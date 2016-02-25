@@ -79,6 +79,7 @@ class User(db.Model, CRUDMixin):
 class Asset(db.Model, CRUDMixin):
     name = db.Column(db.String)
     description = db.Column(db.Text)
+    unit_price = db.Column(db.Numeric(precision=20, scale=4))
 
     #: Arbitrary data
     data = db.Column(JsonType)
@@ -110,5 +111,5 @@ class Transaction(db.Model, CRUDMixin):
     state = db.Column(db.Enum('open', 'closed', 'pending', 'invalid',
                               name='transaction_state'))
     category = db.Column(db.String)
-    unit_price = db.Column(db.Numeric(precision=20, scale=4))
-    quantity = db.Column(db.Integer)
+    asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
+    quantity = db.Column(db.BigInteger)

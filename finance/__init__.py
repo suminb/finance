@@ -17,4 +17,7 @@ def create_app(name=__name__, config={},
     from finance.models import db
     db.init_app(app)
 
+    from finance.main import main_module
+    app.register_blueprint(main_module, url_prefix='')
+
     return app
