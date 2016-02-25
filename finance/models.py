@@ -72,7 +72,10 @@ class User(CRUDMixin, UserMixin, db.Model):
     #: Arbitrary data
     data = db.Column(JsonType)
 
-    accounts = db.relationship('Account', backref='account', lazy='dynamic')
+    accounts = db.relationship('Account', backref='user', lazy='dynamic')
+
+    def __repr__(self):
+        return 'User <{}>'.format(self.name)
 
     @property
     def name(self):
@@ -89,7 +92,7 @@ class Asset(CRUDMixin, db.Model):
     data = db.Column(JsonType)
 
     def __repr__(self):
-        return '{} ({})'.format(self.name, self.description)
+        return 'Asset <{} ({})>'.format(self.name, self.description)
 
     @property
     def unit_price(self):
@@ -106,8 +109,11 @@ class Account(CRUDMixin, db.Model):
     #: Arbitrary data
     data = db.Column(JsonType)
 
-    transactions = db.relationship('Transaction', backref='transaction',
+    transactions = db.relationship('Transaction', backref='account',
                                    lazy='dynamic')
+
+    def __repr__(self):
+        return 'Account <{} ({})>'.format(self.name, self.type)
 
     @property
     def balance(self):
