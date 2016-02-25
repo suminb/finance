@@ -83,10 +83,17 @@ class User(CRUDMixin, UserMixin, db.Model):
         return u'{}, {}'.format(self.family_name, self.given_name)
 
 
+# TODO: Need a way to keep track of the value of volatile assets such as stocks
+# TODO: Need a way to convert one asset's value to another (e.g., currency
+# conversion, stock evaluation, etc.)
+
+
 class Asset(CRUDMixin, db.Model):
     name = db.Column(db.String)
     description = db.Column(db.Text)
-    unit_price = db.Column(db.Numeric(precision=20, scale=4))
+    type = db.Column(db.Enum('cash', 'stock', 'bond', 'security', 'stock',
+                             'commodity', name='asset_type'))
+    # unit_price = db.Column(db.Numeric(precision=20, scale=4))
 
     #: Arbitrary data
     data = db.Column(JsonType)
@@ -99,10 +106,19 @@ class Asset(CRUDMixin, db.Model):
         raise NotImplementedError
 
 
+class AssetValue(CRUDMixin, db.Model):
+    evaluated_at = db.Column(db.DateTime(timezone=False))
+    granularity = db.Column(db.Integer)  # in seconds
+    open = db.Column(db.Numeric(precision=20, scale=4))
+    close = db.Column(db.Numeric(precision=20, scale=4))
+    low = db.Column(db.Numeric(precision=20, scale=4))
+    high = db.Column(db.Numeric(precision=20, scale=4))
+
+
 class Account(CRUDMixin, db.Model):
     user_id = db.Column(db.BigInteger, db.ForeignKey('user.id'))
-    type = db.Column(db.Enum('checking', 'savings', 'loan', 'bond', 'stock',
-                             name='account_type'))
+    type = db.Column(db.Enum('checking', 'savings', 'investment',
+                             'credit_card', name='account_type'))
     name = db.Column(db.String)
     description = db.Column(db.Text)
 
@@ -130,4 +146,5 @@ class Transaction(CRUDMixin, db.Model):
     category = db.Column(db.String)
     asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
     asset = db.relationship(Asset, uselist=False)
-    quantity = db.Column(db.BigInteger)
+    # quantity = db.Column(db.BigInteger)
+    quantity = db.Column(db.Numeric(precision=20, scale=4))
