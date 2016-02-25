@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from flask.ext.login import UserMixin
 from flask.ext.sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.postgresql import JSON
 
@@ -17,6 +18,9 @@ class CRUDMixin(object):
     __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=False)
+
+    def __init__(self, *args, **kwargs):
+        self.id = uuid64.issue()
 
     @classmethod
     def create(cls, commit=True, **kwargs):
@@ -60,7 +64,7 @@ class CRUDMixin(object):
         return commit and db.session.commit()
 
 
-class User(db.Model, CRUDMixin):
+class User(CRUDMixin, UserMixin, db.Model):
     given_name = db.Column(db.String)
     family_name = db.Column(db.String)
     email = db.Column(db.String, unique=True)
@@ -76,7 +80,7 @@ class User(db.Model, CRUDMixin):
         return u'{}, {}'.format(self.family_name, self.given_name)
 
 
-class Asset(db.Model, CRUDMixin):
+class Asset(CRUDMixin, db.Model):
     name = db.Column(db.String)
     description = db.Column(db.Text)
     unit_price = db.Column(db.Numeric(precision=20, scale=4))
@@ -84,12 +88,15 @@ class Asset(db.Model, CRUDMixin):
     #: Arbitrary data
     data = db.Column(JsonType)
 
+    def __repr__(self):
+        return '{} ({})'.format(self.name, self.description)
+
     @property
     def unit_price(self):
-        return 1.0
+        raise NotImplementedError
 
 
-class Account(db.Model, CRUDMixin):
+class Account(CRUDMixin, db.Model):
     user_id = db.Column(db.BigInteger, db.ForeignKey('user.id'))
     type = db.Column(db.Enum('checking', 'savings', 'loan', 'bond', 'stock',
                              name='account_type'))
@@ -102,8 +109,12 @@ class Account(db.Model, CRUDMixin):
     transactions = db.relationship('Transaction', backref='transaction',
                                    lazy='dynamic')
 
+    @property
+    def balance(self):
+        raise NotImplementedError
 
-class Transaction(db.Model, CRUDMixin):
+
+class Transaction(CRUDMixin, db.Model):
     account_id = db.Column(db.BigInteger, db.ForeignKey('account.id'))
     # NOTE: We'll always use the UTC time
     initiated_at = db.Column(db.DateTime(timezone=False))
@@ -112,4 +123,5 @@ class Transaction(db.Model, CRUDMixin):
                               name='transaction_state'))
     category = db.Column(db.String)
     asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
+    asset = db.relationship(Asset, uselist=False)
     quantity = db.Column(db.BigInteger)
