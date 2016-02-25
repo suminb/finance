@@ -17,10 +17,8 @@ class CRUDMixin(object):
 
     __table_args__ = {'extend_existing': True}
 
-    id = db.Column(db.BigInteger, primary_key=True, autoincrement=False)
-
-    def __init__(self, *args, **kwargs):
-        self.id = uuid64.issue()
+    id = db.Column(db.BigInteger, primary_key=True, autoincrement=False,
+                   default=uuid64.issue())
 
     @classmethod
     def create(cls, commit=True, **kwargs):
@@ -64,7 +62,7 @@ class CRUDMixin(object):
         return commit and db.session.commit()
 
 
-class User(CRUDMixin, UserMixin, db.Model):
+class User(db.Model, CRUDMixin, UserMixin):
     given_name = db.Column(db.String)
     family_name = db.Column(db.String)
     email = db.Column(db.String, unique=True)
@@ -88,10 +86,10 @@ class User(CRUDMixin, UserMixin, db.Model):
 # conversion, stock evaluation, etc.)
 
 
-class Asset(CRUDMixin, db.Model):
+class Asset(db.Model, CRUDMixin):
     name = db.Column(db.String)
     description = db.Column(db.Text)
-    type = db.Column(db.Enum('cash', 'stock', 'bond', 'security', 'stock',
+    type = db.Column(db.Enum('currency', 'stock', 'bond', 'security',
                              'commodity', name='asset_type'))
     # unit_price = db.Column(db.Numeric(precision=20, scale=4))
 
@@ -106,7 +104,7 @@ class Asset(CRUDMixin, db.Model):
         raise NotImplementedError
 
 
-class AssetValue(CRUDMixin, db.Model):
+class AssetValue(db.Model, CRUDMixin):
     evaluated_at = db.Column(db.DateTime(timezone=False))
     granularity = db.Column(db.Integer)  # in seconds
     open = db.Column(db.Numeric(precision=20, scale=4))
@@ -115,7 +113,7 @@ class AssetValue(CRUDMixin, db.Model):
     high = db.Column(db.Numeric(precision=20, scale=4))
 
 
-class Account(CRUDMixin, db.Model):
+class Account(db.Model, CRUDMixin):
     user_id = db.Column(db.BigInteger, db.ForeignKey('user.id'))
     type = db.Column(db.Enum('checking', 'savings', 'investment',
                              'credit_card', name='account_type'))
@@ -136,7 +134,7 @@ class Account(CRUDMixin, db.Model):
         raise NotImplementedError
 
 
-class Transaction(CRUDMixin, db.Model):
+class Transaction(db.Model, CRUDMixin):
     account_id = db.Column(db.BigInteger, db.ForeignKey('account.id'))
     # NOTE: We'll always use the UTC time
     initiated_at = db.Column(db.DateTime(timezone=False))
