@@ -138,8 +138,13 @@ class Account(db.Model, CRUDMixin):
 
     @property
     def balance(self):
-        # Sum all transactions to produce (asset, sum(quantity)) pairs
-        raise NotImplementedError
+        # Sum all transactions to produce {asset: sum(quantity)} dictionary
+        bs = {}
+        rs = [(r.asset, r.quantity) for r in self.records]
+        for asset, quantity in rs:
+            bs.setdefault(asset, 0)
+            bs[asset] += quantity
+        return bs
 
 
 class Transaction(db.Model, CRUDMixin):
