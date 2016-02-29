@@ -49,35 +49,44 @@ def insert_test_data():
         asset_sp500 = Asset.create(
             type='security', name='S&P 500', description='')
 
-        Record.create(
-            account=account_checking, asset=asset_krw,
-            quantity=1000000)
-        Record.create(
-            account=account_checking, asset=asset_krw,
-            quantity=-4900)
+        with Transaction.create() as t:
+            Record.create(
+                transaction=t,
+                account=account_checking, asset=asset_krw,
+                quantity=1000000)
+        with Transaction.create() as t:
+            Record.create(
+                transaction=t,
+                account=account_checking, asset=asset_krw,
+                quantity=-4900)
 
-        t1 = Transaction.create()
-        Record.create(
-            created_at=tf('2015-07-24'), transaction=t1,
-            account=account_gold, asset=asset_gold,
-            quantity=2.00)
-        Record.create(
-            created_at=tf('2015-07-24'), transaction=t1,
-            account=account_checking, asset=asset_krw,
-            quantity=-84000)
-        t1.close()
+        with Transaction.create() as t:
+            Record.create(
+                created_at=tf('2015-07-24'), transaction=t,
+                account=account_gold, asset=asset_gold,
+                quantity=2.00)
+            Record.create(
+                created_at=tf('2015-07-24'), transaction=t,
+                account=account_checking, asset=asset_krw,
+                quantity=-84000)
 
-        t2 = Transaction.create()
-        Record.create(
-            created_at=tf('2015-12-28'), transaction=t2,
-            account=account_gold, asset=asset_gold,
-            quantity=-1.00)
-        Record.create(
-            created_at=tf('2015-12-28'), transaction=t2,
-            account=account_checking, asset=asset_krw,
-            quantity=49000)
-        t2.close()
+        with Transaction.create() as t:
+            Record.create(
+                created_at=tf('2015-12-28'), transaction=t,
+                account=account_gold, asset=asset_gold,
+                quantity=-1.00)
+            Record.create(
+                created_at=tf('2015-12-28'), transaction=t,
+                account=account_checking, asset=asset_krw,
+                quantity=49000)
 
+
+@cli.command()
+def test():
+    app = create_app(__name__)
+    with app.app_context():
+        with Transaction.create() as t:
+            t.state = 'xxxx'
 
 if __name__ == '__main__':
     cli()

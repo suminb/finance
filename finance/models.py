@@ -165,7 +165,17 @@ class Transaction(db.Model, CRUDMixin):
         self.state = 'initiated'
         super(self.__class__, self).__init__(*args, **kwargs)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        """Implicitly mark the transaction as closed only if the state is
+        'initiated'."""
+        if self.state == 'initiated':
+            self.close()
+
     def close(self, closed_at=None, commit=True):
+        """Explicitly close a transaction."""
         if closed_at:
             self.closed_at = closed_at
         else:
