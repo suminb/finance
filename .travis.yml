@@ -11,8 +11,9 @@ services:
   - postgresql
 
 env:
-  - DB_URI="postgres:///finance"
-  - PYTHONPATH=.
+  global:
+    - DB_URI="postgres:///finance"
+    - PYTHONPATH=.
 
 install:
   - pip install -r requirements.txt
