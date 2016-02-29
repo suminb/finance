@@ -1,0 +1,28 @@
+sudo: false
+
+language: python
+python:
+  - "3.5"
+
+addons:
+  postgresql: "9.4"
+
+services:
+  - postgresql
+
+env:
+  - DB_URI="postgres:///finance"
+  - PYTHONPATH=.
+
+install:
+  - pip install -r requirements.txt
+  - pip install -r tests/requirements.txt
+
+before_script:
+  - psql -c 'CREATE DATABASE finance;' -U postgres
+
+script:
+  - py.test tests --cov finance --cov-report term-missing
+
+after_success:
+  - coveralls
