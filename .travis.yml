@@ -21,6 +21,7 @@ install:
 
 before_script:
   - psql -c 'CREATE DATABASE finance;' -U postgres
+  - python bin.py create_all
 
 script:
   - py.test tests --cov finance --cov-report term-missing
