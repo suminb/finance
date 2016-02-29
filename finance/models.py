@@ -89,7 +89,7 @@ class User(db.Model, CRUDMixin, UserMixin):
 class Asset(db.Model, CRUDMixin):
     name = db.Column(db.String)
     description = db.Column(db.Text)
-    type = db.Column(db.Enum('currency', 'stock', 'bond', 'security',
+    type = db.Column(db.Enum('currency', 'stock', 'bond', 'security', 'fund',
                              'commodity', name='asset_type'))
     # unit_price = db.Column(db.Numeric(precision=20, scale=4))
 
@@ -101,6 +101,10 @@ class Asset(db.Model, CRUDMixin):
 
     @property
     def unit_price(self):
+        raise NotImplementedError
+
+    @property
+    def current_value(self):
         raise NotImplementedError
 
 
@@ -123,26 +127,56 @@ class Account(db.Model, CRUDMixin):
     #: Arbitrary data
     data = db.Column(JsonType)
 
-    transactions = db.relationship('Transaction', backref='account',
-                                   lazy='dynamic')
+    # NOTE: Transaction-Account relationship is many-to-many
+    # transactions = db.relationship('Transaction', backref='account',
+    #                                lazy='dynamic')
+    records = db.relationship('Record', backref='account',
+                              lazy='dynamic')
 
     def __repr__(self):
         return 'Account <{} ({})>'.format(self.name, self.type)
 
     @property
     def balance(self):
+        # Sum all transactions to produce (asset, sum(quantity)) pairs
         raise NotImplementedError
 
 
 class Transaction(db.Model, CRUDMixin):
-    account_id = db.Column(db.BigInteger, db.ForeignKey('account.id'))
-    # NOTE: We'll always use the UTC time
+    """A transaction consists of multiple records."""
     initiated_at = db.Column(db.DateTime(timezone=False))
     closed_at = db.Column(db.DateTime(timezone=False))
-    state = db.Column(db.Enum('open', 'closed', 'pending', 'invalid',
+    state = db.Column(db.Enum('initiated', 'closed', 'pending', 'invalid',
                               name='transaction_state'))
+    #: Individual record
+    records = db.relationship('Record', backref='transaction',
+                              lazy='dynamic')
+
+    def __init__(self, initiated_at=None, *args, **kwargs):
+        if initiated_at:
+            self.initiated_at = initiated_at
+        else:
+            self.initiated_at = datetime.utcnow()
+        self.state = 'initiated'
+        super(self.__class__, self).__init__(*args, **kwargs)
+
+    def close(self, closed_at=None, commit=True):
+        if closed_at:
+            self.closed_at = closed_at
+        else:
+            self.closed_at = datetime.utcnow()
+        self.state = 'closed'
+
+        if commit:
+            db.session.commit()
+
+
+class Record(db.Model, CRUDMixin):
+    account_id = db.Column(db.BigInteger, db.ForeignKey('account.id'))
+    transaction_id = db.Column(db.BigInteger, db.ForeignKey('transaction.id'))
+    # NOTE: We'll always use the UTC time
+    created_at = db.Column(db.DateTime(timezone=False))
     category = db.Column(db.String)
     asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
     asset = db.relationship(Asset, uselist=False)
-    # quantity = db.Column(db.BigInteger)
     quantity = db.Column(db.Numeric(precision=20, scale=4))

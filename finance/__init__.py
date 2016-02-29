@@ -39,8 +39,8 @@ def create_app(name=__name__, config={},
     app.register_blueprint(main_module, url_prefix='')
 
     admin = Admin(app, name='finance', template_mode='bootstrap3')
-    from finance.models import Account, Asset, Transaction, User
-    classes = [Account, Asset, Transaction, User]
+    from finance.models import Account, Asset, Record, Transaction, User
+    classes = [Account, Asset, Record, Transaction, User]
     for cls in classes:
         admin.add_view(ModelView(cls, db.session,
                                  endpoint=cls.__name__))
