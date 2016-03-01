@@ -85,6 +85,18 @@ class User(db.Model, CRUDMixin, UserMixin):
 # TODO: Need a way to convert one asset's value to another (e.g., currency
 # conversion, stock evaluation, etc.)
 
+class AssetValue(db.Model, CRUDMixin):
+    asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
+    target_asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
+    target_asset = db.relationship('Asset', uselist=False, foreign_keys=[target_asset_id])
+    evaluated_at = db.Column(db.DateTime(timezone=False))
+    granularity = db.Column(db.Enum('1sec', '1min', '5min', '1hour', '1day',
+                                    '1week', '1month', name='granularity'))
+    open = db.Column(db.Numeric(precision=20, scale=4))
+    close = db.Column(db.Numeric(precision=20, scale=4))
+    low = db.Column(db.Numeric(precision=20, scale=4))
+    high = db.Column(db.Numeric(precision=20, scale=4))
+
 
 class Asset(db.Model, CRUDMixin):
     name = db.Column(db.String)
@@ -96,6 +108,10 @@ class Asset(db.Model, CRUDMixin):
     #: Arbitrary data
     data = db.Column(JsonType)
 
+    asset_values = db.relationship('AssetValue', backref='asset',
+                                   foreign_keys=[AssetValue.asset_id],
+                                   lazy='dynamic')
+
     def __repr__(self):
         return 'Asset <{} ({})>'.format(self.name, self.description)
 
@@ -106,15 +122,6 @@ class Asset(db.Model, CRUDMixin):
     @property
     def current_value(self):
         raise NotImplementedError
-
-
-class AssetValue(db.Model, CRUDMixin):
-    evaluated_at = db.Column(db.DateTime(timezone=False))
-    granularity = db.Column(db.Integer)  # in seconds
-    open = db.Column(db.Numeric(precision=20, scale=4))
-    close = db.Column(db.Numeric(precision=20, scale=4))
-    low = db.Column(db.Numeric(precision=20, scale=4))
-    high = db.Column(db.Numeric(precision=20, scale=4))
 
 
 class Account(db.Model, CRUDMixin):
