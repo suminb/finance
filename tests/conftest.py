@@ -1,6 +1,7 @@
 import pytest
 
 from finance import create_app
+from finance.models import Account
 from finance.models import db as _db
 
 
@@ -35,3 +36,23 @@ def db(app, request):
 
     request.addfinalizer(teardown)
     return _db
+
+
+@pytest.fixture(scope='session')
+def account_checking(request, db):
+    def teardown():
+        db.session.delete(account)
+        db.session.commit()
+    request.addfinalizer(teardown)
+    account = Account.create(type='checking', name='Shinhan Checking')
+    return account
+
+
+@pytest.fixture(scope='session')
+def account_sp500(request, db):
+    def teardown():
+        db.session.delete(account)
+        db.session.commit()
+    request.addfinalizer(teardown)
+    account = Account.create(type='investment', name='S&P500 Fund')
+    return account

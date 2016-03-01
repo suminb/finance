@@ -16,13 +16,8 @@ def test_transaction(app):
             t.state = 'xxxx'
 
 
-def test_net_worth(app, db):
+def test_net_worth(app, account_checking, account_sp500):
     with app.app_context():
-        account_checking = Account.create(
-            type='checking', name='Shinhan Checking')
-        account_sp500 = Account.create(
-            type='investment', name='S&P500 Fund')
-
         asset_krw = Asset.create(
             type='currency', name='KRW', description='Korean Won')
         asset_sp500 = Asset.create(
