@@ -1,3 +1,4 @@
+from finance import create_app
 from finance.models import *  # noqa
 
 
