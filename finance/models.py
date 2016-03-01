@@ -153,6 +153,21 @@ class Account(db.Model, CRUDMixin):
             bs[asset] += quantity
         return bs
 
+    def net_worth(self, evaluated_at=None):
+        if not evaluated_at:
+            evaluated_at = datetime.utcnow()
+
+        nw = {}
+        for asset, quantity in self.balance.items():
+            asset_value = AssetValue.query \
+                .filter(AssetValue.asset == asset,
+                        AssetValue.evaluated_at == evaluated_at) \
+                .first()
+            worth = asset_value.close * quantity
+            nw[asset] = worth
+
+        return nw
+
 
 class Transaction(db.Model, CRUDMixin):
     """A transaction consists of multiple records."""
