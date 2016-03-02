@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import click
+import requests
 
 from finance import create_app
 from finance.models import *  # noqa
@@ -128,6 +129,43 @@ def test():
     with app.app_context():
         account = Account.query.filter(Account.name == 'S&P500 Fund').first()
         print(account.net_worth(tf('2016-02-25')))
+
+
+@cli.command()
+def import_fund():
+    url = 'http://dis.kofia.or.kr/proframeWeb/XMLSERVICES/'
+    headers = {
+        'Origin': 'http://dis.kofia.or.kr',
+        'Accept-Encoding': 'gzip, deflate',
+        'Accept-Language': 'en-US,en;q=0.8,ko;q=0.6',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_3) '
+                      'AppleWebKit/537.36 (KHTML, like Gecko) '
+                      'Chrome/48.0.2564.109 Safari/537.36',
+        'Content-Type': 'text/xml',
+        'Accept': 'text/xml',
+        'Referer': 'http://dis.kofia.or.kr/websquare/popup.html?w2xPath=/wq/com/popup/DISComFundSmryInfo.xml&companyCd=20090602&standardCd=KR5223941018&standardDt=20160219&grntGb=S&search=&check=1&isMain=undefined&companyGb=A&uFundNm=/v8ASwBCwqTQwLv4rW0AUwAmAFAANQAwADDHeLNxwqTJna2Mx5DSLMeQwuDQwQBbyPzC3QAt0wzA%0A3dYVAF0AQwAtAEU%3D&popupID=undefined&w2xHome=/wq/fundann/&w2xDocumentRoot=',
+    }
+    data = """<?xml version="1.0" encoding="utf-8"?>
+        <message>
+            <proframeHeader>
+                <pfmAppName>FS-COM</pfmAppName>
+                <pfmSvcName>COMFundPriceModSO</pfmSvcName>
+                <pfmFnName>priceModSrch</pfmFnName>
+            </proframeHeader>
+            <systemHeader></systemHeader>
+            <COMFundUnityInfoInputDTO>
+                <standardCd>KR5223941018</standardCd>
+                <companyCd>A01031</companyCd>
+                <vSrchTrmFrom>20160120</vSrchTrmFrom>
+                <vSrchTrmTo>20160220</vSrchTrmTo>
+                <vSrchStd>1</vSrchStd>
+            </COMFundUnityInfoInputDTO>
+        </message>
+    """
+
+    resp = requests.post(url, headers=headers, data=data)
+    import pdb; pdb.set_trace()
+    pass
 
 if __name__ == '__main__':
     cli()
