@@ -18,10 +18,11 @@ env:
 install:
   - pip install -r requirements.txt
   - pip install -r tests/requirements.txt
+  - pip install -e .
 
 before_script:
   - psql -c 'CREATE DATABASE finance;' -U postgres
-  - python bin.py create_all
+  - finance create_all
 
 script:
   - py.test tests --cov finance --cov-report term-missing
