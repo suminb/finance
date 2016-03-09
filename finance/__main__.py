@@ -5,6 +5,7 @@ import requests
 
 from finance import create_app
 from finance.models import *  # noqa
+from finance.utils import AssetValueSchema
 
 
 tf = lambda x: datetime.strptime(x, '%Y-%m-%d')
@@ -162,10 +163,20 @@ def import_fund():
             </COMFundUnityInfoInputDTO>
         </message>
     """
-
     resp = requests.post(url, headers=headers, data=data)
-    import pdb; pdb.set_trace()
-    pass
+
+    app = create_app(__name__)
+    with app.app_context():
+        asset_krw = Asset.query.filter_by(name='KRW').first()
+        asset_sp500 = Asset.query.filter_by(name='S&P 500').first()
+
+        schema = AssetValueSchema()
+        schema.load(resp.text)
+        for date, unit_price, original_quantity in schema.get_data():
+            AssetValue.create(
+                asset=asset_sp500, target_asset=asset_krw,
+                evaluated_at=date, close=unit_price, granularity='1day')
+
 
 if __name__ == '__main__':
     cli()

@@ -7,7 +7,7 @@ class AssetValueImporter(object):
     pass
 
 
-class AssetValueScheme(object):
+class AssetValueSchema(object):
     def __init__(self):
         self.raw = None
         self.parsed = None
@@ -27,6 +27,6 @@ class AssetValueScheme(object):
             date_str = pr['standardDt']
             date = datetime.strptime(date_str, '%Y%m%d')
             unit_price = float(pr['standardCot'])
-            original_amount = float(pr['uOriginalAmt'])
+            original_quantity = float(pr['uOriginalAmt'])
 
-            yield date, unit_price, original_amount * 1000000
+            yield date, unit_price, original_quantity * 1000000

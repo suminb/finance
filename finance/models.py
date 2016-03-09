@@ -86,6 +86,9 @@ class User(db.Model, CRUDMixin, UserMixin):
 # conversion, stock evaluation, etc.)
 
 class AssetValue(db.Model, CRUDMixin):
+    __table_args__ = (db.UniqueConstraint(
+        'asset_id', 'evaluated_at', 'granularity'), {})
+
     asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
     target_asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
     target_asset = db.relationship('Asset', uselist=False,
