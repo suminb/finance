@@ -88,7 +88,8 @@ class User(db.Model, CRUDMixin, UserMixin):
 class AssetValue(db.Model, CRUDMixin):
     asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
     target_asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
-    target_asset = db.relationship('Asset', uselist=False, foreign_keys=[target_asset_id])
+    target_asset = db.relationship('Asset', uselist=False,
+                                   foreign_keys=[target_asset_id])
     evaluated_at = db.Column(db.DateTime(timezone=False))
     granularity = db.Column(db.Enum('1sec', '1min', '5min', '1hour', '1day',
                                     '1week', '1month', name='granularity'))
@@ -127,7 +128,7 @@ class Asset(db.Model, CRUDMixin):
 class Account(db.Model, CRUDMixin):
     user_id = db.Column(db.BigInteger, db.ForeignKey('user.id'))
     type = db.Column(db.Enum('checking', 'savings', 'investment',
-                             'credit_card', name='account_type'))
+                             'credit_card', 'virtual', name='account_type'))
     name = db.Column(db.String)
     description = db.Column(db.Text)
 
