@@ -1,3 +1,5 @@
+import pytest
+
 from finance import create_app
 from finance.models import *  # noqa
 
@@ -51,3 +53,7 @@ def test_net_worth(app, account_checking, account_sp500):
 
         # The account only has one type of asset
         assert 1 == len(net_worth)
+        assert 921770 == net_worth[asset_sp500]
+
+        with pytest.raises(AssetValueUnavailableException):
+            net_worth = account_sp500.net_worth(make_date('2016-03-01'))

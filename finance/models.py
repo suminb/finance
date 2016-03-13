@@ -11,6 +11,10 @@ db = SQLAlchemy()
 JsonType = db.String().with_variant(JSON(), 'postgresql')
 
 
+class AssetValueUnavailableException(Exception):
+    pass
+
+
 class CRUDMixin(object):
     """Copied from https://realpython.com/blog/python/python-web-applications-with-flask-part-ii/
     """  # noqa
@@ -85,6 +89,21 @@ class User(db.Model, CRUDMixin, UserMixin):
 # TODO: Need a way to convert one asset's value to another (e.g., currency
 # conversion, stock evaluation, etc.)
 
+
+class Granularity(object):
+    sec = '1sec'
+    min = '1min'
+    five_min = '5min'
+    hour = '1hour'
+    day = '1day'
+    week = '1week'
+    month = '1month'
+    year = '1year'
+
+    def is_valid(self, value):
+        raise NotImplementedError
+
+
 class AssetValue(db.Model, CRUDMixin):
     __table_args__ = (db.UniqueConstraint(
         'asset_id', 'evaluated_at', 'granularity'), {})
@@ -95,7 +114,8 @@ class AssetValue(db.Model, CRUDMixin):
                                    foreign_keys=[target_asset_id])
     evaluated_at = db.Column(db.DateTime(timezone=False))
     granularity = db.Column(db.Enum('1sec', '1min', '5min', '1hour', '1day',
-                                    '1week', '1month', name='granularity'))
+                                    '1week', '1month', '1year',
+                                    name='granularity'))
     open = db.Column(db.Numeric(precision=20, scale=4))
     close = db.Column(db.Numeric(precision=20, scale=4))
     low = db.Column(db.Numeric(precision=20, scale=4))
@@ -157,17 +177,29 @@ class Account(db.Model, CRUDMixin):
             bs[asset] += quantity
         return bs
 
-    def net_worth(self, evaluated_at=None):
+    def net_worth(self, evaluated_at=None, granularity=Granularity.day):
+        """Calculates the net worth of the account on a particular datetime."""
         if not evaluated_at:
             evaluated_at = datetime.utcnow()
+
+        if granularity == Granularity.day:
+            # NOTE: Any better way to handle this?
+            date = evaluated_at.date().timetuple()[:6]
+            evaluated_at = datetime(*date)
+        else:
+            raise NotImplementedError
 
         nw = {}
         for asset, quantity in self.balance.items():
             asset_value = AssetValue.query \
                 .filter(AssetValue.asset == asset,
-                        AssetValue.evaluated_at == evaluated_at) \
+                        AssetValue.evaluated_at == evaluated_at,
+                        AssetValue.granularity == granularity) \
                 .first()
-            worth = asset_value.close * quantity
+            if asset_value:
+                worth = asset_value.close * quantity
+            else:
+                raise AssetValueUnavailableException()
             nw[asset] = worth
 
         return nw

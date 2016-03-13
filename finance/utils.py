@@ -13,7 +13,7 @@ class AssetValueSchema(object):
         self.parsed = None
 
     def load(self, raw_data):
-        """Load raw data.
+        """Loads raw data.
 
         :type raw_data: str
         """
