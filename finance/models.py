@@ -177,8 +177,13 @@ class Account(db.Model, CRUDMixin):
             bs[asset] += quantity
         return bs
 
-    def net_worth(self, evaluated_at=None, granularity=Granularity.day):
-        """Calculates the net worth of the account on a particular datetime."""
+    def net_worth(self, evaluated_at=None, granularity=Granularity.day,
+                  approximation=False):
+        """Calculates the net worth of the account on a particular datetime.
+        If approximation=True and the asset value record is unavailable for the
+        given date (evaluated_at), try to pull the most recent AssetValue.
+        """
+
         if not evaluated_at:
             evaluated_at = datetime.utcnow()
 
@@ -193,9 +198,17 @@ class Account(db.Model, CRUDMixin):
         for asset, quantity in self.balance.items():
             asset_value = AssetValue.query \
                 .filter(AssetValue.asset == asset,
-                        AssetValue.evaluated_at == evaluated_at,
-                        AssetValue.granularity == granularity) \
-                .first()
+                        AssetValue.granularity == granularity)
+            if approximation:
+                asset_value = asset_value.filter(
+                    AssetValue.evaluated_at <= evaluated_at) \
+                    .order_by(AssetValue.evaluated_at.desc())
+            else:
+                asset_value = asset_value.filter(
+                    AssetValue.evaluated_at == evaluated_at)
+
+            asset_value = asset_value.first()
+
             if asset_value:
                 worth = asset_value.close * quantity
             else:
