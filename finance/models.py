@@ -264,7 +264,18 @@ class Record(db.Model, CRUDMixin):
     transaction_id = db.Column(db.BigInteger, db.ForeignKey('transaction.id'))
     # NOTE: We'll always use the UTC time
     created_at = db.Column(db.DateTime(timezone=False))
+    type = db.Column(db.Enum('deposit', 'withdraw', 'balance_adjustment',
+                             name='record_type'))
     category = db.Column(db.String)
     asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
     # asset = db.relationship(Asset, uselist=False)
     quantity = db.Column(db.Numeric(precision=20, scale=4))
+
+    def __init__(self, *args, **kwargs):
+        # Record.type could be 'balance_adjustment'
+        if 'type' not in kwargs:
+            if kwargs['quantity'] < 0:
+                kwargs['type'] = 'withdraw'
+            else:
+                kwargs['type'] = 'deposit'
+        super(self.__class__, self).__init__(*args, **kwargs)
