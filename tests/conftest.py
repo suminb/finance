@@ -1,7 +1,7 @@
 import pytest
 
 from finance import create_app
-from finance.models import Account
+from finance.models import Account, Asset
 from finance.models import db as _db
 
 
@@ -56,3 +56,25 @@ def account_sp500(request, db):
     request.addfinalizer(teardown)
     account = Account.create(type='investment', name='S&P500 Fund')
     return account
+
+
+@pytest.fixture(scope='session')
+def asset_krw(request, db):
+    def teardown():
+        db.session.delete(asset)
+        db.session.commit()
+    request.addfinalizer(teardown)
+    asset = Asset.create(
+        type='currency', name='KRW', description='Korean Won')
+    return asset
+
+
+@pytest.fixture(scope='session')
+def asset_sp500(request, db):
+    def teardown():
+        db.session.delete(asset)
+        db.session.commit()
+    request.addfinalizer(teardown)
+    asset = Asset.create(
+        type='security', name='S&P 500', description='')
+    return asset

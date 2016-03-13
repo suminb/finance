@@ -134,7 +134,9 @@ class Asset(db.Model, CRUDMixin):
 
     asset_values = db.relationship('AssetValue', backref='asset',
                                    foreign_keys=[AssetValue.asset_id],
-                                   lazy='dynamic')
+                                   lazy='dynamic', cascade='all,delete-orphan')
+    records = db.relationship('Record', backref='asset',
+                              lazy='dynamic', cascade='all,delete-orphan')
 
     def __repr__(self):
         return 'Asset <{} ({})>'.format(self.name, self.description)
@@ -264,5 +266,5 @@ class Record(db.Model, CRUDMixin):
     created_at = db.Column(db.DateTime(timezone=False))
     category = db.Column(db.String)
     asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
-    asset = db.relationship(Asset, uselist=False)
+    # asset = db.relationship(Asset, uselist=False)
     quantity = db.Column(db.Numeric(precision=20, scale=4))

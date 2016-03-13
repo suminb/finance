@@ -12,13 +12,13 @@ def test_transaction(app):
             t.state = 'xxxx'
 
 
-def test_net_worth(app, account_checking, account_sp500):
-    with app.app_context():
-        asset_krw = Asset.create(
-            type='currency', name='KRW', description='Korean Won')
-        asset_sp500 = Asset.create(
-            type='security', name='S&P 500', description='')
+def test_records(app, account_checking):
+    pass
 
+
+def test_net_worth(app, account_checking, account_sp500, asset_krw,
+                   asset_sp500):
+    with app.app_context():
         AssetValue.create(
             evaluated_at=make_date('2016-02-25'), asset=asset_sp500,
             target_asset=asset_krw, granularity='1day', close=921.77)
