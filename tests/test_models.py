@@ -2,14 +2,7 @@ import pytest
 
 from finance import create_app
 from finance.models import *  # noqa
-
-
-def make_date(strdate):
-    """Make a datetime object from a string.
-
-    :type strdate: str
-    """
-    return datetime.strptime(strdate, '%Y-%m-%d')
+from finance.utils import make_date
 
 
 def test_transaction(app):

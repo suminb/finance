@@ -3,6 +3,14 @@ from datetime import datetime
 import xmltodict
 
 
+def make_date(strdate):
+    """Make a datetime object from a string.
+
+    :type strdate: str
+    """
+    return datetime.strptime(strdate, '%Y-%m-%d')
+
+
 class AssetValueImporter(object):
     pass
 
