@@ -46,6 +46,8 @@ def insert_test_data():
             type='investment', name='Woori Gold Banking', user=user)
         account_sp500 = Account.create(
             type='investment', name='S&P500 Fund', user=user)
+        account_esch = Account.create(
+            type='investment', name='East Spring China Fund', user=user)
 
         asset_krw = Asset.create(
             type='currency', name='KRW', description='Korean Won')
@@ -54,7 +56,11 @@ def insert_test_data():
         asset_gold = Asset.create(
             type='commodity', name='Gold', description='')
         asset_sp500 = Asset.create(
-            type='security', name='S&P 500', description='')
+            type='security', name='KB S&P500', description='',
+            data={'code': 'KR5223941018'})
+        asset_esch = Asset.create(
+            type='security', name='East Spring China',
+            data={'code': 'KR5229221225'})
 
         with Transaction.create() as t:
             Record.create(
@@ -136,9 +142,10 @@ def test():
 
 
 @cli.command()
+@click.argument('code')
 @click.argument('from-date')
 @click.argument('to-date')
-def import_fund(from_date, to_date):
+def import_fund(code, from_date, to_date):
     """Imports fund data from KOFIA.
 
     :param from_date: e.g., 20160101
@@ -165,20 +172,29 @@ def import_fund(from_date, to_date):
             </proframeHeader>
             <systemHeader></systemHeader>
             <COMFundUnityInfoInputDTO>
-                <standardCd>KR5223941018</standardCd>
+                <standardCd>{code}</standardCd>
                 <companyCd>A01031</companyCd>
                 <vSrchTrmFrom>{from_date}</vSrchTrmFrom>
                 <vSrchTrmTo>{to_date}</vSrchTrmTo>
                 <vSrchStd>1</vSrchStd>
             </COMFundUnityInfoInputDTO>
         </message>
-    """.format(from_date=from_date, to_date=to_date)
+    """.format(code=code, from_date=from_date, to_date=to_date)
     resp = requests.post(url, headers=headers, data=data)
 
     app = create_app(__name__)
     with app.app_context():
-        asset_krw = Asset.query.filter_by(name='KRW').first()
-        asset_sp500 = Asset.query.filter_by(name='S&P 500').first()
+        # NOTE: I know this looks really stupid, but we'll stick with this
+        # temporary workaround until we figure out how to create an instance of
+        # Asset model from a raw query result
+        # (sqlalchemy.engine.result.RowProxy)
+        query = "SELECT * FROM asset WHERE data->>'code' = :code LIMIT 1"
+        raw_asset = db.session.execute(query, {'code': code}).first()
+        asset_id = raw_asset[0]
+        asset = Asset.query.get(asset_id)
+
+        # FIXME: Target asset should also be determined by asset.data.code
+        target_asset = Asset.query.filter_by(name='KRW').first()
 
         schema = AssetValueSchema()
         schema.load(resp.text)
@@ -186,7 +202,7 @@ def import_fund(from_date, to_date):
             log.info('Import data on {}', date)
             try:
                 AssetValue.create(
-                    asset=asset_sp500, target_asset=asset_krw,
+                    asset=asset, target_asset=target_asset,
                     evaluated_at=date, close=unit_price, granularity='1day')
             except IntegrityError:
                 log.warn('Identical record has been found for {}. Skipping.',
