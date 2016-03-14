@@ -1,12 +1,10 @@
 import pytest
 
-from finance import create_app
 from finance.models import *  # noqa
 from finance.utils import make_date
 
 
 def test_transaction(app):
-    app = create_app(__name__)
     with app.app_context():
         with Transaction.create() as t:
             t.state = 'xxxx'
