@@ -1,6 +1,8 @@
 from datetime import datetime
 
 import click
+from logbook import Logger
+from sqlalchemy.exc import IntegrityError
 import requests
 
 from finance import create_app
@@ -9,6 +11,7 @@ from finance.utils import AssetValueSchema
 
 
 tf = lambda x: datetime.strptime(x, '%Y-%m-%d')
+log = Logger('finance')
 
 
 @click.group()
@@ -133,7 +136,14 @@ def test():
 
 
 @cli.command()
-def import_fund():
+@click.argument('from-date')
+@click.argument('to-date')
+def import_fund(from_date, to_date):
+    """Imports fund data from KOFIA.
+
+    :param from_date: e.g., 20160101
+    :param to_date: e.g., 20160228
+    """
     url = 'http://dis.kofia.or.kr/proframeWeb/XMLSERVICES/'
     headers = {
         'Origin': 'http://dis.kofia.or.kr',
@@ -157,12 +167,12 @@ def import_fund():
             <COMFundUnityInfoInputDTO>
                 <standardCd>KR5223941018</standardCd>
                 <companyCd>A01031</companyCd>
-                <vSrchTrmFrom>20160120</vSrchTrmFrom>
-                <vSrchTrmTo>20160220</vSrchTrmTo>
+                <vSrchTrmFrom>{from_date}</vSrchTrmFrom>
+                <vSrchTrmTo>{to_date}</vSrchTrmTo>
                 <vSrchStd>1</vSrchStd>
             </COMFundUnityInfoInputDTO>
         </message>
-    """
+    """.format(from_date=from_date, to_date=to_date)
     resp = requests.post(url, headers=headers, data=data)
 
     app = create_app(__name__)
@@ -173,9 +183,15 @@ def import_fund():
         schema = AssetValueSchema()
         schema.load(resp.text)
         for date, unit_price, original_quantity in schema.get_data():
-            AssetValue.create(
-                asset=asset_sp500, target_asset=asset_krw,
-                evaluated_at=date, close=unit_price, granularity='1day')
+            log.info('Import data on {}', date)
+            try:
+                AssetValue.create(
+                    asset=asset_sp500, target_asset=asset_krw,
+                    evaluated_at=date, close=unit_price, granularity='1day')
+            except IntegrityError:
+                log.warn('Identical record has been found for {}. Skipping.',
+                         date)
+                db.session.rollback()
 
 
 if __name__ == '__main__':
