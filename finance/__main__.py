@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 import requests
 
 from finance import create_app
+from finance.exceptions import AssetNotFoundException
 from finance.models import *  # noqa
 from finance.utils import AssetValueSchema
 
@@ -190,6 +191,9 @@ def import_fund(code, from_date, to_date):
         # (sqlalchemy.engine.result.RowProxy)
         query = "SELECT * FROM asset WHERE data->>'code' = :code LIMIT 1"
         raw_asset = db.session.execute(query, {'code': code}).first()
+        if not raw_asset:
+            raise AssetNotFoundException(
+                'Fund code {} is not mapped to any asset'.format(code))
         asset_id = raw_asset[0]
         asset = Asset.query.get(asset_id)
 
