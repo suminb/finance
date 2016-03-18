@@ -1,3 +1,5 @@
+from functools import partial
+
 import pytest
 
 from finance import create_app
@@ -40,41 +42,49 @@ def db(app, request):
 
 @pytest.fixture(scope='session')
 def account_checking(request, db):
-    def teardown():
-        db.session.delete(account)
-        db.session.commit()
-    request.addfinalizer(teardown)
     account = Account.create(type='checking', name='Shinhan Checking')
+    request.addfinalizer(partial(teardown, db=db, record=account))
+    return account
+
+
+@pytest.fixture(scope='session')
+def account_hf(request, db):
+    account = Account.create(type='virtual', name='어니스트펀드')
+    request.addfinalizer(partial(teardown, db=db, record=account))
     return account
 
 
 @pytest.fixture(scope='session')
 def account_sp500(request, db):
-    def teardown():
-        db.session.delete(account)
-        db.session.commit()
-    request.addfinalizer(teardown)
     account = Account.create(type='investment', name='S&P500 Fund')
+    request.addfinalizer(partial(teardown, db=db, record=account))
     return account
 
 
 @pytest.fixture(scope='session')
+def asset_hf1(request, db):
+    asset = Asset.create(
+        type='bond', name='포트폴리오 투자상품 1호')
+    request.addfinalizer(partial(teardown, db=db, record=asset))
+    return asset
+
+
+@pytest.fixture(scope='session')
 def asset_krw(request, db):
-    def teardown():
-        db.session.delete(asset)
-        db.session.commit()
-    request.addfinalizer(teardown)
     asset = Asset.create(
         type='currency', name='KRW', description='Korean Won')
+    request.addfinalizer(partial(teardown, db=db, record=asset))
     return asset
 
 
 @pytest.fixture(scope='session')
 def asset_sp500(request, db):
-    def teardown():
-        db.session.delete(asset)
-        db.session.commit()
-    request.addfinalizer(teardown)
     asset = Asset.create(
         type='security', name='S&P 500', description='')
+    request.addfinalizer(partial(teardown, db=db, record=asset))
     return asset
+
+
+def teardown(db, record):
+    db.session.delete(record)
+    db.session.commit()

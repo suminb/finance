@@ -4,6 +4,10 @@ from finance.models import *  # noqa
 from finance.utils import make_date
 
 
+def test_asset_values(account_hf, asset_hf1):
+    pass
+
+
 def test_transaction(app):
     with app.app_context():
         with Transaction.create() as t:
