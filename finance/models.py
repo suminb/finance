@@ -3,16 +3,13 @@ from datetime import datetime
 from flask.ext.login import UserMixin
 from flask.ext.sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.postgresql import JSON
-
 import uuid64
+
+from finance.exceptions import AssetValueUnavailableException
 
 
 db = SQLAlchemy()
 JsonType = db.String().with_variant(JSON(), 'postgresql')
-
-
-class AssetValueUnavailableException(Exception):
-    pass
 
 
 class CRUDMixin(object):
