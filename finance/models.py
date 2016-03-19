@@ -129,9 +129,12 @@ class Asset(db.Model, CRUDMixin):
     #: Arbitrary data
     data = db.Column(JsonType)
 
-    asset_values = db.relationship('AssetValue', backref='asset',
-                                   foreign_keys=[AssetValue.asset_id],
-                                   lazy='dynamic', cascade='all,delete-orphan')
+    asset_values = db.relationship(
+        'AssetValue', backref='asset', foreign_keys=[AssetValue.asset_id],
+        lazy='dynamic', cascade='all,delete-orphan')
+    target_asset_values = db.relationship(
+        'AssetValue', foreign_keys=[AssetValue.target_asset_id],
+        lazy='dynamic', cascade='all,delete-orphan')
     records = db.relationship('Record', backref='asset',
                               lazy='dynamic', cascade='all,delete-orphan')
 
