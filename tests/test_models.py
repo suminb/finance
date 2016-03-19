@@ -66,15 +66,13 @@ def test_net_worth(account_checking, account_sp500, asset_krw, asset_sp500):
             account=account_checking, asset=asset_krw,
             quantity=-1000 * 921.77)
 
-    net_worth = account_sp500.net_worth(make_date('2016-02-25'))
+    assert 921770 == account_sp500.net_worth(
+        evaluated_at=make_date('2016-02-25'), target_asset=asset_krw)
 
-    # The account only has one type of asset
-    assert 1 == len(net_worth)
-    assert 921770 == net_worth[asset_sp500]
-
-    net_worth = account_sp500.net_worth(make_date('2016-03-01'),
-                                        approximation=True)
-    assert 921770 == net_worth[asset_sp500]
+    assert 921770 == account_sp500.net_worth(
+        evaluated_at=make_date('2016-03-01'), approximation=True,
+        target_asset=asset_krw)
 
     with pytest.raises(AssetValueUnavailableException):
-        net_worth = account_sp500.net_worth(make_date('2016-03-01'))
+        account_sp500.net_worth(make_date('2016-03-01'),
+                                target_asset=asset_krw)

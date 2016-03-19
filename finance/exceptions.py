@@ -4,3 +4,7 @@ class AssetNotFoundException(Exception):
 
 class AssetValueUnavailableException(Exception):
     pass
+
+
+class InvalidTargetAssetException(Exception):
+    pass

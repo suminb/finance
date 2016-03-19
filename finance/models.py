@@ -5,7 +5,8 @@ from flask.ext.sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.postgresql import JSON
 import uuid64
 
-from finance.exceptions import AssetValueUnavailableException
+from finance.exceptions import (
+    AssetValueUnavailableException, InvalidTargetAssetException)
 
 
 db = SQLAlchemy()
@@ -181,11 +182,14 @@ class Account(db.Model, CRUDMixin):
         return bs
 
     def net_worth(self, evaluated_at=None, granularity=Granularity.day,
-                  approximation=False):
+                  approximation=False, target_asset=None):
         """Calculates the net worth of the account on a particular datetime.
         If approximation=True and the asset value record is unavailable for the
         given date (evaluated_at), try to pull the most recent AssetValue.
         """
+        if target_asset is None:
+            raise InvalidTargetAssetException('Target asset cannot be null')
+
         if not evaluated_at:
             evaluated_at = datetime.utcnow()
 
@@ -196,11 +200,12 @@ class Account(db.Model, CRUDMixin):
         else:
             raise NotImplementedError
 
-        nw = {}
+        net_asset_value = 0
         for asset, quantity in self.balance.items():
             asset_value = AssetValue.query \
                 .filter(AssetValue.asset == asset,
-                        AssetValue.granularity == granularity)
+                        AssetValue.granularity == granularity,
+                        AssetValue.target_asset == target_asset)
             if approximation:
                 asset_value = asset_value.filter(
                     AssetValue.evaluated_at <= evaluated_at) \
@@ -213,11 +218,13 @@ class Account(db.Model, CRUDMixin):
 
             if asset_value:
                 worth = asset_value.close * quantity
+            elif approximation:
+                worth = 0
             else:
                 raise AssetValueUnavailableException()
-            nw[asset] = worth
+            net_asset_value += worth
 
-        return nw
+        return net_asset_value
 
 
 class Portfolio(db.Model, CRUDMixin):
@@ -229,16 +236,13 @@ class Portfolio(db.Model, CRUDMixin):
         if commit:
             db.session.commit()
 
-    def net_worth(self, evaluated_at=None, granularity=Granularity.day,
-                  approximation=False):
+    def net_worth(self, evaluated_at=None, granularity=Granularity.day):
         """Calculates the net worth of the portfolio on a particular datetime.
-        If approximation=True and the asset value record is unavailable for the
-        given date (evaluated_at), try to pull the most recent AssetValue.
         """
-        nw = {}
+        net = 0
         for account in self.accounts:
-            nw.update(account.net_worth(evaluated_at, granularity, True))
-        return nw
+            net += account.net_worth(evaluated_at, granularity, True)
+        return net
 
 
 class Transaction(db.Model, CRUDMixin):
