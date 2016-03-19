@@ -152,6 +152,7 @@ class Asset(db.Model, CRUDMixin):
 
 class Account(db.Model, CRUDMixin):
     user_id = db.Column(db.BigInteger, db.ForeignKey('user.id'))
+    portfolio_id = db.Column(db.BigInteger, db.ForeignKey('portfolio.id'))
     type = db.Column(db.Enum('checking', 'savings', 'investment',
                              'credit_card', 'virtual', name='account_type'))
     name = db.Column(db.String)
@@ -185,7 +186,6 @@ class Account(db.Model, CRUDMixin):
         If approximation=True and the asset value record is unavailable for the
         given date (evaluated_at), try to pull the most recent AssetValue.
         """
-
         if not evaluated_at:
             evaluated_at = datetime.utcnow()
 
@@ -217,6 +217,27 @@ class Account(db.Model, CRUDMixin):
                 raise AssetValueUnavailableException()
             nw[asset] = worth
 
+        return nw
+
+
+class Portfolio(db.Model, CRUDMixin):
+    """A collection of accounts (= a collection of assets)."""
+    accounts = db.relationship('Account', backref='portfolio', lazy='dynamic')
+
+    def add_accounts(self, *accounts, commit=True):
+        self.accounts.extend(accounts)
+        if commit:
+            db.session.commit()
+
+    def net_worth(self, evaluated_at=None, granularity=Granularity.day,
+                  approximation=False):
+        """Calculates the net worth of the portfolio on a particular datetime.
+        If approximation=True and the asset value record is unavailable for the
+        given date (evaluated_at), try to pull the most recent AssetValue.
+        """
+        nw = {}
+        for account in self.accounts:
+            nw.update(account.net_worth(evaluated_at, granularity, True))
         return nw
 
 
