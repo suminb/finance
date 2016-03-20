@@ -202,6 +202,10 @@ class Account(db.Model, CRUDMixin):
 
         net_asset_value = 0
         for asset, quantity in self.balance.items():
+            if asset == target_asset:
+                net_asset_value += quantity
+                continue
+
             asset_value = AssetValue.query \
                 .filter(AssetValue.asset == asset,
                         AssetValue.granularity == granularity,
@@ -229,7 +233,13 @@ class Account(db.Model, CRUDMixin):
 
 class Portfolio(db.Model, CRUDMixin):
     """A collection of accounts (= a collection of assets)."""
+    __table_args__ = (
+        db.ForeignKeyConstraint(['target_asset_id'], ['asset.id']),
+    )
     accounts = db.relationship('Account', backref='portfolio', lazy='dynamic')
+    target_asset_id = db.Column(db.BigInteger)
+    target_asset = db.relationship('Asset', uselist=False,
+                                   foreign_keys=[target_asset_id])
 
     def add_accounts(self, *accounts, commit=True):
         self.accounts.extend(accounts)
@@ -241,7 +251,8 @@ class Portfolio(db.Model, CRUDMixin):
         """
         net = 0
         for account in self.accounts:
-            net += account.net_worth(evaluated_at, granularity, True)
+            net += account.net_worth(evaluated_at, granularity, True,
+                                     self.target_asset)
         return net
 
 
