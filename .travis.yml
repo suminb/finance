@@ -25,7 +25,7 @@ before_script:
   - finance create_all
 
 script:
-  - py.test tests --cov finance --cov-report term-missing
+  - py.test -v tests --cov finance --cov-report term-missing
 
 after_success:
   - coveralls
