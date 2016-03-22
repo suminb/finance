@@ -14,7 +14,8 @@ def date_range(start, end, step=1):
         raise NotImplementedError('Any value of step that is not 1 is not '
                                   'supported at the moment')
     delta = end - start
-    return [start + timedelta(days=i) for i in range(0, delta.days)]
+    for i in range(0, delta.days):
+        yield start + timedelta(days=i)
 
 
 def make_date(strdate):
