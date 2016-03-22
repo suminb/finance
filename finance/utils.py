@@ -1,6 +1,20 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import xmltodict
+
+
+def date_range(start, end, step=1):
+    """Generates a range of dates.
+
+    :param start: Starting date (inclusive)
+    :param end: Ending date (exclusive)
+    :param step: Number of days to jump (currently unsupported)
+    """
+    if step != 1:
+        raise NotImplementedError('Any value of step that is not 1 is not '
+                                  'supported at the moment')
+    delta = end - start
+    return [start + timedelta(days=i) for i in range(0, delta.days)]
 
 
 def make_date(strdate):
