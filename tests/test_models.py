@@ -100,6 +100,12 @@ def test_records(account_checking, asset_krw):
 def test_net_worth_1(account_checking, asset_krw):
     assert 0 == account_checking.net_worth(
         evaluated_at=make_date('2016-01-01'), target_asset=asset_krw)
+    assert 0 == account_checking.net_worth(
+        evaluated_at=make_date('2016-01-02'), target_asset=asset_krw)
+    assert 0 == account_checking.net_worth(
+        evaluated_at=make_date('2016-01-03'), target_asset=asset_krw)
+    assert 0 == account_checking.net_worth(
+        evaluated_at=make_date('2016-01-04'), target_asset=asset_krw)
 
     with Transaction.create() as t:
         Record.create(
@@ -108,23 +114,38 @@ def test_net_worth_1(account_checking, asset_krw):
 
     assert 1000 == account_checking.net_worth(
         evaluated_at=make_date('2016-01-01'), target_asset=asset_krw)
-
     assert 1000 == account_checking.net_worth(
         evaluated_at=make_date('2016-01-02'), target_asset=asset_krw)
+    assert 1000 == account_checking.net_worth(
+        evaluated_at=make_date('2016-01-03'), target_asset=asset_krw)
+    assert 1000 == account_checking.net_worth(
+        evaluated_at=make_date('2016-01-04'), target_asset=asset_krw)
 
     with Transaction.create() as t:
         Record.create(
-            created_at=make_date('2016-01-01'), transaction=t,
+            created_at=make_date('2016-01-02'), transaction=t,
             account=account_checking, asset=asset_krw, quantity=2000)
 
+    assert 1000 == account_checking.net_worth(
+        evaluated_at=make_date('2016-01-01'), target_asset=asset_krw)
     assert 3000 == account_checking.net_worth(
         evaluated_at=make_date('2016-01-02'), target_asset=asset_krw)
+    assert 3000 == account_checking.net_worth(
+        evaluated_at=make_date('2016-01-03'), target_asset=asset_krw)
+    assert 3000 == account_checking.net_worth(
+        evaluated_at=make_date('2016-01-04'), target_asset=asset_krw)
 
     with Transaction.create() as t:
         Record.create(
             created_at=make_date('2016-01-03'), transaction=t,
             account=account_checking, asset=asset_krw, quantity=-1500)
 
+    assert 1000 == account_checking.net_worth(
+        evaluated_at=make_date('2016-01-01'), target_asset=asset_krw)
+    assert 3000 == account_checking.net_worth(
+        evaluated_at=make_date('2016-01-02'), target_asset=asset_krw)
+    assert 1500 == account_checking.net_worth(
+        evaluated_at=make_date('2016-01-03'), target_asset=asset_krw)
     assert 1500 == account_checking.net_worth(
         evaluated_at=make_date('2016-01-04'), target_asset=asset_krw)
 

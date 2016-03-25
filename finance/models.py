@@ -171,11 +171,19 @@ class Account(db.Model, CRUDMixin):
     def __repr__(self):
         return 'Account <{} ({})>'.format(self.name, self.type)
 
-    @property
-    def balance(self):
+    def balance(self, evaluated_at=None):
+        """Calculates the account balance on a given date."""
+        if not evaluated_at:
+            evaluated_at = datetime.utcnow()
+
+        # FIMXE: Consider open transactions
+        records = Record.query.filter(
+            Record.account == self,
+            Record.created_at <= evaluated_at)
+
         # Sum all transactions to produce {asset: sum(quantity)} dictionary
         bs = {}
-        rs = [(r.asset, r.quantity) for r in self.records]
+        rs = [(r.asset, r.quantity) for r in records]
         for asset, quantity in rs:
             bs.setdefault(asset, 0)
             bs[asset] += quantity
@@ -201,7 +209,7 @@ class Account(db.Model, CRUDMixin):
             raise NotImplementedError
 
         net_asset_value = 0
-        for asset, quantity in self.balance.items():
+        for asset, quantity in self.balance(evaluated_at).items():
             if asset == target_asset:
                 net_asset_value += quantity
                 continue
