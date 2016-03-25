@@ -40,21 +40,21 @@ def db(app, request):
     return _db
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='function')
 def account_checking(request, db):
     account = Account.create(type='checking', name='Shinhan Checking')
     request.addfinalizer(partial(teardown, db=db, record=account))
     return account
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='function')
 def account_hf(request, db):
     account = Account.create(type='virtual', name='어니스트펀드')
     request.addfinalizer(partial(teardown, db=db, record=account))
     return account
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='function')
 def account_sp500(request, db):
     account = Account.create(type='investment', name='S&P500 Fund')
     request.addfinalizer(partial(teardown, db=db, record=account))
