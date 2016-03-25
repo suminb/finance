@@ -8,7 +8,7 @@ import requests
 from finance import create_app
 from finance.exceptions import AssetNotFoundException
 from finance.models import *  # noqa
-from finance.utils import AssetValueSchema
+from finance.utils import AssetValueSchema, make_date
 
 
 tf = lambda x: datetime.strptime(x, '%Y-%m-%d')
@@ -49,6 +49,7 @@ def insert_test_data():
             type='investment', name='S&P500 Fund', user=user)
         account_esch = Account.create(
             type='investment', name='East Spring China Fund', user=user)
+        account_hf = Account.create(type='virtual', name='어니스트펀드', user=user)
 
         asset_krw = Asset.create(
             type='currency', name='KRW', description='Korean Won')
@@ -62,6 +63,8 @@ def insert_test_data():
         asset_esch = Asset.create(
             type='security', name='East Spring China',
             data={'code': 'KR5229221225'})
+        asset_hf1 = Asset.create(
+            type='bond', name='포트폴리오 투자상품 1호')
 
         with Transaction.create() as t:
             Record.create(
@@ -132,6 +135,43 @@ def insert_test_data():
 2016-02-26, account_gold, asset_gold, -1.63
 2016-02-26, account_checking, asset_krw, 79589
 """
+        with Transaction.create() as t:
+            Record.create(
+                created_at=make_date('2015-12-04'), transaction=t,
+                account=account_checking, asset=asset_krw, quantity=500000)
+            Record.create(
+                created_at=make_date('2015-12-04'), transaction=t,
+                account=account_checking, asset=asset_krw, quantity=-500000)
+            Record.create(
+                created_at=make_date('2015-12-04'), transaction=t,
+                account=account_hf, asset=asset_hf1, quantity=1)
+        # Initial asset value
+        AssetValue.create(
+            evaluated_at=make_date('2015-12-04'), asset=asset_hf1,
+            target_asset=asset_krw, granularity='1day', close=500000)
+        # 1st payment
+        interest, tax, returned = 3923, 740, 30930
+        with Transaction.create() as t:
+            Record.create(
+                created_at=make_date('2016-01-08'), transaction=t,
+                account=account_checking, asset=asset_krw, quantity=returned)
+        # Remaining principle value after the 1st payment
+        AssetValue.create(
+            evaluated_at=make_date('2016-01-08'), asset=asset_hf1,
+            target_asset=asset_krw, granularity='1day', close=472253)
+        # 2nd payment
+        with Transaction.create() as t:
+            Record.create(
+                created_at=make_date('2016-02-05'), transaction=t,
+                account=account_checking, asset=asset_krw, quantity=25016)
+        # Remaining principle value after the 2nd payment
+        AssetValue.create(
+            evaluated_at=make_date('2016-02-05'), asset=asset_hf1,
+            target_asset=asset_krw, granularity='1day', close=450195)
+
+        portfolio = Portfolio()
+        portfolio.target_asset = asset_krw
+        portfolio.add_accounts(account_hf, account_checking)
 
 
 @cli.command()

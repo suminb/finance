@@ -13,6 +13,11 @@ def date_range(start, end, step=1):
     if step != 1:
         raise NotImplementedError('Any value of step that is not 1 is not '
                                   'supported at the moment')
+    if isinstance(start, str):
+        start = make_date(start)
+    if isinstance(end, str):
+        end = make_date(end)
+
     delta = end - start
     for i in range(0, delta.days):
         yield start + timedelta(days=i)
