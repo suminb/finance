@@ -31,6 +31,41 @@ def make_date(strdate):
     return datetime.strptime(strdate, '%Y-%m-%d')
 
 
+def parse_decimal(v):
+    try:
+        return float(v)
+    except ValueError:
+        return None
+
+
+def insert_asset(row):
+    """Parses a comma separated values to fill in an Asset object.
+
+    :param row: comma separated values
+    """
+    from finance.models import Asset
+    type, name, description = row.split(',')
+    Asset.create(type=type, name=name, description=description)
+
+
+def insert_asset_value(row, asset, target_asset):
+    """
+    (evaluated_at, granularity, open, high, low, close)
+    """
+    from finance.models import AssetValue
+    columns = row.split(',')
+    evaluated_at = make_date(columns[0])
+    granularity = columns[1]
+    open, high, low, close = map(parse_decimal, columns[2:6])
+    AssetValue.create(asset=asset, target_asset=target_asset,
+                      evaluated_at=evaluated_at, granularity=granularity,
+                      open=open, high=high, low=low, close=close)
+
+
+def insert_record(row):
+    Record.create()
+
+
 class AssetValueImporter(object):
     pass
 

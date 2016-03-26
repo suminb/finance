@@ -8,7 +8,8 @@ import requests
 from finance import create_app
 from finance.exceptions import AssetNotFoundException
 from finance.models import *  # noqa
-from finance.utils import AssetValueSchema, make_date
+from finance.utils import (
+    AssetValueSchema, make_date, insert_asset, insert_asset_value)
 
 
 tf = lambda x: datetime.strptime(x, '%Y-%m-%d')
@@ -66,59 +67,6 @@ def insert_test_data():
         asset_hf1 = Asset.create(
             type='bond', name='포트폴리오 투자상품 1호')
 
-        with Transaction.create() as t:
-            Record.create(
-                transaction=t,
-                account=account_checking, asset=asset_krw, quantity=1000000)
-        with Transaction.create() as t:
-            Record.create(
-                transaction=t, account=account_checking, asset=asset_krw,
-                quantity=-4900)
-
-        with Transaction.create() as t:
-            Record.create(
-                created_at=tf('2015-07-24'), transaction=t,
-                account=account_gold, asset=asset_gold,
-                quantity=2.00)
-            Record.create(
-                created_at=tf('2015-07-24'), transaction=t,
-                account=account_checking, asset=asset_krw,
-                quantity=-84000)
-
-        with Transaction.create() as t:
-            Record.create(
-                created_at=tf('2015-12-28'), transaction=t,
-                account=account_gold, asset=asset_gold,
-                quantity=-1.00)
-            Record.create(
-                created_at=tf('2015-12-28'), transaction=t,
-                account=account_checking, asset=asset_krw,
-                quantity=49000)
-
-        with Transaction.create() as t:
-            Record.create(
-                created_at=tf('2016-02-25'), transaction=t,
-                account=account_sp500, asset=asset_sp500,
-                quantity=1000)
-            Record.create(
-                created_at=tf('2016-02-25'), transaction=t,
-                account=account_checking, asset=asset_krw,
-                quantity=-1000 * 921.77)
-
-        AssetValue.create(
-            evaluated_at=tf('2016-02-25'), asset=asset_sp500,
-            target_asset=asset_krw, granularity='1day', close=921.77)
-        AssetValue.create(
-            evaluated_at=tf('2016-02-24'), asset=asset_sp500,
-            target_asset=asset_krw, granularity='1day', close=932.00)
-        AssetValue.create(
-            evaluated_at=tf('2016-02-23'), asset=asset_sp500,
-            target_asset=asset_krw, granularity='1day', close=921.06)
-        AssetValue.create(
-            evaluated_at=tf('2016-02-22'), asset=asset_sp500,
-            target_asset=asset_krw, granularity='1day', close=921.76)
-
-
         data = """
 2016-01-22, account_gold, asset_gold, 10.00
 2016-01-22, account_checking, asset_krw, -426870
@@ -146,9 +94,7 @@ def insert_test_data():
                 created_at=make_date('2015-12-04'), transaction=t,
                 account=account_hf, asset=asset_hf1, quantity=1)
         # Initial asset value
-        AssetValue.create(
-            evaluated_at=make_date('2015-12-04'), asset=asset_hf1,
-            target_asset=asset_krw, granularity='1day', close=500000)
+        insert_asset_value('2015-12-04,1day,,,,500000', asset_hf1, asset_krw)
         # 1st payment
         interest, tax, returned = 3923, 740, 30930
         with Transaction.create() as t:
@@ -156,18 +102,14 @@ def insert_test_data():
                 created_at=make_date('2016-01-08'), transaction=t,
                 account=account_checking, asset=asset_krw, quantity=returned)
         # Remaining principle value after the 1st payment
-        AssetValue.create(
-            evaluated_at=make_date('2016-01-08'), asset=asset_hf1,
-            target_asset=asset_krw, granularity='1day', close=472253)
+        insert_asset_value('2016-01-08,1day,,,,472253', asset_hf1, asset_krw)
         # 2nd payment
         with Transaction.create() as t:
             Record.create(
                 created_at=make_date('2016-02-05'), transaction=t,
                 account=account_checking, asset=asset_krw, quantity=25016)
         # Remaining principle value after the 2nd payment
-        AssetValue.create(
-            evaluated_at=make_date('2016-02-05'), asset=asset_hf1,
-            target_asset=asset_krw, granularity='1day', close=450195)
+        insert_asset_value('2016-02-05,1day,,,,450195', asset_hf1, asset_krw)
 
         portfolio = Portfolio()
         portfolio.target_asset = asset_krw

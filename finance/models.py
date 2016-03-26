@@ -115,17 +115,16 @@ class AssetValue(db.Model, CRUDMixin):
                                     '1week', '1month', '1year',
                                     name='granularity'))
     open = db.Column(db.Numeric(precision=20, scale=4))
-    close = db.Column(db.Numeric(precision=20, scale=4))
-    low = db.Column(db.Numeric(precision=20, scale=4))
     high = db.Column(db.Numeric(precision=20, scale=4))
+    low = db.Column(db.Numeric(precision=20, scale=4))
+    close = db.Column(db.Numeric(precision=20, scale=4))
 
 
 class Asset(db.Model, CRUDMixin):
-    name = db.Column(db.String)
-    description = db.Column(db.Text)
     type = db.Column(db.Enum('currency', 'stock', 'bond', 'security', 'fund',
                              'commodity', name='asset_type'))
-    # unit_price = db.Column(db.Numeric(precision=20, scale=4))
+    name = db.Column(db.String)
+    description = db.Column(db.Text)
 
     #: Arbitrary data
     data = db.Column(JsonType)
