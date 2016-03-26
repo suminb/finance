@@ -9,7 +9,8 @@ from finance import create_app
 from finance.exceptions import AssetNotFoundException
 from finance.models import *  # noqa
 from finance.utils import (
-    AssetValueSchema, make_date, insert_asset, insert_asset_value)
+    AssetValueSchema, make_date, insert_asset, insert_asset_value,
+    insert_record)
 
 
 tf = lambda x: datetime.strptime(x, '%Y-%m-%d')
@@ -52,62 +53,54 @@ def insert_test_data():
             type='investment', name='East Spring China Fund', user=user)
         account_hf = Account.create(type='virtual', name='어니스트펀드', user=user)
 
-        asset_krw = Asset.create(
-            type='currency', name='KRW', description='Korean Won')
-        asset_usd = Asset.create(
-            type='currency', name='USD', description='United States Dollar')
-        asset_gold = Asset.create(
-            type='commodity', name='Gold', description='')
-        asset_sp500 = Asset.create(
-            type='security', name='KB S&P500', description='',
-            data={'code': 'KR5223941018'})
-        asset_esch = Asset.create(
-            type='security', name='East Spring China',
-            data={'code': 'KR5229221225'})
-        asset_hf1 = Asset.create(
-            type='bond', name='포트폴리오 투자상품 1호')
+        asset_krw = insert_asset('currency, KRW, Korean Won')
+        asset_usd = insert_asset('currency, USD, United States Dollar')
+        asset_gold = insert_asset('commodity, Gold, Gold')
+        asset_sp500 = insert_asset('security, KB S&P500,',
+                                   data={'code': 'KR5223941018'})
+        asset_esch = insert_asset('security, 이스트스프링차이나펀드,',
+                                  data={'code': 'KR5229221225'})
+        asset_hf1 = insert_asset('bond, 포트폴리오 투자상품 1호,')
 
-        data = """
-2016-01-22, account_gold, asset_gold, 10.00
-2016-01-22, account_checking, asset_krw, -426870
-2016-02-12, account_gold, asset_gold, -1.04
-2016-02-12, account_checking, asset_krw, 49586
-2016-02-12, account_gold, asset_gold, -1.04
-2016-02-12, account_checking, asset_krw, 49816
-2016-02-19, account_gold, asset_gold, -1.00
-2016-02-19, account_checking, asset_krw, 48603
-2016-02-23, account_gold, asset_gold, -2.08
-2016-02-23, account_checking, asset_krw, 99577
-2016-02-24, account_gold, asset_gold, -2.06
-2016-02-24, account_checking, asset_krw, 99667
-2016-02-26, account_gold, asset_gold, -1.63
-2016-02-26, account_checking, asset_krw, 79589
-"""
         with Transaction.create() as t:
-            Record.create(
-                created_at=make_date('2015-12-04'), transaction=t,
-                account=account_checking, asset=asset_krw, quantity=500000)
-            Record.create(
-                created_at=make_date('2015-12-04'), transaction=t,
-                account=account_checking, asset=asset_krw, quantity=-500000)
-            Record.create(
-                created_at=make_date('2015-12-04'), transaction=t,
-                account=account_hf, asset=asset_hf1, quantity=1)
+            insert_record(',2016-01-22,,10.00', account_gold, asset_gold, t)
+            insert_record(',2016-01-22,,-426870', account_checking, asset_krw, t)
+        with Transaction.create() as t:
+            insert_record(',2016-01-22,,-1.04', account_gold, asset_gold, t)
+            insert_record(',2016-01-22,,49586', account_checking, asset_krw, t)
+        with Transaction.create() as t:
+            insert_record(',2016-01-22,,-1.04', account_gold, asset_gold, t)
+            insert_record(',2016-01-22,,49816', account_checking, asset_krw, t)
+        with Transaction.create() as t:
+            insert_record(',2016-01-29,,-1.00', account_gold, asset_gold, t)
+            insert_record(',2016-01-29,,48603', account_checking, asset_krw, t)
+        with Transaction.create() as t:
+            insert_record(',2016-02-23,,-2.08', account_gold, asset_gold, t)
+            insert_record(',2016-02-23,,99577', account_checking, asset_krw, t)
+        with Transaction.create() as t:
+            insert_record(',2016-02-24,,-2.06', account_gold, asset_gold, t)
+            insert_record(',2016-02-24,,99667', account_checking, asset_krw, t)
+        with Transaction.create() as t:
+            insert_record(',2016-02-26,,-1.63', account_gold, asset_gold, t)
+            insert_record(',2016-02-26,,79589', account_checking, asset_krw, t)
+
+        with Transaction.create() as t:
+            insert_record(',2015-12-04,,500000',
+                          account_checking, asset_krw, t)
+            insert_record(',2015-12-04,,-500000',
+                          account_checking, asset_krw, t)
+            insert_record(',2015-12-04,,1', account_hf, asset_hf1, t)
         # Initial asset value
         insert_asset_value('2015-12-04,1day,,,,500000', asset_hf1, asset_krw)
         # 1st payment
         interest, tax, returned = 3923, 740, 30930
         with Transaction.create() as t:
-            Record.create(
-                created_at=make_date('2016-01-08'), transaction=t,
-                account=account_checking, asset=asset_krw, quantity=returned)
+            insert_record(',2016-01-08,,30930', account_checking, asset_krw, t)
         # Remaining principle value after the 1st payment
         insert_asset_value('2016-01-08,1day,,,,472253', asset_hf1, asset_krw)
         # 2nd payment
         with Transaction.create() as t:
-            Record.create(
-                created_at=make_date('2016-02-05'), transaction=t,
-                account=account_checking, asset=asset_krw, quantity=25016)
+            insert_record(',2016-02-05,,25016', account_checking, asset_krw, t)
         # Remaining principle value after the 2nd payment
         insert_asset_value('2016-02-05,1day,,,,450195', asset_hf1, asset_krw)
 

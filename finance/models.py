@@ -304,14 +304,14 @@ class Transaction(db.Model, CRUDMixin):
 
 class Record(db.Model, CRUDMixin):
     account_id = db.Column(db.BigInteger, db.ForeignKey('account.id'))
-    transaction_id = db.Column(db.BigInteger, db.ForeignKey('transaction.id'))
-    # NOTE: We'll always use the UTC time
-    created_at = db.Column(db.DateTime(timezone=False))
-    type = db.Column(db.Enum('deposit', 'withdraw', 'balance_adjustment',
-                             name='record_type'))
-    category = db.Column(db.String)
     asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
     # asset = db.relationship(Asset, uselist=False)
+    transaction_id = db.Column(db.BigInteger, db.ForeignKey('transaction.id'))
+    type = db.Column(db.Enum('deposit', 'withdraw', 'balance_adjustment',
+                             name='record_type'))
+    # NOTE: We'll always use the UTC time
+    created_at = db.Column(db.DateTime(timezone=False))
+    category = db.Column(db.String)
     quantity = db.Column(db.Numeric(precision=20, scale=4))
 
     def __init__(self, *args, **kwargs):

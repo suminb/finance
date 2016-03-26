@@ -31,6 +31,10 @@ def make_date(strdate):
     return datetime.strptime(strdate, '%Y-%m-%d')
 
 
+def parse_nullable_str(v):
+    return v if v else None
+
+
 def parse_decimal(v):
     try:
         return float(v)
@@ -38,14 +42,16 @@ def parse_decimal(v):
         return None
 
 
-def insert_asset(row):
+def insert_asset(row, data=None):
     """Parses a comma separated values to fill in an Asset object.
+    (type, name, description)
 
     :param row: comma separated values
     """
     from finance.models import Asset
-    type, name, description = row.split(',')
-    Asset.create(type=type, name=name, description=description)
+    type, name, description = [x.strip() for x in row.split(',')]
+    return Asset.create(
+        type=type, name=name, description=description, data=data)
 
 
 def insert_asset_value(row, asset, target_asset):
@@ -53,17 +59,28 @@ def insert_asset_value(row, asset, target_asset):
     (evaluated_at, granularity, open, high, low, close)
     """
     from finance.models import AssetValue
-    columns = row.split(',')
+    columns = [x.strip() for x in row.split(',')]
     evaluated_at = make_date(columns[0])
     granularity = columns[1]
     open, high, low, close = map(parse_decimal, columns[2:6])
-    AssetValue.create(asset=asset, target_asset=target_asset,
-                      evaluated_at=evaluated_at, granularity=granularity,
-                      open=open, high=high, low=low, close=close)
+    return AssetValue.create(
+        asset=asset, target_asset=target_asset, evaluated_at=evaluated_at,
+        granularity=granularity, open=open, high=high, low=low, close=close)
 
 
-def insert_record(row):
-    Record.create()
+def insert_record(row, account, asset, transaction):
+    """
+    (type, created_at, cateory, quantity)
+    """
+    from finance.models import Record
+    type, created_at, category, quantity = [x.strip() for x in row.split(',')]
+    type = parse_nullable_str(type)
+    created_at = make_date(created_at)
+    category = parse_nullable_str(category)
+    quantity = parse_decimal(quantity)
+    return Record.create(
+        account=account, asset=asset, transaction=transaction, type=type,
+        created_at=created_at, category=category, quantity=quantity)
 
 
 class AssetValueImporter(object):
