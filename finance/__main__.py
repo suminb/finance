@@ -118,6 +118,22 @@ def test():
 
 
 @cli.command()
+@click.argument('filename')
+def import_8percent(filename):
+    from bs4 import BeautifulSoup
+    with open(filename) as fin:
+        raw = fin.read()
+    soup = BeautifulSoup(raw, 'html.parser')
+
+    rows = soup.find_all('div', class_='Box_444')
+    for row in rows:
+        cols = row.find_all('div')
+        cols = [x.text.strip() for x in cols]
+        date, _, principle, interest, tax, fees, total = cols
+        print(date, principle, interest, tax, fees, total)
+
+
+@cli.command()
 @click.argument('code')
 @click.argument('from-date')
 @click.argument('to-date')
