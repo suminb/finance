@@ -23,6 +23,15 @@ def date_range(start, end, step=1):
         yield start + timedelta(days=i)
 
 
+def extract_numbers(value):
+    """Extracts numbers only from a string."""
+    def extract(vs):
+        for v in vs:
+            if v in '01234567890':
+                yield v
+    return ''.join(extract(value))
+
+
 def make_date(strdate):
     """Make a datetime object from a string.
 

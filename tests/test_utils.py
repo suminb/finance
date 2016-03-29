@@ -1,6 +1,6 @@
 import types
 
-from finance.utils import date_range, make_date
+from finance.utils import date_range, extract_numbers, make_date
 
 
 def test_date_range():
@@ -12,3 +12,9 @@ def test_date_range():
     assert 14 == len(r)
     assert r[0] == make_date('2016-01-01')
     assert r[13] == make_date('2016-01-14')
+
+
+def test_extract_numbers():
+    assert '160' == extract_numbers('160')
+    assert '1694' == extract_numbers('1,694')
+    assert '1806' == extract_numbers('1,806 원')
