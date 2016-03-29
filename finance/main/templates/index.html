@@ -52,7 +52,7 @@
 <script src="http://techanjs.org/techan.min.js"></script>
 <script>
 
-    var margin = {top: 20, right: 20, bottom: 30, left: 50},
+    var margin = {top: 20, right: 20, bottom: 30, left: 80},
             width = 960 - margin.left - margin.right,
             height = 500 - margin.top - margin.bottom;
 
@@ -117,7 +117,7 @@
         }).sort(function(a, b) { return d3.ascending(accessor.d(a), accessor.d(b)); });
      */
 
-    $.get('/data', function(response) {
+    $.get('/data', {start: '{{ start }}', end: '{{ end }}'}, function(response) {
         var accessor = candlestick.accessor(), timestart = Date.now();
         var data = response.data;
         data = data.map(function(d) {
@@ -130,12 +130,10 @@
             volume: d[5]
           };
         });
-        console.log(data);
 
         data = data.sort(function(a, b) {
           return d3.ascending(accessor.d(a), accessor.d(b));
         });
-        console.log(data);
 
         x.domain(data.map(accessor.d));
         y.domain(techan.scale.plot.ohlc(data, accessor).domain());
@@ -158,7 +156,7 @@
                 .attr("y", 6)
                 .attr("dy", ".71em")
                 .style("text-anchor", "end")
-                .text("Price ($)");
+                .text("Price");
 
         svg.append("g")
                 .attr("class", "volume axis");

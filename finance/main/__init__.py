@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, render_template
+from flask import Blueprint, jsonify, render_template, request
 
 from finance.models import Portfolio
 from finance.utils import date_range
@@ -9,9 +9,11 @@ main_module = Blueprint('main', __name__, template_folder='templates')
 @main_module.route('/')
 def index():
     portfolio = Portfolio.query.first()
+    start, end = map(request.args.get, ['start', 'end'])
     context = {
         'portfolio': portfolio,
-        'date_range': date_range('2016-01-01', '2016-02-28'),
+        'start': start,
+        'end': end,
     }
     return render_template('index.html', **context)
 
@@ -19,7 +21,7 @@ def index():
 @main_module.route('/data')
 def data():
     portfolio = Portfolio.query.first()
-    start, end = '2016-01-01', '2016-02-28'
+    start, end = map(request.args.get, ['start', 'end'])
     def gen(start, end):
         for date in date_range(start, end):
             nw = portfolio.net_worth(date)
