@@ -51,7 +51,10 @@ def insert_test_data():
             type='investment', name='S&P500 Fund', user=user)
         account_esch = Account.create(
             type='investment', name='East Spring China Fund', user=user)
-        account_hf = Account.create(type='virtual', name='어니스트펀드', user=user)
+        account_kjp = Account.create(
+            type='investment', name='키움일본인덱스 주식재간접', user=user)
+        account_hf = Account.create(
+            type='virtual', name='어니스트펀드', user=user)
 
         asset_krw = insert_asset('currency, KRW, Korean Won')
         asset_usd = insert_asset('currency, USD, United States Dollar')
@@ -60,7 +63,13 @@ def insert_test_data():
                                    data={'code': 'KR5223941018'})
         asset_esch = insert_asset('security, 이스트스프링차이나펀드,',
                                   data={'code': 'KR5229221225'})
+        asset_kjp = insert_asset('security, 키움일본인덱스,',
+                                 data={'code': 'KR5206689717'})
         asset_hf1 = insert_asset('bond, 포트폴리오 투자상품 1호,')
+
+        insert_record(',2015-01-01,,2400727', account_sp500, asset_sp500, None)
+        insert_record(',2015-01-01,,1685792', account_esch, asset_esch, None)
+        insert_record(',2015-01-01,,268695', account_kjp, asset_kjp, None)
 
         with Transaction.create() as t:
             insert_record(',2016-01-22,,10.00', account_gold, asset_gold, t)
@@ -106,7 +115,8 @@ def insert_test_data():
 
         portfolio = Portfolio()
         portfolio.target_asset = asset_krw
-        portfolio.add_accounts(account_hf, account_checking)
+        portfolio.add_accounts(account_hf, account_checking, account_sp500,
+                               account_kjp)
 
 
 @cli.command()
@@ -195,6 +205,7 @@ def import_fund(code, from_date, to_date):
         schema.load(resp.text)
         for date, unit_price, original_quantity in schema.get_data():
             log.info('Import data on {}', date)
+            unit_price /= 1000.0
             try:
                 AssetValue.create(
                     asset=asset, target_asset=target_asset,
