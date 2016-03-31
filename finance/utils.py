@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+import requests
 import xmltodict
 
 
@@ -59,6 +60,21 @@ def parse_nullable_str(v):
     return v if v else None
 
 
+def fetch_8percent_data(bond_id, cookie):
+    url = 'https://8percent.kr/my/repayment_detail/{}/'.format(bond_id)
+    headers = {
+        'Accept-Encoding': 'text/html',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;'
+                  'q=0.9,image/webp,*/*;q=0.8',
+        'Cookie': cookie,
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_3) '
+                      'AppleWebKit/537.36 (KHTML, like Gecko) '
+                      'Chrome/49.0.2623.87 Safari/537.36',
+    }
+    resp = requests.get(url, headers=headers)
+    return resp.text
+
+
 def import_8percent_data(raw):
     from bs4 import BeautifulSoup
     soup = BeautifulSoup(raw, 'html.parser')
@@ -68,7 +84,8 @@ def import_8percent_data(raw):
         cols = row.find_all('div')
         cols = [x.text.strip() for x in cols]
         date = parse_date(cols[0], '%y.%m.%d')
-        principle, interest, tax, fees, total = map(extract_numbers, cols[2:7])
+        principle, interest, tax, fees, total = \
+            [extract_numbers(x, int) for x in cols[2:7]]
         yield date, principle, interest, tax, fees, total
 
 

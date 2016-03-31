@@ -9,8 +9,8 @@ from finance import create_app
 from finance.exceptions import AssetNotFoundException
 from finance.models import *  # noqa
 from finance.utils import (
-    AssetValueSchema, make_date, import_8percent_data, insert_asset,
-    insert_asset_value, insert_record)
+    AssetValueSchema, fetch_8percent_data, make_date, import_8percent_data,
+    insert_asset, insert_asset_value, insert_record)
 
 
 tf = lambda x: datetime.strptime(x, '%Y-%m-%d')
@@ -128,10 +128,10 @@ def test():
 
 
 @cli.command()
-@click.argument('filename')
-def import_8percent(filename):
-    with open(filename) as fin:
-        raw = fin.read()
+@click.argument('bond_id')
+@click.argument('cookie')
+def import_8percent(bond_id, cookie):
+    raw = fetch_8percent_data(bond_id, cookie)
     for row in import_8percent_data(raw):
         print(row)
 
