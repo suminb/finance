@@ -37,11 +37,15 @@ def make_date(strdate):
 
     :type strdate: str
     """
-    return datetime.strptime(strdate, '%Y-%m-%d')
+    return parse_date(strdate)
 
 
-def parse_nullable_str(v):
-    return v if v else None
+def parse_date(strdate, format='%Y-%m-%d'):
+    """Make a datetime object from a string.
+
+    :type strdate: str
+    """
+    return datetime.strptime(strdate, format)
 
 
 def parse_decimal(v):
@@ -49,6 +53,10 @@ def parse_decimal(v):
         return float(v)
     except ValueError:
         return None
+
+
+def parse_nullable_str(v):
+    return v if v else None
 
 
 def import_8percent_data(raw):
@@ -59,7 +67,7 @@ def import_8percent_data(raw):
     for row in rows:
         cols = row.find_all('div')
         cols = [x.text.strip() for x in cols]
-        date, _ = cols[0:2]
+        date = parse_date(cols[0], '%y.%m.%d')
         principle, interest, tax, fees, total = map(extract_numbers, cols[2:7])
         yield date, principle, interest, tax, fees, total
 
