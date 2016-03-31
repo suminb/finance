@@ -9,8 +9,8 @@ from finance import create_app
 from finance.exceptions import AssetNotFoundException
 from finance.models import *  # noqa
 from finance.utils import (
-    AssetValueSchema, make_date, insert_asset, insert_asset_value,
-    insert_record)
+    AssetValueSchema, make_date, import_8percent_data, insert_asset,
+    insert_asset_value, insert_record)
 
 
 tf = lambda x: datetime.strptime(x, '%Y-%m-%d')
@@ -130,17 +130,10 @@ def test():
 @cli.command()
 @click.argument('filename')
 def import_8percent(filename):
-    from bs4 import BeautifulSoup
     with open(filename) as fin:
         raw = fin.read()
-    soup = BeautifulSoup(raw, 'html.parser')
-
-    rows = soup.find_all('div', class_='Box_444')
-    for row in rows:
-        cols = row.find_all('div')
-        cols = [x.text.strip() for x in cols]
-        date, _, principle, interest, tax, fees, total = cols
-        print(date, principle, interest, tax, fees, total)
+    for row in import_8percent_data(raw):
+        print(row)
 
 
 @cli.command()

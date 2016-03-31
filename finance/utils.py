@@ -23,13 +23,13 @@ def date_range(start, end, step=1):
         yield start + timedelta(days=i)
 
 
-def extract_numbers(value):
+def extract_numbers(value, type=float):
     """Extracts numbers only from a string."""
     def extract(vs):
         for v in vs:
             if v in '01234567890':
                 yield v
-    return ''.join(extract(value))
+    return type(''.join(extract(value)))
 
 
 def make_date(strdate):
@@ -49,6 +49,19 @@ def parse_decimal(v):
         return float(v)
     except ValueError:
         return None
+
+
+def import_8percent_data(raw):
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(raw, 'html.parser')
+
+    rows = soup.find_all('div', class_='Box_444')
+    for row in rows:
+        cols = row.find_all('div')
+        cols = [x.text.strip() for x in cols]
+        date, _ = cols[0:2]
+        principle, interest, tax, fees, total = map(extract_numbers, cols[2:7])
+        yield date, principle, interest, tax, fees, total
 
 
 def insert_asset(row, data=None):
