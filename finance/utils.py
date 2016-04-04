@@ -4,6 +4,9 @@ import requests
 import xmltodict
 
 
+_8PERCENT_DATE_FORMAT = '%y.%m.%d'
+
+
 def date_range(start, end, step=1):
     """Generates a range of dates.
 
@@ -79,18 +82,48 @@ def parse_8percent_data(raw):
     from bs4 import BeautifulSoup
     soup = BeautifulSoup(raw, 'html.parser')
 
+    def extract_div_text(soup, id):
+        return soup.find('div', id=id).text.strip()
+
+    name = extract_div_text(soup, 'Text_298')
+    started_at = parse_date(extract_div_text(soup, 'Text_250'),
+                            _8PERCENT_DATE_FORMAT)
+    grade = extract_div_text(soup, 'Text_264')
+    duration = int(extract_numbers(extract_div_text(soup, 'Text_278')))
+    apy = float(extract_numbers(extract_div_text(soup, 'Text_281'))) / 100
+    amount = int(extract_numbers(extract_div_text(soup, 'Text_300')))
+
     rows = soup.find_all('div', class_='Box_444')
-    for row in rows:
-        cols = row.find_all('div')
-        cols = [x.text.strip() for x in cols]
-        date = parse_date(cols[0], '%y.%m.%d')
-        principle, interest, tax, fees, total = \
-            [extract_numbers(x, int) for x in cols[2:7]]
-        yield date, principle, interest, tax, fees
+    def gen_records(rows):
+        for row in rows:
+            cols = row.find_all('div')
+            cols = [x.text.strip() for x in cols]
+            date = parse_date(cols[0], _8PERCENT_DATE_FORMAT)
+            principle, interest, tax, fees, total = \
+                [extract_numbers(x, int) for x in cols[2:7]]
+            yield date, principle, interest, tax, fees
+
+    return {
+        'name': name,
+        'started_at': started_at,
+        'grade': grade,
+        'duration': duration,
+        'annual_percentage_yield': apy,
+        'amount': amount,
+        'records': gen_records(rows),
+    }
 
 
-def import_8percent_data(date, principle, interest, tax, fees):
-    pass
+
+def import_8percent_data(date, principle, interest, tax, fees,
+                         account_checking=None, asset_krw=None, asset_hf=None):
+    with Transaction.create() as t:
+        Record.create(
+            created_at=date, transaction=t,
+            account=account_checking, asset=asset_krw, quantity=returned)
+    AssetValue.create(
+        evaluated_at=date, asset=asset_hf,
+        target_asset=asset_krw, granularity='1day', close=472253)
 
 
 def insert_asset(row, data=None):

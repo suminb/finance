@@ -39,7 +39,7 @@ def test_parse_8percent_data():
     with open(sample_file) as fin:
         raw = fin.read()
 
-    data = [
+    stored_data = [
         ('2016-04-11', 612, 160, 1694, 340),
         ('2016-05-11', 390, 90, 1916, 0),
         ('2016-06-13', 386, 90, 1920, 0),
@@ -66,8 +66,18 @@ def test_parse_8percent_data():
         ('2018-03-12', 16, 0, 2290, 0),
     ]
 
+    parsed_data = parse_8percent_data(raw)
+
+    assert parsed_data['name']
+    assert parsed_data['grade']
+    assert isinstance(parsed_data['duration'], int)
+    assert isinstance(parsed_data['annual_percentage_yield'], float)
+    assert 0.0 < parsed_data['annual_percentage_yield'] <= 0.3
+    assert isinstance(parsed_data['amount'], int)
+    assert 0 < parsed_data['amount']
+
     flag = True
-    for expected, actual in zip(data, parse_8percent_data(raw)):
+    for expected, actual in zip(stored_data, parsed_data['records']):
         assert len(expected) == len(actual)
         expected = list(expected)
         expected[0] = make_date(expected[0])
