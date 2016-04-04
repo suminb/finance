@@ -1,5 +1,3 @@
-from datetime import datetime
-
 import click
 from logbook import Logger
 from sqlalchemy.exc import IntegrityError
@@ -13,7 +11,6 @@ from finance.utils import (
     insert_asset, insert_asset_value, insert_record)
 
 
-tf = lambda x: datetime.strptime(x, '%Y-%m-%d')
 log = Logger('finance')
 
 
@@ -124,7 +121,7 @@ def test():
     app = create_app(__name__)
     with app.app_context():
         account = Account.query.filter(Account.name == 'S&P500 Fund').first()
-        print(account.net_worth(tf('2016-02-25')))
+        print(account.net_worth(make_date('2016-02-25')))
 
 
 @cli.command()
