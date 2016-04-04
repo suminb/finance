@@ -110,20 +110,30 @@ def parse_8percent_data(raw):
         'duration': duration,
         'annual_percentage_yield': apy,
         'amount': amount,
-        'records': gen_records(rows),
+        'records': list(gen_records(rows)),
     }
 
 
+def import_8percent_data(parsed_data, account_checking=None, asset_krw=None):
+    from finance.models import Account, Asset, AssetValue, Record, Transaction
 
-def import_8percent_data(date, principle, interest, tax, fees,
-                         account_checking=None, asset_krw=None, asset_hf=None):
-    with Transaction.create() as t:
-        Record.create(
-            created_at=date, transaction=t,
-            account=account_checking, asset=asset_krw, quantity=returned)
-    AssetValue.create(
-        evaluated_at=date, asset=asset_hf,
-        target_asset=asset_krw, granularity='1day', close=472253)
+    account_checking = Account.query.filter(Account.name == 'Shinhan Checking').first()
+    asset_krw = Asset.query.filter(Asset.name == 'KRW').first()
+
+    asset_hf = Asset.create(name=parsed_data['name'])
+
+    remaining_value = parsed_data['amount']
+    for record in parsed_data['records']:
+        date, principle, interest, tax, fees = record
+        returned = principle + interest - (tax + fees)
+        remaining_value -= principle
+        with Transaction.create() as t:
+            Record.create(
+                created_at=date, transaction=t,
+                account=account_checking, asset=asset_krw, quantity=returned)
+        AssetValue.create(
+            evaluated_at=date, asset=asset_hf,
+            target_asset=asset_krw, granularity='1day', close=remaining_value)
 
 
 def insert_asset(row, data=None):

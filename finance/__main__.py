@@ -134,10 +134,12 @@ def import_8percent(filename, cookie):
         raw = fin.read()
     bond_ids = [int(x) for x in
                 re.findall(r'/my/repayment_detail/(\d+)', raw)]
-    for bond_id in bond_ids:
-        raw = fetch_8percent_data(bond_id, cookie)
-        for row in parse_8percent_data(raw):
-            insert_8percent_data(*row)
+    app = create_app(__name__)
+    with app.app_context():
+        for bond_id in bond_ids:
+            raw = fetch_8percent_data(bond_id, cookie)
+            parsed_data = parse_8percent_data(raw)
+            import_8percent_data(parsed_data)
 
 
 @cli.command()
