@@ -1,3 +1,5 @@
+import re
+
 import click
 from logbook import Logger
 from sqlalchemy.exc import IntegrityError
@@ -8,7 +10,7 @@ from finance.exceptions import AssetNotFoundException
 from finance.models import *  # noqa
 from finance.utils import (
     AssetValueSchema, fetch_8percent_data, make_date, import_8percent_data,
-    insert_asset, insert_asset_value, insert_record)
+    insert_asset, insert_asset_value, insert_record, parse_8percent_data)
 
 
 log = Logger('finance')
@@ -125,12 +127,17 @@ def test():
 
 
 @cli.command()
-@click.argument('bond_id')
+@click.argument('filename')
 @click.argument('cookie')
-def import_8percent(bond_id, cookie):
-    raw = fetch_8percent_data(bond_id, cookie)
-    for row in import_8percent_data(raw):
-        print(row)
+def import_8percent(filename, cookie):
+    with open(filename) as fin:
+        raw = fin.read()
+    bond_ids = [int(x) for x in
+                re.findall(r'/my/repayment_detail/(\d+)', raw)]
+    for bond_id in bond_ids:
+        raw = fetch_8percent_data(bond_id, cookie)
+        for row in parse_8percent_data(raw):
+            insert_8percent_data(*row)
 
 
 @cli.command()

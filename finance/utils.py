@@ -75,7 +75,7 @@ def fetch_8percent_data(bond_id, cookie):
     return resp.text
 
 
-def import_8percent_data(raw):
+def parse_8percent_data(raw):
     from bs4 import BeautifulSoup
     soup = BeautifulSoup(raw, 'html.parser')
 
@@ -86,7 +86,11 @@ def import_8percent_data(raw):
         date = parse_date(cols[0], '%y.%m.%d')
         principle, interest, tax, fees, total = \
             [extract_numbers(x, int) for x in cols[2:7]]
-        yield date, principle, interest, tax, fees, total
+        yield date, principle, interest, tax, fees
+
+
+def import_8percent_data(date, principle, interest, tax, fees):
+    pass
 
 
 def insert_asset(row, data=None):
