@@ -137,18 +137,28 @@ def parse_8percent_data(raw):
     }
 
 
-def import_8percent_data(parsed_data, account_checking=None, account_8p=None,
-                         asset_krw=None):
+def import_8percent_data(parsed_data, account_checking, account_8p, asset_krw):
     from finance.models import Asset, AssetValue, Record, Transaction
 
+    assert account_checking
+    assert account_8p
+    assert asset_krw
+
     asset_8p = Asset.create(name=parsed_data['name'])
+    remaining_value = parsed_data['amount']
+    started_at = parsed_data['started_at']
 
     with Transaction.create() as t:
         Record.create(
-            created_at=parsed_data['started_at'], transaction=t,
-            account=account_8p, asset=asset_8p, quantity=1)
+            created_at=started_at, transaction=t, account=account_checking,
+            asset=asset_krw, quantity=-remaining_value)
+        Record.create(
+            created_at=started_at, transaction=t, account=account_8p,
+            asset=asset_8p, quantity=1)
+    AssetValue.create(
+        evaluated_at=started_at, asset=asset_8p,
+        target_asset=asset_krw, granularity='1day', close=remaining_value)
 
-    remaining_value = parsed_data['amount']
     for record in parsed_data['records']:
         date, principle, interest, tax, fees = record
         returned = principle + interest - (tax + fees)
