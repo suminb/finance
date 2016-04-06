@@ -137,20 +137,16 @@ def parse_8percent_data(raw):
     }
 
 
-def import_8percent_data(parsed_data, account_checking=None, account_hf=None,
+def import_8percent_data(parsed_data, account_checking=None, account_8p=None,
                          asset_krw=None):
-    from finance.models import Account, Asset, AssetValue, Record, Transaction
+    from finance.models import Asset, AssetValue, Record, Transaction
 
-    account_checking = Account.query.filter(
-        Account.name == 'Shinhan Checking').first()
-    asset_krw = Asset.query.filter(Asset.name == 'KRW').first()
-
-    asset_hf = Asset.create(name=parsed_data['name'])
+    asset_8p = Asset.create(name=parsed_data['name'])
 
     with Transaction.create() as t:
         Record.create(
             created_at=parsed_data['started_at'], transaction=t,
-            account=account_hf, asset=asset_hf, quantity=1)
+            account=account_8p, asset=asset_8p, quantity=1)
 
     remaining_value = parsed_data['amount']
     for record in parsed_data['records']:
@@ -162,7 +158,7 @@ def import_8percent_data(parsed_data, account_checking=None, account_hf=None,
                 created_at=date, transaction=t,
                 account=account_checking, asset=asset_krw, quantity=returned)
         AssetValue.create(
-            evaluated_at=date, asset=asset_hf,
+            evaluated_at=date, asset=asset_8p,
             target_asset=asset_krw, granularity='1day', close=remaining_value)
 
 

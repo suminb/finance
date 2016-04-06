@@ -54,8 +54,10 @@ def insert_test_data():
             type='investment', name='East Spring China Fund', user=user)
         account_kjp = Account.create(
             type='investment', name='키움일본인덱스 주식재간접', user=user)
+        account_8p = Account.create(
+            id=8001, type='investment', name='8퍼센트', user=user)
         account_hf = Account.create(
-            type='virtual', name='어니스트펀드', user=user)
+            id=8002, type='virtual', name='어니스트펀드', user=user)
 
         asset_krw = insert_asset('currency, KRW, Korean Won')
         asset_usd = insert_asset('currency, USD, United States Dollar')
@@ -67,6 +69,10 @@ def insert_test_data():
         asset_kjp = insert_asset('security, 키움일본인덱스,',
                                  data={'code': 'KR5206689717'})
         asset_hf1 = insert_asset('bond, 포트폴리오 투자상품 1호,')
+
+        portfolio = Portfolio()
+        portfolio.target_asset = asset_krw
+        portfolio.add_accounts(account_checking, account_8p)
         return
 
         insert_record(',2015-01-01,,2400727', account_sp500, asset_sp500, None)
@@ -115,11 +121,6 @@ def insert_test_data():
         # Remaining principle value after the 2nd payment
         insert_asset_value('2016-02-05,1day,,,,450195', asset_hf1, asset_krw)
 
-        portfolio = Portfolio()
-        portfolio.target_asset = asset_krw
-        portfolio.add_accounts(account_hf, account_checking, account_sp500,
-                               account_kjp)
-
 
 @cli.command()
 def test():
@@ -150,20 +151,21 @@ def fetch_8percent(filename, cookie):
 
 @cli.command()
 @click.argument('filename')
-@click.argument('cookie')
-def import_8percent(filename, cookie):
+def import_8percent(filename):
+    """Imports a single file."""
     app = create_app(__name__)
     with app.app_context():
-        account = Account.create(
-            id=1001,
-            type='investment',
-            name='8퍼센트',
-            description='',
-        )
-        log.info('{} has been created', account)
-        for bond_id in bond_ids:
-            parsed_data = parse_8percent_data(raw)
-            import_8percent_data(parsed_data)
+        with open(filename) as fin:
+            raw = fin.read()
+        account_8p = Account.query.get(8001)
+        account_checking = Account.query.filter(
+            Account.name == 'Shinhan Checking').first()
+        asset_krw = Asset.query.filter(Asset.name == 'KRW').first()
+
+        parsed_data = parse_8percent_data(raw)
+        import_8percent_data(
+            parsed_data, account_checking=account_checking,
+            account_8p=account_8p, asset_krw=asset_krw)
 
 
 @cli.command()
