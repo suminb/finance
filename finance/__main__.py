@@ -65,6 +65,7 @@ def insert_test_data():
         asset_kjp = insert_asset('security, 키움일본인덱스,',
                                  data={'code': 'KR5206689717'})
         asset_hf1 = insert_asset('bond, 포트폴리오 투자상품 1호,')
+        return
 
         insert_record(',2015-01-01,,2400727', account_sp500, asset_sp500, None)
         insert_record(',2015-01-01,,1685792', account_esch, asset_esch, None)
