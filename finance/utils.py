@@ -122,7 +122,11 @@ def parse_8percent_data(raw):
             returned = etnc(row, 'Cell_453', int)
 
             # Make sure the parsed data is correct
-            assert returned == principle + interest - (tax + fees)
+            try:
+                assert returned == principle + interest - (tax + fees)
+            except AssertionError:
+                import pdb; pdb.set_trace()
+                pass
 
             yield date, principle, interest, tax, fees
 
