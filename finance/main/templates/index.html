@@ -13,36 +13,10 @@
         shape-rendering: crispEdges;
     }
 
-    path.candle {
-        stroke: #000000;
-    }
-
-    path.candle.body {
-        stroke-width: 0;
-    }
-
-    path.candle.up {
-        fill: #00AA00;
-        stroke: #00AA00;
-    }
-
-    path.candle.down {
-        fill: #FF0000;
-        stroke: #FF0000;
-    }
-
-
-    path.ohlc {
+    path.line {
+        fill: none;
         stroke: #000000;
         stroke-width: 1;
-    }
-
-    path.ohlc.up {
-        stroke: #00AA00;
-    }
-
-    path.ohlc.down {
-        stroke: #FF0000;
     }
 
 </style>
@@ -59,26 +33,15 @@
     var parseDate = d3.time.format("%Y%m%d").parse;
 
     var x = techan.scale.financetime()
-            .range([0, width]);
+            .range([0, width])
+            .outerPadding(0);
 
     var y = d3.scale.linear()
             .range([height, 0]);
 
-    var yVolume = d3.scale.linear()
-                .range([y(0), y(0.2)]);
-
-    var ohlc = techan.plot.ohlc()
+    var close = techan.plot.close()
             .xScale(x)
             .yScale(y);
-
-    var candlestick = techan.plot.candlestick()
-            .xScale(x)
-            .yScale(y);
-
-    var volume = techan.plot.volume()
-            .accessor(ohlc.accessor())   // Set the accessor to a ohlc accessor so we get highlighted bars
-            .xScale(x)
-            .yScale(yVolume);
 
     var xAxis = d3.svg.axis()
             .scale(x)
@@ -88,37 +51,14 @@
             .scale(y)
             .orient("left");
 
-    var volumeAxis = d3.svg.axis()
-            .scale(yVolume)
-            .orient("right")
-            .ticks(3)
-            .tickFormat(d3.format(",.3s"));
-
     var svg = d3.select("body").append("svg")
             .attr("width", width + margin.left + margin.right)
             .attr("height", height + margin.top + margin.bottom)
             .append("g")
             .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-    /*
-    d3.csv("/static/data.csv", function(error, data) {
-        var accessor = candlestick.accessor(),
-            timestart = Date.now();
-
-        data = data.slice(0, 200).map(function(d) {
-            return {
-                date: parseDate(d.Date),
-                open: +d.Open,
-                high: +d.High,
-                low: +d.Low,
-                close: +d.Close,
-                volume: +d.Volume
-            };
-        }).sort(function(a, b) { return d3.ascending(accessor.d(a), accessor.d(b)); });
-     */
-
     $.get('/data', {start: '{{ start }}', end: '{{ end }}'}, function(response) {
-        var accessor = candlestick.accessor(), timestart = Date.now();
+        var accessor = close.accessor();
         var data = response.data;
         data = data.map(function(d) {
           return {
@@ -131,17 +71,21 @@
           };
         });
 
+/*
         data = data.sort(function(a, b) {
           return d3.ascending(accessor.d(a), accessor.d(b));
         });
+*/
+
+        console.log(data);
 
         x.domain(data.map(accessor.d));
         y.domain(techan.scale.plot.ohlc(data, accessor).domain());
 
         svg.append("g")
                 .datum(data)
-                .attr("class", "candlestick")
-                .call(candlestick);
+                .attr("class", "close")
+                .call(close);
 
         svg.append("g")
                 .attr("class", "x axis")
@@ -156,14 +100,7 @@
                 .attr("y", 6)
                 .attr("dy", ".71em")
                 .style("text-anchor", "end")
-                .text("Price");
-
-        svg.append("g")
-                .attr("class", "volume axis");
-
-        svg.select("g.volume").datum(data);
-
-        console.log("Render time: " + (Date.now()-timestart));
+                .text("Price ($)");
     });
 
 </script>
