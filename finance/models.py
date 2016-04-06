@@ -24,7 +24,8 @@ class CRUDMixin(object):
 
     @classmethod
     def create(cls, commit=True, **kwargs):
-        kwargs.update(dict(id=uuid64.issue()))
+        if 'id' not in kwargs:
+            kwargs.update(dict(id=uuid64.issue()))
         instance = cls(**kwargs)
 
         if hasattr(instance, 'timestamp') \
