@@ -1,3 +1,4 @@
+import os
 import re
 
 import click
@@ -13,6 +14,7 @@ from finance.utils import (
     insert_asset, insert_asset_value, insert_record, parse_8percent_data)
 
 
+BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 log = Logger('finance')
 
 
@@ -130,7 +132,7 @@ def test():
 @cli.command()
 @click.argument('filename')
 @click.argument('cookie')
-def import_8percent(filename, cookie):
+def fetch_8percent(filename, cookie):
     """
     :param filename: A file containing bond IDs
     """
@@ -138,6 +140,18 @@ def import_8percent(filename, cookie):
         raw = fin.read()
     bond_ids = [int(x) for x in
                 re.findall(r'/my/repayment_detail/(\d+)', raw)]
+    for bond_id in bond_ids:
+        target_path = os.path.join(BASE_PATH, 'sample-data',
+                                   '8percent-{}.html'.format(bond_id))
+        raw = fetch_8percent_data(bond_id, cookie)
+        with open(target_path, 'w') as fout:
+            fout.write(raw)
+
+
+@cli.command()
+@click.argument('filename')
+@click.argument('cookie')
+def import_8percent(filename, cookie):
     app = create_app(__name__)
     with app.app_context():
         account = Account.create(
@@ -148,7 +162,6 @@ def import_8percent(filename, cookie):
         )
         log.info('{} has been created', account)
         for bond_id in bond_ids:
-            raw = fetch_8percent_data(bond_id, cookie)
             parsed_data = parse_8percent_data(raw)
             import_8percent_data(parsed_data)
 
