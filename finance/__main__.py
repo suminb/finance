@@ -131,12 +131,22 @@ def test():
 @click.argument('filename')
 @click.argument('cookie')
 def import_8percent(filename, cookie):
+    """
+    :param filename: A file containing bond IDs
+    """
     with open(filename) as fin:
         raw = fin.read()
     bond_ids = [int(x) for x in
                 re.findall(r'/my/repayment_detail/(\d+)', raw)]
     app = create_app(__name__)
     with app.app_context():
+        account = Account.create(
+            id=1001,
+            type='investment',
+            name='8퍼센트',
+            description='',
+        )
+        log.info('{} has been created', account)
         for bond_id in bond_ids:
             raw = fetch_8percent_data(bond_id, cookie)
             parsed_data = parse_8percent_data(raw)
