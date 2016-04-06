@@ -243,6 +243,8 @@ class Portfolio(db.Model, CRUDMixin):
     __table_args__ = (
         db.ForeignKeyConstraint(['target_asset_id'], ['asset.id']),
     )
+    name = db.Column(db.String)
+    description = db.Column(db.String)
     accounts = db.relationship('Account', backref='portfolio', lazy='dynamic')
     target_asset_id = db.Column(db.BigInteger)
     target_asset = db.relationship('Asset', uselist=False,
