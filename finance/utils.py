@@ -1,10 +1,12 @@
 from datetime import datetime, timedelta
 
+from logbook import Logger
 import requests
 import xmltodict
 
 
 _8PERCENT_DATE_FORMAT = '%y.%m.%d'
+log = Logger('finance')
 
 
 def date_range(start, end, step=1):
@@ -65,6 +67,7 @@ def parse_nullable_str(v):
 
 def fetch_8percent_data(bond_id, cookie):
     url = 'https://8percent.kr/my/repayment_detail/{}/'.format(bond_id)
+    log.info('Fetching bond information from {}', url)
     headers = {
         'Accept-Encoding': 'text/html',
         'Accept': 'text/html,application/xhtml+xml,application/xml;'
@@ -82,25 +85,45 @@ def parse_8percent_data(raw):
     from bs4 import BeautifulSoup
     soup = BeautifulSoup(raw, 'html.parser')
 
-    def extract_div_text(soup, id):
-        return soup.find('div', id=id).text.strip()
+    def extract_div_text(soup, id=None, class_=None):
+        if id:
+            return soup.find('div', id=id).text.strip()
+        elif class_:
+            return soup.find('div', class_=class_).text.strip()
+        else:
+            return Exception('Either id or class must be provided')
 
-    name = extract_div_text(soup, 'Text_298')
-    started_at = parse_date(extract_div_text(soup, 'Text_250'),
+    def etni(soup, id, f):
+        return f(extract_numbers(extract_div_text(soup, id=id)))
+
+    def etnc(soup, class_, f):
+        return f(extract_numbers(extract_div_text(soup, class_=class_)))
+
+    name = extract_div_text(soup, id='Text_298')
+    started_at = parse_date(extract_div_text(soup, id='Text_250'),
                             _8PERCENT_DATE_FORMAT)
-    grade = extract_div_text(soup, 'Text_264')
-    duration = int(extract_numbers(extract_div_text(soup, 'Text_278')))
-    apy = float(extract_numbers(extract_div_text(soup, 'Text_281'))) / 100
-    amount = int(extract_numbers(extract_div_text(soup, 'Text_300')))
+    grade = extract_div_text(soup, id='Text_264')
+    duration = etni(soup, 'Text_278', int)
+    apy = etni(soup, 'Text_281', float) / 100
+    amount = etni(soup, 'Text_300', int)
+
+    log.info('Parsed: {}, {}, {}, {}, {}, {}', name, started_at, grade,
+             duration, apy, amount)
 
     rows = soup.find_all('div', class_='Box_444')
     def gen_records(rows):
         for row in rows:
-            cols = row.find_all('div')
-            cols = [x.text.strip() for x in cols]
-            date = parse_date(cols[0], _8PERCENT_DATE_FORMAT)
-            principle, interest, tax, fees, total = \
-                [extract_numbers(x, int) for x in cols[2:7]]
+            date = parse_date(extract_div_text(row, class_='Cell_445'),
+                              _8PERCENT_DATE_FORMAT)
+            principle = etnc(row, 'Cell_451', int)
+            interest = etnc(row, 'Cell_448', int)
+            tax = etnc(row, 'Cell_449', int)
+            fees = etnc(row, 'Cell_452', int)
+            returned = etnc(row, 'Cell_453', int)
+
+            # Make sure the parsed data is correct
+            assert returned == principle + interest - (tax + fees)
+
             yield date, principle, interest, tax, fees
 
     return {
@@ -114,13 +137,20 @@ def parse_8percent_data(raw):
     }
 
 
-def import_8percent_data(parsed_data, account_checking=None, asset_krw=None):
+def import_8percent_data(parsed_data, account_checking=None, account_hf=None,
+                         asset_krw=None):
     from finance.models import Account, Asset, AssetValue, Record, Transaction
 
-    account_checking = Account.query.filter(Account.name == 'Shinhan Checking').first()
+    account_checking = Account.query.filter(
+        Account.name == 'Shinhan Checking').first()
     asset_krw = Asset.query.filter(Asset.name == 'KRW').first()
 
     asset_hf = Asset.create(name=parsed_data['name'])
+
+    with Transaction.create() as t:
+        Record.create(
+            created_at=parsed_data['started_at'], transaction=t,
+            account=account_hf, asset=asset_hf, quantity=1)
 
     remaining_value = parsed_data['amount']
     for record in parsed_data['records']:
