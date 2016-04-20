@@ -76,53 +76,6 @@ def insert_test_data():
         portfolio = Portfolio()
         portfolio.target_asset = asset_krw
         portfolio.add_accounts(account_checking, account_8p)
-        return
-
-        insert_record(',2015-01-01,,2400727', account_sp500, asset_sp500, None)
-        insert_record(',2015-01-01,,1685792', account_esch, asset_esch, None)
-        insert_record(',2015-01-01,,268695', account_kjp, asset_kjp, None)
-
-        with Transaction.create() as t:
-            insert_record(',2016-01-22,,10.00', account_gold, asset_gold, t)
-            insert_record(',2016-01-22,,-426870', account_checking, asset_krw, t)
-        with Transaction.create() as t:
-            insert_record(',2016-01-22,,-1.04', account_gold, asset_gold, t)
-            insert_record(',2016-01-22,,49586', account_checking, asset_krw, t)
-        with Transaction.create() as t:
-            insert_record(',2016-01-22,,-1.04', account_gold, asset_gold, t)
-            insert_record(',2016-01-22,,49816', account_checking, asset_krw, t)
-        with Transaction.create() as t:
-            insert_record(',2016-01-29,,-1.00', account_gold, asset_gold, t)
-            insert_record(',2016-01-29,,48603', account_checking, asset_krw, t)
-        with Transaction.create() as t:
-            insert_record(',2016-02-23,,-2.08', account_gold, asset_gold, t)
-            insert_record(',2016-02-23,,99577', account_checking, asset_krw, t)
-        with Transaction.create() as t:
-            insert_record(',2016-02-24,,-2.06', account_gold, asset_gold, t)
-            insert_record(',2016-02-24,,99667', account_checking, asset_krw, t)
-        with Transaction.create() as t:
-            insert_record(',2016-02-26,,-1.63', account_gold, asset_gold, t)
-            insert_record(',2016-02-26,,79589', account_checking, asset_krw, t)
-
-        with Transaction.create() as t:
-            insert_record(',2015-12-04,,500000',
-                          account_checking, asset_krw, t)
-            insert_record(',2015-12-04,,-500000',
-                          account_checking, asset_krw, t)
-            insert_record(',2015-12-04,,1', account_hf, asset_hf1, t)
-        # Initial asset value
-        insert_asset_value('2015-12-04,1day,,,,500000', asset_hf1, asset_krw)
-        # 1st payment
-        interest, tax, returned = 3923, 740, 30930
-        with Transaction.create() as t:
-            insert_record(',2016-01-08,,30930', account_checking, asset_krw, t)
-        # Remaining principle value after the 1st payment
-        insert_asset_value('2016-01-08,1day,,,,472253', asset_hf1, asset_krw)
-        # 2nd payment
-        with Transaction.create() as t:
-            insert_record(',2016-02-05,,25016', account_checking, asset_krw, t)
-        # Remaining principle value after the 2nd payment
-        insert_asset_value('2016-02-05,1day,,,,450195', asset_hf1, asset_krw)
 
 
 @cli.command()
