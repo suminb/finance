@@ -155,6 +155,34 @@ def import_8percent(filename):
 
 
 @cli.command()
+def import_hf():
+    app = create_app(__name__)
+    app.app_context().push()
+
+    account = Account.get(id=1001)
+    asset = Asset.query.filter_by(name='KRW').first()
+
+    with open('sample-data/hf.txt') as fin:
+        for line in fin:
+            if line.strip():
+                insert_record(line, account, asset, None)
+
+
+@cli.command()
+def import_rf():
+    app = create_app(__name__)
+    app.app_context().push()
+
+    account = Account.get(id=1001)
+    asset = Asset.query.filter_by(name='KRW').first()
+
+    with open('sample-data/rf.txt') as fin:
+        for line in fin:
+            if line.strip():
+                insert_record(line, account, asset, None)
+
+
+@cli.command()
 @click.argument('code')
 @click.argument('from-date')
 @click.argument('to-date')
