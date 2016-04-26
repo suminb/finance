@@ -319,7 +319,7 @@ class Record(db.Model, CRUDMixin):
 
     def __init__(self, *args, **kwargs):
         # Record.type could be 'balance_adjustment'
-        if 'type' not in kwargs:
+        if 'type' not in kwargs and 'quantity' in kwargs:
             if kwargs['quantity'] < 0:
                 kwargs['type'] = 'withdraw'
             else:
