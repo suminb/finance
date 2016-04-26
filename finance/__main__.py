@@ -10,8 +10,9 @@ from finance import create_app
 from finance.exceptions import AssetNotFoundException
 from finance.models import *  # noqa
 from finance.utils import (
-    AssetValueSchema, fetch_8percent_data, make_date, import_8percent_data,
-    insert_asset, insert_asset_value, insert_record, parse_8percent_data)
+    AssetValueSchema, extract_numbers, fetch_8percent_data, make_date,
+    import_8percent_data, insert_asset, insert_asset_value, insert_record,
+    parse_8percent_data, parse_date)
 
 
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -45,15 +46,17 @@ def insert_test_data():
             family_name='Byeon', given_name='Sumin', email='suminb@gmail.com')
 
         account_checking = Account.create(
-            type='checking', name='Shinhan Checking', user=user)
+            id=1001, type='checking', name='Shinhan Checking', user=user)
         account_gold = Account.create(
-            type='investment', name='Woori Gold Banking', user=user)
+            id=9001, type='investment', name='Woori Gold Banking', user=user)
         account_sp500 = Account.create(
-            type='investment', name='S&P500 Fund', user=user)
+            id=7001, type='investment', name='S&P500 Fund', user=user)
         account_esch = Account.create(
-            type='investment', name='East Spring China Fund', user=user)
+            id=7002, type='investment', name='East Spring China Fund',
+            user=user)
         account_kjp = Account.create(
-            type='investment', name='키움일본인덱스 주식재간접', user=user)
+            id=7003, type='investment', name='키움일본인덱스 주식재간접',
+            user=user)
         account_8p = Account.create(
             id=8001, type='investment', name='8퍼센트', user=user)
         account_hf = Account.create(
@@ -73,61 +76,44 @@ def insert_test_data():
         portfolio = Portfolio()
         portfolio.target_asset = asset_krw
         portfolio.add_accounts(account_checking, account_8p)
-        return
-
-        insert_record(',2015-01-01,,2400727', account_sp500, asset_sp500, None)
-        insert_record(',2015-01-01,,1685792', account_esch, asset_esch, None)
-        insert_record(',2015-01-01,,268695', account_kjp, asset_kjp, None)
-
-        with Transaction.create() as t:
-            insert_record(',2016-01-22,,10.00', account_gold, asset_gold, t)
-            insert_record(',2016-01-22,,-426870', account_checking, asset_krw, t)
-        with Transaction.create() as t:
-            insert_record(',2016-01-22,,-1.04', account_gold, asset_gold, t)
-            insert_record(',2016-01-22,,49586', account_checking, asset_krw, t)
-        with Transaction.create() as t:
-            insert_record(',2016-01-22,,-1.04', account_gold, asset_gold, t)
-            insert_record(',2016-01-22,,49816', account_checking, asset_krw, t)
-        with Transaction.create() as t:
-            insert_record(',2016-01-29,,-1.00', account_gold, asset_gold, t)
-            insert_record(',2016-01-29,,48603', account_checking, asset_krw, t)
-        with Transaction.create() as t:
-            insert_record(',2016-02-23,,-2.08', account_gold, asset_gold, t)
-            insert_record(',2016-02-23,,99577', account_checking, asset_krw, t)
-        with Transaction.create() as t:
-            insert_record(',2016-02-24,,-2.06', account_gold, asset_gold, t)
-            insert_record(',2016-02-24,,99667', account_checking, asset_krw, t)
-        with Transaction.create() as t:
-            insert_record(',2016-02-26,,-1.63', account_gold, asset_gold, t)
-            insert_record(',2016-02-26,,79589', account_checking, asset_krw, t)
-
-        with Transaction.create() as t:
-            insert_record(',2015-12-04,,500000',
-                          account_checking, asset_krw, t)
-            insert_record(',2015-12-04,,-500000',
-                          account_checking, asset_krw, t)
-            insert_record(',2015-12-04,,1', account_hf, asset_hf1, t)
-        # Initial asset value
-        insert_asset_value('2015-12-04,1day,,,,500000', asset_hf1, asset_krw)
-        # 1st payment
-        interest, tax, returned = 3923, 740, 30930
-        with Transaction.create() as t:
-            insert_record(',2016-01-08,,30930', account_checking, asset_krw, t)
-        # Remaining principle value after the 1st payment
-        insert_asset_value('2016-01-08,1day,,,,472253', asset_hf1, asset_krw)
-        # 2nd payment
-        with Transaction.create() as t:
-            insert_record(',2016-02-05,,25016', account_checking, asset_krw, t)
-        # Remaining principle value after the 2nd payment
-        insert_asset_value('2016-02-05,1day,,,,450195', asset_hf1, asset_krw)
 
 
 @cli.command()
-def test():
+def import_sp500():
     app = create_app(__name__)
     with app.app_context():
-        account = Account.query.filter(Account.name == 'S&P500 Fund').first()
-        print(account.net_worth(make_date('2016-02-25')))
+        account_checking = Account.get(id=1001)
+        account_sp500 = Account.get(id=7001)
+        asset_krw = Asset.query.filter_by(name='KRW').first()
+        asset_sp500 = Asset.query.filter_by(name='KB S&P500').first()
+
+        with open('sample-data/sp500.csv') as fin:
+            for line in fin:
+                cols = line.split()
+                if len(cols) != 5:
+                    continue
+                date = parse_date(cols[0], '%Y.%m.%d')
+                _type = cols[1]
+                quantity_krw, quantity_sp500 = \
+                    [int(extract_numbers(v)) for v in cols[2:4]]
+
+                print(cols)
+
+                withdraw = _type == '일반입금'
+
+                with Transaction.create() as t:
+                    if withdraw:
+                        Record.create(
+                            created_at=date, account=account_checking,
+                            asset=asset_krw, quantity=-quantity_krw,
+                            transaction=t)
+                    Record.create(
+                        created_at=date, account=account_sp500,
+                        asset=asset_sp500, quantity=quantity_sp500,
+                        transaction=t)
+
+        print(account_sp500.net_worth(make_date('2016-02-25'), target_asset=asset_krw))
+
 
 
 @cli.command()
@@ -169,6 +155,34 @@ def import_8percent(filename):
 
 
 @cli.command()
+def import_hf():
+    app = create_app(__name__)
+    app.app_context().push()
+
+    account = Account.get(id=1001)
+    asset = Asset.query.filter_by(name='KRW').first()
+
+    with open('sample-data/hf.txt') as fin:
+        for line in fin:
+            if line.strip():
+                insert_record(line, account, asset, None)
+
+
+@cli.command()
+def import_rf():
+    app = create_app(__name__)
+    app.app_context().push()
+
+    account = Account.get(id=1001)
+    asset = Asset.query.filter_by(name='KRW').first()
+
+    with open('sample-data/rf.txt') as fin:
+        for line in fin:
+            if line.strip():
+                insert_record(line, account, asset, None)
+
+
+@cli.command()
 @click.argument('code')
 @click.argument('from-date')
 @click.argument('to-date')
@@ -188,7 +202,13 @@ def import_fund(code, from_date, to_date):
                       'Chrome/48.0.2564.109 Safari/537.36',
         'Content-Type': 'text/xml',
         'Accept': 'text/xml',
-        'Referer': 'http://dis.kofia.or.kr/websquare/popup.html?w2xPath=/wq/com/popup/DISComFundSmryInfo.xml&companyCd=20090602&standardCd=KR5223941018&standardDt=20160219&grntGb=S&search=&check=1&isMain=undefined&companyGb=A&uFundNm=/v8ASwBCwqTQwLv4rW0AUwAmAFAANQAwADDHeLNxwqTJna2Mx5DSLMeQwuDQwQBbyPzC3QAt0wzA%0A3dYVAF0AQwAtAEU%3D&popupID=undefined&w2xHome=/wq/fundann/&w2xDocumentRoot=',
+        'Referer': 'http://dis.kofia.or.kr/websquare/popup.html?w2xPath='
+                   '/wq/com/popup/DISComFundSmryInfo.xml&companyCd=20090602&'
+                   'standardCd=KR5223941018&standardDt=20160219&grntGb=S&'
+                   'search=&check=1&isMain=undefined&companyGb=A&uFundNm='
+                   '/v8ASwBCwqTQwLv4rW0AUwAmAFAANQAwADDHeLNxwqTJna2Mx5DSLMeQwu'
+                   'DQwQBbyPzC3QAt0wzA%0A3dYVAF0AQwAtAEU%3D&popupID=undefined&'
+                   'w2xHome=/wq/fundann/&w2xDocumentRoot=',
     }
     data = """<?xml version="1.0" encoding="utf-8"?>
         <message>
