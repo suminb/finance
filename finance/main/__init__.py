@@ -26,6 +26,7 @@ def data():
     start, end = map(request.args.get, ['start', 'end'])
     def gen(start, end):
         for date in date_range(start, end):
+            log.info('Calculating net worth on {}', date)
             nw = portfolio.net_worth(date)
             v = float(nw)
             yield date.strftime('%Y%m%d'), v, v, v, v, 0
