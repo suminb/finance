@@ -24,7 +24,8 @@ class CRUDMixin(object):
 
     @classmethod
     def create(cls, commit=True, **kwargs):
-        kwargs.update(dict(id=uuid64.issue()))
+        if 'id' not in kwargs:
+            kwargs.update(dict(id=uuid64.issue()))
         instance = cls(**kwargs)
 
         if hasattr(instance, 'timestamp') \
@@ -115,17 +116,16 @@ class AssetValue(db.Model, CRUDMixin):
                                     '1week', '1month', '1year',
                                     name='granularity'))
     open = db.Column(db.Numeric(precision=20, scale=4))
-    close = db.Column(db.Numeric(precision=20, scale=4))
-    low = db.Column(db.Numeric(precision=20, scale=4))
     high = db.Column(db.Numeric(precision=20, scale=4))
+    low = db.Column(db.Numeric(precision=20, scale=4))
+    close = db.Column(db.Numeric(precision=20, scale=4))
 
 
 class Asset(db.Model, CRUDMixin):
-    name = db.Column(db.String)
-    description = db.Column(db.Text)
     type = db.Column(db.Enum('currency', 'stock', 'bond', 'security', 'fund',
                              'commodity', name='asset_type'))
-    # unit_price = db.Column(db.Numeric(precision=20, scale=4))
+    name = db.Column(db.String)
+    description = db.Column(db.Text)
 
     #: Arbitrary data
     data = db.Column(JsonType)
@@ -171,11 +171,19 @@ class Account(db.Model, CRUDMixin):
     def __repr__(self):
         return 'Account <{} ({})>'.format(self.name, self.type)
 
-    @property
-    def balance(self):
+    def balance(self, evaluated_at=None):
+        """Calculates the account balance on a given date."""
+        if not evaluated_at:
+            evaluated_at = datetime.utcnow()
+
+        # FIMXE: Consider open transactions
+        records = Record.query.filter(
+            Record.account == self,
+            Record.created_at <= evaluated_at)
+
         # Sum all transactions to produce {asset: sum(quantity)} dictionary
         bs = {}
-        rs = [(r.asset, r.quantity) for r in self.records]
+        rs = [(r.asset, r.quantity) for r in records]
         for asset, quantity in rs:
             bs.setdefault(asset, 0)
             bs[asset] += quantity
@@ -201,7 +209,7 @@ class Account(db.Model, CRUDMixin):
             raise NotImplementedError
 
         net_asset_value = 0
-        for asset, quantity in self.balance.items():
+        for asset, quantity in self.balance(evaluated_at).items():
             if asset == target_asset:
                 net_asset_value += quantity
                 continue
@@ -236,6 +244,8 @@ class Portfolio(db.Model, CRUDMixin):
     __table_args__ = (
         db.ForeignKeyConstraint(['target_asset_id'], ['asset.id']),
     )
+    name = db.Column(db.String)
+    description = db.Column(db.String)
     accounts = db.relationship('Account', backref='portfolio', lazy='dynamic')
     target_asset_id = db.Column(db.BigInteger)
     target_asset = db.relationship('Asset', uselist=False,
@@ -297,19 +307,19 @@ class Transaction(db.Model, CRUDMixin):
 
 class Record(db.Model, CRUDMixin):
     account_id = db.Column(db.BigInteger, db.ForeignKey('account.id'))
-    transaction_id = db.Column(db.BigInteger, db.ForeignKey('transaction.id'))
-    # NOTE: We'll always use the UTC time
-    created_at = db.Column(db.DateTime(timezone=False))
-    type = db.Column(db.Enum('deposit', 'withdraw', 'balance_adjustment',
-                             name='record_type'))
-    category = db.Column(db.String)
     asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
     # asset = db.relationship(Asset, uselist=False)
+    transaction_id = db.Column(db.BigInteger, db.ForeignKey('transaction.id'))
+    type = db.Column(db.Enum('deposit', 'withdraw', 'balance_adjustment',
+                             name='record_type'))
+    # NOTE: We'll always use the UTC time
+    created_at = db.Column(db.DateTime(timezone=False))
+    category = db.Column(db.String)
     quantity = db.Column(db.Numeric(precision=20, scale=4))
 
     def __init__(self, *args, **kwargs):
         # Record.type could be 'balance_adjustment'
-        if 'type' not in kwargs:
+        if 'type' not in kwargs and 'quantity' in kwargs:
             if kwargs['quantity'] < 0:
                 kwargs['type'] = 'withdraw'
             else:
