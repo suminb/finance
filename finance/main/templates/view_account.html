@@ -1,0 +1,32 @@
+{% extends 'layout.html' %}
+{% block content %}
+
+  <h2>Account-{{ entity.id }}</h2>
+
+  <div>{{ entity.name }}</div>
+  <div>{{ entity.description }}</div>
+  <div>{{ entity.net_worth() }}</div>
+
+  <h3>Records</h3>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Date/time</th>
+        <th>Transaction</th>
+        <th>Category</th>
+        <th>Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for record in entity.records %}
+      <tr>
+        <td>{{ record.created_at }}</td>
+        <td>{{ record.transaction_id }}</td>
+        <td>{{ record.category }}</td>
+        <td>{{ record.quantity }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+{% endblock %}

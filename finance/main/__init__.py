@@ -11,6 +11,7 @@ log = Logger()
 ENTITY_MAPPINGS = {
     'account': {
         'class': Account,
+        'view_template': 'view_account.html',
     },
     'asset': {
         'class': Asset,
