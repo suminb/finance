@@ -1,4 +1,5 @@
 provision.sh
 .cache
+sample-data/*
 *.pyc
 *.swp
