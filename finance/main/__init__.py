@@ -8,11 +8,33 @@ main_module = Blueprint('main', __name__, template_folder='templates')
 log = Logger()
 
 
-ENTITY_CLASSES = {
-    'account': Account,
-    'asset': Asset,
-    'portfolio': Portfolio,
+ENTITY_MAPPINGS = {
+    'account': {
+        'class': Account,
+    },
+    'asset': {
+        'class': Asset,
+    },
+    'portfolio': {
+        'class': Portfolio,
+        'view_template': 'view_portfolio.html',
+    }
 }
+
+
+def get_entity_class(entity_type):
+    if entity_type in ENTITY_MAPPINGS:
+        return ENTITY_MAPPINGS[entity_type]['class']
+    else:
+        from finance.models import db
+        return db.Model
+
+
+def get_view_template(entity_type):
+    if entity_type in ENTITY_MAPPINGS:
+        return ENTITY_MAPPINGS[entity_type]['view_template']
+    else:
+        return 'view_entity.html'
 
 
 @main_module.route('/')
@@ -41,16 +63,9 @@ def data():
     return jsonify({'data': [x for x in gen(start, end)]})
 
 
-@main_module.route('/portfolios/<int:entity_id>')
-def view_portfolio(entity_id):
-    entity = Portfolio.query.get(entity_id)
-    context = {'entity': entity}
-    return render_template('view_portfolio.html', **context)
-
-
 @main_module.route('/entities/<entity_type>')
 def list_entities(entity_type):
-    entity_class = ENTITY_CLASSES[entity_type]
+    entity_class = get_entity_class(entity_type)
     entities = entity_class.query.all()
     context = {
         'entities': entities,
@@ -60,9 +75,11 @@ def list_entities(entity_type):
 
 @main_module.route('/entities/<entity_type>:<int:entity_id>')
 def view_entity(entity_type, entity_id):
-    entity_class = ENTITY_CLASSES[entity_type]
+    entity_class = get_entity_class(entity_type)
+    view_template = get_view_template(entity_type)
     entity = entity_class.query.get(entity_id)
     context = {
         'entity': entity,
+        'entity_class': entity_class,
     }
-    return render_template('view_entity.html', **context)
+    return render_template(view_template, **context)
