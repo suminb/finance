@@ -1,0 +1,11 @@
+{% block content %}
+
+  <ul>
+  {% for entity in entities %}
+    <li>
+      <a href="{{ url_for('main.view_entity', entity_type=entity.__tablename__, entity_id=entity.id) }}">{{ entity }}</a>
+    </li>
+  {% endfor %}
+  </ul>
+
+{% endblock %}
