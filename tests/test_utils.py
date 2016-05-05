@@ -34,13 +34,13 @@ def test_extract_numbers():
 
 
 def test_parse_8percent_data():
-    sample_file = os.path.join(PROJECT_PATH, 'sample-data',
+    sample_file = os.path.join(PROJECT_PATH, 'tests', 'data',
                                '8percent-829.html')
     with open(sample_file) as fin:
         raw = fin.read()
 
     stored_data = [
-        ('2016-04-11', 1694, 612, 160, 340),
+        ('2016-04-11', 1694, 614, 160, 340),
         ('2016-05-11', 1916, 390, 90, 0),
         ('2016-06-13', 1920, 386, 90, 0),
         ('2016-07-11', 1982, 324, 80, 0),
