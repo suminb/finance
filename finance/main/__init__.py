@@ -23,17 +23,17 @@ ENTITY_MAPPINGS = {
 
 
 def get_entity_class(entity_type):
-    if entity_type in ENTITY_MAPPINGS:
+    try:
         return ENTITY_MAPPINGS[entity_type]['class']
-    else:
+    except KeyError:
         from finance.models import db
         return db.Model
 
 
 def get_view_template(entity_type):
-    if entity_type in ENTITY_MAPPINGS:
+    try:
         return ENTITY_MAPPINGS[entity_type]['view_template']
-    else:
+    except KeyError:
         return 'view_entity.html'
 
 
