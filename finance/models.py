@@ -108,9 +108,9 @@ class AssetValue(db.Model, CRUDMixin):
         'asset_id', 'evaluated_at', 'granularity'), {})
 
     asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
-    target_asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
-    target_asset = db.relationship('Asset', uselist=False,
-                                   foreign_keys=[target_asset_id])
+    base_asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
+    base_asset = db.relationship('Asset', uselist=False,
+                                 foreign_keys=[base_asset_id])
     evaluated_at = db.Column(db.DateTime(timezone=False))
     granularity = db.Column(db.Enum('1sec', '1min', '5min', '1hour', '1day',
                                     '1week', '1month', '1year',
@@ -133,8 +133,8 @@ class Asset(db.Model, CRUDMixin):
     asset_values = db.relationship(
         'AssetValue', backref='asset', foreign_keys=[AssetValue.asset_id],
         lazy='dynamic', cascade='all,delete-orphan')
-    target_asset_values = db.relationship(
-        'AssetValue', foreign_keys=[AssetValue.target_asset_id],
+    base_asset_values = db.relationship(
+        'AssetValue', foreign_keys=[AssetValue.base_asset_id],
         lazy='dynamic', cascade='all,delete-orphan')
     records = db.relationship('Record', backref='asset',
                               lazy='dynamic', cascade='all,delete-orphan')
@@ -190,13 +190,13 @@ class Account(db.Model, CRUDMixin):
         return bs
 
     def net_worth(self, evaluated_at=None, granularity=Granularity.day,
-                  approximation=False, target_asset=None):
+                  approximation=False, base_asset=None):
         """Calculates the net worth of the account on a particular datetime.
         If approximation=True and the asset value record is unavailable for the
         given date (evaluated_at), try to pull the most recent AssetValue.
         """
-        if target_asset is None:
-            raise InvalidTargetAssetException('Target asset cannot be null')
+        if base_asset is None:
+            raise InvalidTargetAssetException('Base asset cannot be null')
 
         if not evaluated_at:
             evaluated_at = datetime.utcnow()
@@ -210,14 +210,14 @@ class Account(db.Model, CRUDMixin):
 
         net_asset_value = 0
         for asset, quantity in self.balance(evaluated_at).items():
-            if asset == target_asset:
+            if asset == base_asset:
                 net_asset_value += quantity
                 continue
 
             asset_value = AssetValue.query \
                 .filter(AssetValue.asset == asset,
                         AssetValue.granularity == granularity,
-                        AssetValue.target_asset == target_asset)
+                        AssetValue.base_asset == base_asset)
             if approximation:
                 asset_value = asset_value.filter(
                     AssetValue.evaluated_at <= evaluated_at) \
@@ -242,14 +242,14 @@ class Account(db.Model, CRUDMixin):
 class Portfolio(db.Model, CRUDMixin):
     """A collection of accounts (= a collection of assets)."""
     __table_args__ = (
-        db.ForeignKeyConstraint(['target_asset_id'], ['asset.id']),
+        db.ForeignKeyConstraint(['base_asset_id'], ['asset.id']),
     )
     name = db.Column(db.String)
     description = db.Column(db.String)
     accounts = db.relationship('Account', backref='portfolio', lazy='dynamic')
-    target_asset_id = db.Column(db.BigInteger)
-    target_asset = db.relationship('Asset', uselist=False,
-                                   foreign_keys=[target_asset_id])
+    base_asset_id = db.Column(db.BigInteger)
+    base_asset = db.relationship('Asset', uselist=False,
+                                 foreign_keys=[base_asset_id])
 
     def add_accounts(self, *accounts, commit=True):
         self.accounts.extend(accounts)
@@ -262,7 +262,7 @@ class Portfolio(db.Model, CRUDMixin):
         net = 0
         for account in self.accounts:
             net += account.net_worth(evaluated_at, granularity, True,
-                                     self.target_asset)
+                                     self.base_asset)
         return net
 
 

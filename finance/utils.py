@@ -161,7 +161,7 @@ def import_8percent_data(parsed_data, account_checking, account_8p, asset_krw):
             asset=asset_8p, quantity=1)
     AssetValue.create(
         evaluated_at=started_at, asset=asset_8p,
-        target_asset=asset_krw, granularity='1day', close=remaining_value)
+        base_asset=asset_krw, granularity='1day', close=remaining_value)
 
     for record in parsed_data['records']:
         date, principle, interest, tax, fees = record
@@ -173,7 +173,7 @@ def import_8percent_data(parsed_data, account_checking, account_8p, asset_krw):
                 account=account_checking, asset=asset_krw, quantity=returned)
         AssetValue.create(
             evaluated_at=date, asset=asset_8p,
-            target_asset=asset_krw, granularity='1day', close=remaining_value)
+            base_asset=asset_krw, granularity='1day', close=remaining_value)
 
 
 def insert_asset(row, data=None):
@@ -188,7 +188,7 @@ def insert_asset(row, data=None):
         type=type, name=name, description=description, data=data)
 
 
-def insert_asset_value(row, asset, target_asset):
+def insert_asset_value(row, asset, base_asset):
     """
     (evaluated_at, granularity, open, high, low, close)
     """
@@ -198,7 +198,7 @@ def insert_asset_value(row, asset, target_asset):
     granularity = columns[1]
     open, high, low, close = map(parse_decimal, columns[2:6])
     return AssetValue.create(
-        asset=asset, target_asset=target_asset, evaluated_at=evaluated_at,
+        asset=asset, base_asset=base_asset, evaluated_at=evaluated_at,
         granularity=granularity, open=open, high=high, low=low, close=close)
 
 

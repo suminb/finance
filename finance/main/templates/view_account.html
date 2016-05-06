@@ -5,7 +5,7 @@
 
   <div>{{ entity.name }}</div>
   <div>{{ entity.description }}</div>
-  <div>{{ entity.net_worth() }}</div>
+  <div>{{ entity.net_worth(approximation=True, base_asset=entity.portfolio.base_asset) }}</div>
 
   <h3>Records</h3>
   <table class="table">

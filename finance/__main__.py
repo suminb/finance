@@ -74,7 +74,7 @@ def insert_test_data():
         asset_hf1 = insert_asset('bond, 포트폴리오 투자상품 1호,')
 
         portfolio = Portfolio()
-        portfolio.target_asset = asset_krw
+        portfolio.base_asset = asset_krw
         portfolio.add_accounts(account_checking, account_8p)
 
 
@@ -112,8 +112,8 @@ def import_sp500():
                         asset=asset_sp500, quantity=quantity_sp500,
                         transaction=t)
 
-        print(account_sp500.net_worth(make_date('2016-02-25'), target_asset=asset_krw))
-
+        # print(account_sp500.net_worth(make_date('2016-02-25'),
+        #      base_asset=asset_krw))
 
 
 @cli.command()
@@ -244,7 +244,7 @@ def import_fund(code, from_date, to_date):
         asset = Asset.query.get(asset_id)
 
         # FIXME: Target asset should also be determined by asset.data.code
-        target_asset = Asset.query.filter_by(name='KRW').first()
+        base_asset = Asset.query.filter_by(name='KRW').first()
 
         schema = AssetValueSchema()
         schema.load(resp.text)
@@ -253,7 +253,7 @@ def import_fund(code, from_date, to_date):
             unit_price /= 1000.0
             try:
                 AssetValue.create(
-                    asset=asset, target_asset=target_asset,
+                    asset=asset, base_asset=base_asset,
                     evaluated_at=date, close=unit_price, granularity='1day')
             except IntegrityError:
                 log.warn('Identical record has been found for {}. Skipping.',
