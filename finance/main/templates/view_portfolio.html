@@ -17,6 +17,7 @@
     <li>
       <a href="{{ url_for('main.view_entity', entity_type='account',
         entity_id=account.id) }}">{{ account.name }}</a>
+      ({{ account.net_worth(approximation=True, base_asset=entity.base_asset) }})
     </li>
     {% endfor %}
   </ul>
