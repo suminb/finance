@@ -3,9 +3,11 @@
 
   <h2>Account-{{ entity.id }}</h2>
 
-  <div>{{ entity.name }}</div>
-  <div>{{ entity.description }}</div>
-  <div>{{ entity.net_worth(approximation=True, base_asset=entity.portfolio.base_asset) }}</div>
+  <div>Name: {{ entity.name }}</div>
+  <div>Description: {{ entity.description }}</div>
+  <div>Net worth:
+    {{ entity.net_worth(approximation=True, base_asset=entity.portfolio.base_asset) }}
+  </div>
 
   <h3>Records</h3>
   <table class="table">
