@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 
 from logbook import Logger
-import requests
 import xmltodict
 
 
