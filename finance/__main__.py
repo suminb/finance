@@ -118,8 +118,7 @@ def import_sp500():
 
 @cli.command()
 @click.argument('filename')
-@click.argument('cookie')
-def fetch_8percent(filename, cookie):
+def fetch_8percent(filename):
     """
     :param filename: A file containing bond IDs
     """
