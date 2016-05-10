@@ -1,11 +1,9 @@
 from datetime import datetime, timedelta
 
 from logbook import Logger
-import requests
 import xmltodict
 
 
-_8PERCENT_DATE_FORMAT = '%y.%m.%d'
 log = Logger('finance')
 
 
@@ -63,82 +61,6 @@ def parse_decimal(v):
 
 def parse_nullable_str(v):
     return v if v else None
-
-
-def fetch_8percent_data(bond_id, cookie):
-    url = 'https://8percent.kr/my/repayment_detail/{}/'.format(bond_id)
-    log.info('Fetching bond information from {}', url)
-    headers = {
-        'Accept-Encoding': 'text/html',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;'
-                  'q=0.9,image/webp,*/*;q=0.8',
-        'Cookie': cookie,
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_3) '
-                      'AppleWebKit/537.36 (KHTML, like Gecko) '
-                      'Chrome/49.0.2623.87 Safari/537.36',
-    }
-    resp = requests.get(url, headers=headers)
-    return resp.text
-
-
-def parse_8percent_data(raw):
-    from bs4 import BeautifulSoup
-    soup = BeautifulSoup(raw, 'html.parser')
-
-    def extract_div_text(soup, id=None, class_=None):
-        if id:
-            return soup.find('div', id=id).text.strip()
-        elif class_:
-            return soup.find('div', class_=class_).text.strip()
-        else:
-            return Exception('Either id or class must be provided')
-
-    def etni(soup, id, f):
-        return f(extract_numbers(extract_div_text(soup, id=id)))
-
-    def etnc(soup, class_, f):
-        return f(extract_numbers(extract_div_text(soup, class_=class_)))
-
-    name = extract_div_text(soup, id='Text_298')
-    started_at = parse_date(extract_div_text(soup, id='Text_250'),
-                            _8PERCENT_DATE_FORMAT)
-    grade = extract_div_text(soup, id='Text_264')
-    duration = etni(soup, 'Text_278', int)
-    apy = etni(soup, 'Text_281', float) / 100
-    amount = etni(soup, 'Text_300', int)
-
-    log.info('Parsed: {}, {}, {}, {}, {}, {}', name, started_at, grade,
-             duration, apy, amount)
-
-    rows = soup.find_all('div', class_='Box_444')
-    def gen_records(rows):
-        for row in rows:
-            date = parse_date(extract_div_text(row, class_='Cell_445'),
-                              _8PERCENT_DATE_FORMAT)
-            principle = etnc(row, 'Cell_451', int)
-            interest = etnc(row, 'Cell_448', int)
-            tax = etnc(row, 'Cell_449', int)
-            fees = etnc(row, 'Cell_452', int)
-            returned = etnc(row, 'Cell_453', int)
-
-            # Make sure the parsed data is correct
-            try:
-                assert returned == principle + interest - (tax + fees)
-            except AssertionError:
-                import pdb; pdb.set_trace()
-                pass
-
-            yield date, principle, interest, tax, fees
-
-    return {
-        'name': name,
-        'started_at': started_at,
-        'grade': grade,
-        'duration': duration,
-        'annual_percentage_yield': apy,
-        'amount': amount,
-        'records': list(gen_records(rows)),
-    }
 
 
 def import_8percent_data(parsed_data, account_checking, account_8p, asset_krw):

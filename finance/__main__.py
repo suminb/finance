@@ -9,10 +9,10 @@ import requests
 from finance import create_app
 from finance.exceptions import AssetNotFoundException
 from finance.models import *  # noqa
+from finance.providers import _8Percent
 from finance.utils import (
-    AssetValueSchema, extract_numbers, fetch_8percent_data, make_date,
-    import_8percent_data, insert_asset, insert_asset_value, insert_record,
-    parse_8percent_data, parse_date)
+    AssetValueSchema, extract_numbers, make_date, import_8percent_data,
+    insert_asset, insert_asset_value, insert_record, parse_date)
 
 
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -127,10 +127,11 @@ def fetch_8percent(filename, cookie):
         raw = fin.read()
     bond_ids = [int(x) for x in
                 re.findall(r'/my/repayment_detail/(\d+)', raw)]
+    provider = _8Percent()
     for bond_id in bond_ids:
         target_path = os.path.join(BASE_PATH, 'sample-data',
                                    '8percent-{}.html'.format(bond_id))
-        raw = fetch_8percent_data(bond_id, cookie)
+        raw = provider.fetch_data(bond_id)
         with open(target_path, 'w') as fout:
             fout.write(raw)
 
@@ -140,6 +141,7 @@ def fetch_8percent(filename, cookie):
 def import_8percent(filename):
     """Imports a single file."""
     app = create_app(__name__)
+    provider = _8Percent()
     with app.app_context():
         with open(filename) as fin:
             raw = fin.read()
@@ -148,7 +150,7 @@ def import_8percent(filename):
             Account.name == 'Shinhan Checking').first()
         asset_krw = Asset.query.filter(Asset.name == 'KRW').first()
 
-        parsed_data = parse_8percent_data(raw)
+        parsed_data = provider.parse_data(raw)
         import_8percent_data(
             parsed_data, account_checking=account_checking,
             account_8p=account_8p, asset_krw=asset_krw)
