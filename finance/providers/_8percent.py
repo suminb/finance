@@ -4,7 +4,7 @@ import pickle
 from logbook import Logger
 import requests
 
-from finance.providers import Provider
+from finance.providers.provider import Provider
 from finance.utils import extract_numbers, parse_date
 
 
