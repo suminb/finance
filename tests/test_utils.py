@@ -2,7 +2,7 @@ import os
 import types
 
 from finance.utils import (
-    date_range, extract_numbers, make_date)
+    date_range, extract_numbers, parse_date)
 
 
 BASE_PATH = os.path.abspath(os.path.dirname(__file__))
@@ -10,14 +10,14 @@ PROJECT_PATH = os.path.abspath(os.path.join(BASE_PATH, '..'))
 
 
 def test_date_range():
-    start, end = make_date('2016-01-01'), make_date('2016-01-15')
+    start, end = parse_date('2016-01-01'), parse_date('2016-01-15')
     r = date_range(start, end)
     assert isinstance(r, types.GeneratorType)
 
     r = list(r)
     assert 14 == len(r)
-    assert r[0] == make_date('2016-01-01')
-    assert r[13] == make_date('2016-01-14')
+    assert r[0] == parse_date('2016-01-01')
+    assert r[13] == parse_date('2016-01-14')
 
 
 def test_extract_numbers():
