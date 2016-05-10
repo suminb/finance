@@ -28,7 +28,7 @@ def test_import_8percent():
     assert result.exit_code == 0
 
 
-def test_import_sp500():
+def _test_import_sp500():
     runner = CliRunner()
     result = runner.invoke(import_sp500)
     assert result.exit_code == 0
