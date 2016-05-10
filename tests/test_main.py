@@ -32,3 +32,8 @@ def test_import_sp500():
     runner = CliRunner()
     result = runner.invoke(import_sp500)
     assert result.exit_code == 0
+
+
+def teardown_module(module):
+    runner = CliRunner()
+    runner.invoke(drop_all)

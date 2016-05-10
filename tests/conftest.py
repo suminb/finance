@@ -7,7 +7,7 @@ from finance.models import Account, Asset
 from finance.models import db as _db
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='module')
 def app(request):
     """Session-wide test `Flask` application."""
     settings_override = {
@@ -26,12 +26,11 @@ def app(request):
     return app
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='module')
 def db(app, request):
     """Session-wide test database."""
     def teardown():
-        # _db.drop_all()
-        pass
+        _db.drop_all()
 
     _db.app = app
     _db.create_all()
@@ -61,7 +60,7 @@ def account_sp500(request, db):
     return account
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='module')
 def asset_hf1(request, db):
     asset = Asset.create(
         type='bond', name='포트폴리오 투자상품 1호')
@@ -69,7 +68,7 @@ def asset_hf1(request, db):
     return asset
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='module')
 def asset_krw(request, db):
     asset = Asset.create(
         type='currency', name='KRW', description='Korean Won')
@@ -77,7 +76,7 @@ def asset_krw(request, db):
     return asset
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='module')
 def asset_sp500(request, db):
     asset = Asset.create(
         type='security', name='S&P 500', description='')
