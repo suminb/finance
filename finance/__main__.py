@@ -11,7 +11,7 @@ from finance.exceptions import AssetNotFoundException
 from finance.models import *  # noqa
 from finance.providers import _8Percent
 from finance.utils import (
-    AssetValueSchema, extract_numbers, make_date, import_8percent_data,
+    AssetValueSchema, extract_numbers, import_8percent_data,
     insert_asset, insert_asset_value, insert_record, parse_date)
 
 
@@ -112,7 +112,7 @@ def import_sp500():
                         asset=asset_sp500, quantity=quantity_sp500,
                         transaction=t)
 
-        # print(account_sp500.net_worth(make_date('2016-02-25'),
+        # print(account_sp500.net_worth(parse_date('2016-02-25'),
         #      base_asset=asset_krw))
 
 

@@ -18,9 +18,9 @@ def date_range(start, end, step=1):
         raise NotImplementedError('Any value of step that is not 1 is not '
                                   'supported at the moment')
     if isinstance(start, str):
-        start = make_date(start)
+        start = parse_date(start)
     if isinstance(end, str):
-        end = make_date(end)
+        end = parse_date(end)
 
     delta = end - start
     for i in range(0, delta.days):
@@ -34,14 +34,6 @@ def extract_numbers(value, type=str):
             if v in '01234567890.':
                 yield v
     return type(''.join(extract(value)))
-
-
-def make_date(strdate):
-    """Make a datetime object from a string.
-
-    :type strdate: str
-    """
-    return parse_date(strdate)
 
 
 def parse_date(strdate, format='%Y-%m-%d'):
@@ -116,7 +108,7 @@ def insert_asset_value(row, asset, base_asset):
     """
     from finance.models import AssetValue
     columns = [x.strip() for x in row.split(',')]
-    evaluated_at = make_date(columns[0])
+    evaluated_at = parse_date(columns[0])
     granularity = columns[1]
     open, high, low, close = map(parse_decimal, columns[2:6])
     return AssetValue.create(
@@ -131,7 +123,7 @@ def insert_record(row, account, asset, transaction):
     from finance.models import Record
     type, created_at, category, quantity = [x.strip() for x in row.split(',')]
     type = parse_nullable_str(type)
-    created_at = make_date(created_at)
+    created_at = parse_date(created_at)
     category = parse_nullable_str(category)
     quantity = parse_decimal(quantity)
     return Record.create(
