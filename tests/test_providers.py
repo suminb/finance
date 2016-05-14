@@ -10,9 +10,13 @@ BASE_PATH = os.path.abspath(os.path.dirname(__file__))
 PROJECT_PATH = os.path.abspath(os.path.join(BASE_PATH, '..'))
 
 
-@pytest.mark.skipif(
+skip_if_no_credentials = pytest.mark.skipif(
     '_8PERCENT_USERNAME' not in os.environ or
-    '_8PERCENT_PASSWORD' not in os.environ)
+    '_8PERCENT_PASSWORD' not in os.environ,
+    reason='8percent credentials are not provided')
+
+
+@skip_if_no_credentials
 def test_8percent_login():
     username = os.environ.get('_8PERCENT_USERNAME')
     password = os.environ.get('_8PERCENT_PASSWORD')
@@ -22,6 +26,7 @@ def test_8percent_login():
     assert 200 == resp.status_code
 
 
+@skip_if_no_credentials
 def test_8percent_fetch_data():
     provider = _8Percent()
     resp = provider.fetch_data(829)
