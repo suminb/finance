@@ -10,6 +10,9 @@ BASE_PATH = os.path.abspath(os.path.dirname(__file__))
 PROJECT_PATH = os.path.abspath(os.path.join(BASE_PATH, '..'))
 
 
+@pytest.mark.skipif(
+    '_8PERCENT_USERNAME' not in os.environ or
+    '_8PERCENT_PASSWORD' not in os.environ)
 def test_8percent_login():
     username = os.environ.get('_8PERCENT_USERNAME')
     password = os.environ.get('_8PERCENT_PASSWORD')
