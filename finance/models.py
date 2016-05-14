@@ -104,6 +104,10 @@ class Granularity(object):
 
 
 class AssetValue(db.Model, CRUDMixin):
+    """Represents a unit price of an asset at a particular point of time. The
+    granularity of the 'particular point of time' may range from one second
+    to a year. See `Granularity` for more details."""
+
     __table_args__ = (db.UniqueConstraint(
         'asset_id', 'evaluated_at', 'granularity'), {})
 
@@ -122,6 +126,8 @@ class AssetValue(db.Model, CRUDMixin):
 
 
 class Asset(db.Model, CRUDMixin):
+    """Represents an asset."""
+
     type = db.Column(db.Enum('currency', 'stock', 'bond', 'security', 'fund',
                              'commodity', name='asset_type'))
     name = db.Column(db.String)
@@ -152,6 +158,10 @@ class Asset(db.Model, CRUDMixin):
 
 
 class Account(db.Model, CRUDMixin):
+    """Represents an account. An account may contain multiple records based
+    on different assets. For example, a single bank account may have a balance
+    in different foreign currencies."""
+
     user_id = db.Column(db.BigInteger, db.ForeignKey('user.id'))
     portfolio_id = db.Column(db.BigInteger, db.ForeignKey('portfolio.id'))
     type = db.Column(db.Enum('checking', 'savings', 'investment',
