@@ -284,12 +284,23 @@ class Portfolio(db.Model, CRUDMixin):
         return net
 
 
+class TransactionState(object):
+    initiated = 'initiated'
+    closed = 'closed'
+    pending = 'pending'
+    invalid = 'invalid'
+
+
+transaction_states = (
+    TransactionState.initiated, TransactionState.closed,
+    TransactionState.pending, TransactionState.invalid)
+
+
 class Transaction(db.Model, CRUDMixin):
     """A transaction consists of multiple records."""
     initiated_at = db.Column(db.DateTime(timezone=False))
     closed_at = db.Column(db.DateTime(timezone=False))
-    state = db.Column(db.Enum('initiated', 'closed', 'pending', 'invalid',
-                              name='transaction_state'))
+    state = db.Column(db.Enum(*transaction_states, name='transaction_state'))
     #: Individual record
     records = db.relationship('Record', backref='transaction',
                               lazy='dynamic')
@@ -299,7 +310,7 @@ class Transaction(db.Model, CRUDMixin):
             self.initiated_at = initiated_at
         else:
             self.initiated_at = datetime.utcnow()
-        self.state = 'initiated'
+        self.state = TransactionState.initiated
         super(self.__class__, self).__init__(*args, **kwargs)
 
     def __enter__(self):
@@ -308,7 +319,7 @@ class Transaction(db.Model, CRUDMixin):
     def __exit__(self, type, value, traceback):
         """Implicitly mark the transaction as closed only if the state is
         'initiated'."""
-        if self.state == 'initiated':
+        if self.state == TransactionState.initiated:
             self.close()
 
     def close(self, closed_at=None, commit=True):
@@ -317,7 +328,7 @@ class Transaction(db.Model, CRUDMixin):
             self.closed_at = closed_at
         else:
             self.closed_at = datetime.utcnow()
-        self.state = 'closed'
+        self.state = TransactionState.closed
 
         if commit:
             db.session.commit()
