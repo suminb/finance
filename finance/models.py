@@ -1,4 +1,7 @@
+import collections
 from datetime import datetime
+import functools
+import operator
 
 from flask.ext.login import UserMixin
 from flask.ext.sqlalchemy import SQLAlchemy
@@ -273,6 +276,16 @@ class Portfolio(db.Model, CRUDMixin):
         self.accounts.extend(accounts)
         if commit:
             db.session.commit()
+
+    def balance(self, evaluated_at=None):
+        """Calculates the sum of all account balances on a given date."""
+        if not evaluated_at:
+            evaluated_at = datetime.utcnow()
+
+        # Balances of all accounts under this portfolio
+        bs = [account.balance(evaluated_at) for account in self.accounts]
+
+        return functools.reduce(operator.add, map(collections.Counter, bs))
 
     def net_worth(self, evaluated_at=None, granularity=Granularity.day):
         """Calculates the net worth of the portfolio on a particular datetime.
