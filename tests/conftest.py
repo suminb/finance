@@ -41,7 +41,14 @@ def db(app, request):
 
 @pytest.fixture(scope='function')
 def account_checking(request, db):
-    account = Account.create(type='checking', name='Shinhan Checking')
+    account = Account.create(type='checking', name='신한은행 입출금')
+    request.addfinalizer(partial(teardown, db=db, record=account))
+    return account
+
+
+@pytest.fixture(scope='function')
+def account_savings(request, db):
+    account = Account.create(type='savings', name='신한은행 적금')
     request.addfinalizer(partial(teardown, db=db, record=account))
     return account
 

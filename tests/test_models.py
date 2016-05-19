@@ -91,6 +91,48 @@ def test_portfolio(account_hf, asset_hf1, account_checking, asset_krw):
     db.session.commit()
 
 
+def test_portfolio_balance(account_checking, account_savings, account_sp500,
+                           asset_krw, asset_sp500):
+    portfolio = Portfolio()
+    portfolio.base_asset = asset_krw
+    portfolio.add_accounts(account_checking, account_savings, account_sp500)
+
+    assert portfolio.balance(parse_date('2016-05-20')) == {}
+
+    Record.create(
+        created_at=parse_date('2016-05-01'), account=account_checking,
+        asset=asset_krw, quantity=1500)
+    Record.create(
+        created_at=parse_date('2016-05-01'), account=account_savings,
+        asset=asset_krw, quantity=3000)
+    Record.create(
+        created_at=parse_date('2016-05-01'), account=account_sp500,
+        asset=asset_sp500, quantity=120)
+
+    assert portfolio.balance(parse_date('2016-05-20')) \
+        == {asset_krw: 4500, asset_sp500: 120}
+
+    Record.create(
+        created_at=parse_date('2016-05-02'), account=account_savings,
+        asset=asset_krw, quantity=4000)
+    Record.create(
+        created_at=parse_date('2016-05-03'), account=account_savings,
+        asset=asset_krw, quantity=5000)
+
+    assert portfolio.balance(parse_date('2016-05-20')) \
+        == {asset_krw: 13500, asset_sp500: 120}
+
+    Record.create(
+        created_at=parse_date('2016-05-04'), account=account_savings,
+        asset=asset_krw, quantity=10000, type=RecordType.balance_adjustment)
+
+    assert portfolio.balance(parse_date('2016-05-20')) \
+        == {asset_krw: 11500, asset_sp500: 120}
+
+    db.session.delete(portfolio)
+    db.session.commit()
+
+
 def _test_transaction():
     with Transaction.create() as t:
         t.state = 'xxxx'
