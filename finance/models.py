@@ -187,16 +187,24 @@ class Account(db.Model, CRUDMixin):
             evaluated_at = datetime.utcnow()
 
         # FIMXE: Consider open transactions
-        records = Record.query.filter(
-            Record.account == self,
-            Record.created_at <= evaluated_at)
+        records = Record.query \
+            .filter(
+                Record.account == self,
+                Record.created_at <= evaluated_at) \
+            .order_by(
+                Record.created_at)
 
         # Sum all transactions to produce {asset: sum(quantity)} dictionary
         bs = {}
-        rs = [(r.asset, r.quantity) for r in records]
-        for asset, quantity in rs:
+        rs = [(r.asset, r.quantity, r.type) for r in records]
+        for asset, quantity, type in rs:
             bs.setdefault(asset, 0)
-            bs[asset] += quantity
+            if type == RecordType.balance_adjustment:
+                # Previous records will be ignored when 'balance_adjustment'
+                # is seen.
+                bs[asset] = quantity
+            else:
+                bs[asset] += quantity
         return bs
 
     def net_worth(self, evaluated_at=None, granularity=Granularity.day,
@@ -315,13 +323,22 @@ class Transaction(db.Model, CRUDMixin):
             db.session.commit()
 
 
+class RecordType(object):
+    deposit = 'deposit'
+    withdraw = 'withdraw'
+    balance_adjustment = 'balance_adjustment'
+
+
+record_types = (RecordType.deposit, RecordType.withdraw,
+                RecordType.balance_adjustment)
+
+
 class Record(db.Model, CRUDMixin):
     account_id = db.Column(db.BigInteger, db.ForeignKey('account.id'))
     asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
     # asset = db.relationship(Asset, uselist=False)
     transaction_id = db.Column(db.BigInteger, db.ForeignKey('transaction.id'))
-    type = db.Column(db.Enum('deposit', 'withdraw', 'balance_adjustment',
-                             name='record_type'))
+    type = db.Column(db.Enum(*record_types, name='record_type'))
     # NOTE: We'll always use the UTC time
     created_at = db.Column(db.DateTime(timezone=False))
     category = db.Column(db.String)
