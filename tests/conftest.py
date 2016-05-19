@@ -84,6 +84,14 @@ def asset_sp500(request, db):
     return asset
 
 
+@pytest.fixture(scope='module')
+def asset_usd(request, db):
+    asset = Asset.create(
+        type='currency', name='USD', description='United States Dollar')
+    request.addfinalizer(partial(teardown, db=db, record=asset))
+    return asset
+
+
 def teardown(db, record):
     db.session.delete(record)
     db.session.commit()

@@ -4,6 +4,34 @@ from finance.models import *  # noqa
 from finance.utils import parse_date
 
 
+def test_balance(account_checking, asset_krw, asset_usd):
+    assert account_checking.balance() == {}
+
+    Record.create(
+        created_at=parse_date('2016-05-01'), account=account_checking,
+        asset=asset_krw, quantity=1000)
+    assert account_checking.balance(parse_date('2016-05-19')) \
+        == {asset_krw: 1000}
+
+    Record.create(
+        created_at=parse_date('2016-05-02'), account=account_checking,
+        asset=asset_krw, quantity=-500)
+    assert account_checking.balance(parse_date('2016-05-19')) \
+        == {asset_krw: 500}
+
+    Record.create(
+        created_at=parse_date('2016-05-03'), account=account_checking,
+        asset=asset_usd, quantity=25)
+    assert account_checking.balance(parse_date('2016-05-19')) \
+        == {asset_krw: 500, asset_usd: 25}
+
+    Record.create(
+        created_at=parse_date('2016-05-04'), account=account_checking,
+        asset=asset_usd, quantity=40, type=RecordType.balance_adjustment)
+    assert account_checking.balance(parse_date('2016-05-19')) \
+        == {asset_krw: 500, asset_usd: 40}
+
+
 def test_portfolio(account_hf, asset_hf1, account_checking, asset_krw):
     portfolio = Portfolio()
     portfolio.base_asset = asset_krw
