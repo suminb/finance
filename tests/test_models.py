@@ -1,5 +1,6 @@
 import pytest
 
+from finance.exceptions import AssetValueUnavailableException
 from finance.models import *  # noqa
 from finance.utils import parse_date
 
@@ -48,10 +49,10 @@ def test_portfolio(account_hf, asset_hf1, account_checking, asset_krw):
             created_at=parse_date('2015-12-04'), transaction=t,
             account=account_hf, asset=asset_hf1, quantity=1)
 
-    net_worth = portfolio.net_worth(evaluated_at=parse_date('2015-12-04'),
-                                    granularity=Granularity.day)
-    # The net asset value shall be initially zero
-    assert 0 == net_worth
+    # The net asset value shall not be available at this point
+    with pytest.raises(AssetValueUnavailableException):
+        net_worth = portfolio.net_worth(evaluated_at=parse_date('2015-12-04'),
+                                        granularity=Granularity.day)
 
     # Initial asset value
     AssetValue.create(
@@ -167,6 +168,26 @@ def test_records(account_checking, asset_krw):
         assert 'balance_adjustment' == record.type
 
 
+def test_net_worth_without_asset_value(request, account_sp500, asset_krw,
+                                       asset_sp500):
+    asset_values = AssetValue.query.filter_by(asset=asset_sp500)
+    for asset_value in asset_values:
+        db.session.delete(asset_value)
+    db.session.commit()
+
+    record = Record.create(
+        created_at=parse_date('2016-05-27'), account=account_sp500,
+        asset=asset_sp500, quantity=1000)
+
+    with pytest.raises(AssetValueUnavailableException):
+        account_sp500.net_worth(parse_date('2016-05-28'), base_asset=asset_krw)
+
+    def teardown():
+        db.session.delete(record)
+        db.session.commit()
+    request.addfinalizer(teardown)
+
+
 def test_net_worth_1(account_checking, asset_krw):
     assert 0 == account_checking.net_worth(
         evaluated_at=parse_date('2016-01-01'), base_asset=asset_krw)
@@ -250,7 +271,3 @@ def test_net_worth_2(account_checking, account_sp500, asset_krw, asset_sp500):
     assert 921770 == account_sp500.net_worth(
         evaluated_at=parse_date('2016-03-01'), approximation=True,
         base_asset=asset_krw)
-
-    with pytest.raises(AssetValueUnavailableException):
-        account_sp500.net_worth(parse_date('2016-03-01'),
-                                base_asset=asset_krw)

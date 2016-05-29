@@ -251,8 +251,6 @@ class Account(db.Model, CRUDMixin):
 
             if asset_value:
                 worth = asset_value.close * quantity
-            elif approximation:
-                worth = 0
             else:
                 raise AssetValueUnavailableException()
             net_asset_value += worth
