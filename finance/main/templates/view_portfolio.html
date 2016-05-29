@@ -1,0 +1,26 @@
+{% extends 'layout.html' %}
+{% block content %}
+
+  <h1>Portfolio</h1>
+
+  <ul>
+    <li>Name: {{ entity.name }}</li>
+    <li>Description: {{ entity.description }}</li>
+    <li>Base asset: {{ entity.base_asset }}</li>
+    <li>Net worth: {{ entity.net_worth() }}</li>
+  </ul>
+
+  <h2>Accounts</h2>
+
+  <ul>
+    {% for account in entity.accounts %}
+    <li>
+      <a href="{{ url_for('main.view_entity', entity_type='account',
+        entity_id=account.id) }}">{{ account.name }}</a>
+      balance = {{ account.balance() }},
+      net worth = {{ account.net_worth(approximation=True, base_asset=entity.base_asset) }}
+    </li>
+    {% endfor %}
+  </ul>
+
+{% endblock %}

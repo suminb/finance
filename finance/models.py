@@ -1,4 +1,7 @@
+import collections
 from datetime import datetime
+import functools
+import operator
 
 from flask.ext.login import UserMixin
 from flask.ext.sqlalchemy import SQLAlchemy
@@ -24,7 +27,8 @@ class CRUDMixin(object):
 
     @classmethod
     def create(cls, commit=True, **kwargs):
-        kwargs.update(dict(id=uuid64.issue()))
+        if 'id' not in kwargs:
+            kwargs.update(dict(id=uuid64.issue()))
         instance = cls(**kwargs)
 
         if hasattr(instance, 'timestamp') \
@@ -103,29 +107,34 @@ class Granularity(object):
 
 
 class AssetValue(db.Model, CRUDMixin):
+    """Represents a unit price of an asset at a particular point of time. The
+    granularity of the 'particular point of time' may range from one second
+    to a year. See `Granularity` for more details."""
+
     __table_args__ = (db.UniqueConstraint(
         'asset_id', 'evaluated_at', 'granularity'), {})
 
     asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
-    target_asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
-    target_asset = db.relationship('Asset', uselist=False,
-                                   foreign_keys=[target_asset_id])
+    base_asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
+    base_asset = db.relationship('Asset', uselist=False,
+                                 foreign_keys=[base_asset_id])
     evaluated_at = db.Column(db.DateTime(timezone=False))
     granularity = db.Column(db.Enum('1sec', '1min', '5min', '1hour', '1day',
                                     '1week', '1month', '1year',
                                     name='granularity'))
     open = db.Column(db.Numeric(precision=20, scale=4))
-    close = db.Column(db.Numeric(precision=20, scale=4))
-    low = db.Column(db.Numeric(precision=20, scale=4))
     high = db.Column(db.Numeric(precision=20, scale=4))
+    low = db.Column(db.Numeric(precision=20, scale=4))
+    close = db.Column(db.Numeric(precision=20, scale=4))
 
 
 class Asset(db.Model, CRUDMixin):
-    name = db.Column(db.String)
-    description = db.Column(db.Text)
+    """Represents an asset."""
+
     type = db.Column(db.Enum('currency', 'stock', 'bond', 'security', 'fund',
                              'commodity', name='asset_type'))
-    # unit_price = db.Column(db.Numeric(precision=20, scale=4))
+    name = db.Column(db.String)
+    description = db.Column(db.Text)
 
     #: Arbitrary data
     data = db.Column(JsonType)
@@ -133,8 +142,8 @@ class Asset(db.Model, CRUDMixin):
     asset_values = db.relationship(
         'AssetValue', backref='asset', foreign_keys=[AssetValue.asset_id],
         lazy='dynamic', cascade='all,delete-orphan')
-    target_asset_values = db.relationship(
-        'AssetValue', foreign_keys=[AssetValue.target_asset_id],
+    base_asset_values = db.relationship(
+        'AssetValue', foreign_keys=[AssetValue.base_asset_id],
         lazy='dynamic', cascade='all,delete-orphan')
     records = db.relationship('Record', backref='asset',
                               lazy='dynamic', cascade='all,delete-orphan')
@@ -152,6 +161,10 @@ class Asset(db.Model, CRUDMixin):
 
 
 class Account(db.Model, CRUDMixin):
+    """Represents an account. An account may contain multiple records based
+    on different assets. For example, a single bank account may have a balance
+    in different foreign currencies."""
+
     user_id = db.Column(db.BigInteger, db.ForeignKey('user.id'))
     portfolio_id = db.Column(db.BigInteger, db.ForeignKey('portfolio.id'))
     type = db.Column(db.Enum('checking', 'savings', 'investment',
@@ -171,24 +184,40 @@ class Account(db.Model, CRUDMixin):
     def __repr__(self):
         return 'Account <{} ({})>'.format(self.name, self.type)
 
-    @property
-    def balance(self):
+    def balance(self, evaluated_at=None):
+        """Calculates the account balance on a given date."""
+        if not evaluated_at:
+            evaluated_at = datetime.utcnow()
+
+        # FIMXE: Consider open transactions
+        records = Record.query \
+            .filter(
+                Record.account == self,
+                Record.created_at <= evaluated_at) \
+            .order_by(
+                Record.created_at)
+
         # Sum all transactions to produce {asset: sum(quantity)} dictionary
         bs = {}
-        rs = [(r.asset, r.quantity) for r in self.records]
-        for asset, quantity in rs:
+        rs = [(r.asset, r.quantity, r.type) for r in records]
+        for asset, quantity, type in rs:
             bs.setdefault(asset, 0)
-            bs[asset] += quantity
+            if type == RecordType.balance_adjustment:
+                # Previous records will be ignored when 'balance_adjustment'
+                # is seen.
+                bs[asset] = quantity
+            else:
+                bs[asset] += quantity
         return bs
 
     def net_worth(self, evaluated_at=None, granularity=Granularity.day,
-                  approximation=False, target_asset=None):
+                  approximation=False, base_asset=None):
         """Calculates the net worth of the account on a particular datetime.
         If approximation=True and the asset value record is unavailable for the
         given date (evaluated_at), try to pull the most recent AssetValue.
         """
-        if target_asset is None:
-            raise InvalidTargetAssetException('Target asset cannot be null')
+        if base_asset is None:
+            raise InvalidTargetAssetException('Base asset cannot be null')
 
         if not evaluated_at:
             evaluated_at = datetime.utcnow()
@@ -201,15 +230,15 @@ class Account(db.Model, CRUDMixin):
             raise NotImplementedError
 
         net_asset_value = 0
-        for asset, quantity in self.balance.items():
-            if asset == target_asset:
+        for asset, quantity in self.balance(evaluated_at).items():
+            if asset == base_asset:
                 net_asset_value += quantity
                 continue
 
             asset_value = AssetValue.query \
                 .filter(AssetValue.asset == asset,
                         AssetValue.granularity == granularity,
-                        AssetValue.target_asset == target_asset)
+                        AssetValue.base_asset == base_asset)
             if approximation:
                 asset_value = asset_value.filter(
                     AssetValue.evaluated_at <= evaluated_at) \
@@ -222,8 +251,6 @@ class Account(db.Model, CRUDMixin):
 
             if asset_value:
                 worth = asset_value.close * quantity
-            elif approximation:
-                worth = 0
             else:
                 raise AssetValueUnavailableException()
             net_asset_value += worth
@@ -234,17 +261,29 @@ class Account(db.Model, CRUDMixin):
 class Portfolio(db.Model, CRUDMixin):
     """A collection of accounts (= a collection of assets)."""
     __table_args__ = (
-        db.ForeignKeyConstraint(['target_asset_id'], ['asset.id']),
+        db.ForeignKeyConstraint(['base_asset_id'], ['asset.id']),
     )
+    name = db.Column(db.String)
+    description = db.Column(db.String)
     accounts = db.relationship('Account', backref='portfolio', lazy='dynamic')
-    target_asset_id = db.Column(db.BigInteger)
-    target_asset = db.relationship('Asset', uselist=False,
-                                   foreign_keys=[target_asset_id])
+    base_asset_id = db.Column(db.BigInteger)
+    base_asset = db.relationship('Asset', uselist=False,
+                                 foreign_keys=[base_asset_id])
 
     def add_accounts(self, *accounts, commit=True):
         self.accounts.extend(accounts)
         if commit:
             db.session.commit()
+
+    def balance(self, evaluated_at=None):
+        """Calculates the sum of all account balances on a given date."""
+        if not evaluated_at:
+            evaluated_at = datetime.utcnow()
+
+        # Balances of all accounts under this portfolio
+        bs = [account.balance(evaluated_at) for account in self.accounts]
+
+        return functools.reduce(operator.add, map(collections.Counter, bs))
 
     def net_worth(self, evaluated_at=None, granularity=Granularity.day):
         """Calculates the net worth of the portfolio on a particular datetime.
@@ -252,16 +291,27 @@ class Portfolio(db.Model, CRUDMixin):
         net = 0
         for account in self.accounts:
             net += account.net_worth(evaluated_at, granularity, True,
-                                     self.target_asset)
+                                     self.base_asset)
         return net
+
+
+class TransactionState(object):
+    initiated = 'initiated'
+    closed = 'closed'
+    pending = 'pending'
+    invalid = 'invalid'
+
+
+transaction_states = (
+    TransactionState.initiated, TransactionState.closed,
+    TransactionState.pending, TransactionState.invalid)
 
 
 class Transaction(db.Model, CRUDMixin):
     """A transaction consists of multiple records."""
     initiated_at = db.Column(db.DateTime(timezone=False))
     closed_at = db.Column(db.DateTime(timezone=False))
-    state = db.Column(db.Enum('initiated', 'closed', 'pending', 'invalid',
-                              name='transaction_state'))
+    state = db.Column(db.Enum(*transaction_states, name='transaction_state'))
     #: Individual record
     records = db.relationship('Record', backref='transaction',
                               lazy='dynamic')
@@ -271,7 +321,7 @@ class Transaction(db.Model, CRUDMixin):
             self.initiated_at = initiated_at
         else:
             self.initiated_at = datetime.utcnow()
-        self.state = 'initiated'
+        self.state = TransactionState.initiated
         super(self.__class__, self).__init__(*args, **kwargs)
 
     def __enter__(self):
@@ -280,7 +330,7 @@ class Transaction(db.Model, CRUDMixin):
     def __exit__(self, type, value, traceback):
         """Implicitly mark the transaction as closed only if the state is
         'initiated'."""
-        if self.state == 'initiated':
+        if self.state == TransactionState.initiated:
             self.close()
 
     def close(self, closed_at=None, commit=True):
@@ -289,27 +339,36 @@ class Transaction(db.Model, CRUDMixin):
             self.closed_at = closed_at
         else:
             self.closed_at = datetime.utcnow()
-        self.state = 'closed'
+        self.state = TransactionState.closed
 
         if commit:
             db.session.commit()
 
 
+class RecordType(object):
+    deposit = 'deposit'
+    withdraw = 'withdraw'
+    balance_adjustment = 'balance_adjustment'
+
+
+record_types = (RecordType.deposit, RecordType.withdraw,
+                RecordType.balance_adjustment)
+
+
 class Record(db.Model, CRUDMixin):
     account_id = db.Column(db.BigInteger, db.ForeignKey('account.id'))
-    transaction_id = db.Column(db.BigInteger, db.ForeignKey('transaction.id'))
-    # NOTE: We'll always use the UTC time
-    created_at = db.Column(db.DateTime(timezone=False))
-    type = db.Column(db.Enum('deposit', 'withdraw', 'balance_adjustment',
-                             name='record_type'))
-    category = db.Column(db.String)
     asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
     # asset = db.relationship(Asset, uselist=False)
+    transaction_id = db.Column(db.BigInteger, db.ForeignKey('transaction.id'))
+    type = db.Column(db.Enum(*record_types, name='record_type'))
+    # NOTE: We'll always use the UTC time
+    created_at = db.Column(db.DateTime(timezone=False))
+    category = db.Column(db.String)
     quantity = db.Column(db.Numeric(precision=20, scale=4))
 
     def __init__(self, *args, **kwargs):
         # Record.type could be 'balance_adjustment'
-        if 'type' not in kwargs:
+        if 'type' not in kwargs and 'quantity' in kwargs:
             if kwargs['quantity'] < 0:
                 kwargs['type'] = 'withdraw'
             else:
