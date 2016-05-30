@@ -34,6 +34,13 @@ def _test_import_sp500():
     assert result.exit_code == 0
 
 
+def test_import_fund():
+    runner = CliRunner()
+    result = runner.invoke(import_fund,
+                           ['KR5223941018', '20160101', '20160131'])
+    assert result.exit_code == 0
+
+
 def test_import_non_existing_fund():
     runner = CliRunner()
     result = runner.invoke(import_fund, ['???', '20160101', '20160131'])
