@@ -5,15 +5,14 @@ import click
 from click.testing import CliRunner
 from logbook import Logger
 from sqlalchemy.exc import IntegrityError
-import requests
 
 from finance import create_app
 from finance.exceptions import AssetNotFoundException
 from finance.models import *  # noqa
 from finance.providers import _8Percent, Kofia
 from finance.utils import (
-    AssetValueSchema, extract_numbers, import_8percent_data,
-    insert_asset, insert_asset_value, insert_record, parse_date)
+    extract_numbers, import_8percent_data, insert_asset, insert_record,
+    parse_date)
 
 
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
