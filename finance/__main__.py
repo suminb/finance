@@ -2,6 +2,7 @@ import os
 import re
 
 import click
+from click.testing import CliRunner
 from logbook import Logger
 from sqlalchemy.exc import IntegrityError
 import requests
@@ -79,7 +80,14 @@ def insert_test_data():
 
 
 @cli.command()
-def import_sp500():
+def import_sp500_asset_values():
+    runner = CliRunner()
+    runner.invoke(import_fund, ['KR5223941018', '2015-01-01', '2016-06-01'],
+                  catch_exceptions=True)
+
+
+@cli.command()
+def import_sp500_records():
     """Import S&P500 fund sample data. Expects a tab seprated value document.
     """
     app = create_app(__name__)
