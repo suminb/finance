@@ -37,13 +37,13 @@ def _test_import_sp500():
 def test_import_fund():
     runner = CliRunner()
     result = runner.invoke(import_fund,
-                           ['KR5223941018', '20160101', '20160131'])
+                           ['KR5223941018', '2016-01-01', '2016-01-31'])
     assert result.exit_code == 0
 
 
 def test_import_non_existing_fund():
     runner = CliRunner()
-    result = runner.invoke(import_fund, ['???', '20160101', '20160131'])
+    result = runner.invoke(import_fund, ['???', '2016-01-01', '2016-01-31'])
     assert isinstance(result.exception, AssetNotFoundException)
 
 
