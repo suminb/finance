@@ -112,18 +112,21 @@ def import_sp500():
             quantity_krw, quantity_sp500 = \
                 [int(extract_numbers(v)) for v in cols[3:5]]
 
-            print(cols)
+            log.info(', '.join([c.strip() for c in cols]))
 
-            withdraw = _type == '일반입금'
+            if not (_type == '일반입금' or _type == '일반신규'):
+                log.info('Record type \'{}\' will be ignored', _type)
+                continue
 
-            # TODO: Check if identical records exist
             with Transaction.create() as t:
+                # NOTE: The actual deposit date and the buying date generally
+                # differ by a few days. Need to figure out how to parse this
+                # properly from the raw data.
                 try:
-                    if withdraw:
-                        Record.create(
-                            created_at=date, account=account_checking,
-                            asset=asset_krw, quantity=-quantity_krw,
-                            transaction=t)
+                    Record.create(
+                        created_at=date, account=account_checking,
+                        asset=asset_krw, quantity=-quantity_krw,
+                        transaction=t)
                 except IntegrityError:
                     log.warn('Identical record exists')
                     db.session.rollback()
