@@ -356,6 +356,10 @@ record_types = (RecordType.deposit, RecordType.withdraw,
 
 
 class Record(db.Model, CRUDMixin):
+    # NOTE: Is this okay to do this?
+    __table_args__ = (db.UniqueConstraint(
+        'account_id', 'created_at', 'quantity'), {})
+
     account_id = db.Column(db.BigInteger, db.ForeignKey('account.id'))
     asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
     # asset = db.relationship(Asset, uselist=False)
@@ -370,7 +374,7 @@ class Record(db.Model, CRUDMixin):
         # Record.type could be 'balance_adjustment'
         if 'type' not in kwargs and 'quantity' in kwargs:
             if kwargs['quantity'] < 0:
-                kwargs['type'] = 'withdraw'
+                kwargs['type'] = RecordType.withdraw
             else:
-                kwargs['type'] = 'deposit'
+                kwargs['type'] = RecordType.deposit
         super(self.__class__, self).__init__(*args, **kwargs)
