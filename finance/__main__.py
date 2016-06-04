@@ -231,36 +231,35 @@ def import_fund(code, from_date, to_date):
     provider = Kofia()
 
     app = create_app(__name__)
-    app.app_context().push()
+    with app.app_context():
+        # NOTE: I know this looks really stupid, but we'll stick with this
+        # temporary workaround until we figure out how to create an instance of
+        # Asset model from a raw query result
+        # (sqlalchemy.engine.result.RowProxy)
+        query = "SELECT * FROM asset WHERE data->>'code' = :code LIMIT 1"
+        raw_asset = db.session.execute(query, {'code': code}).first()
+        if not raw_asset:
+            raise AssetNotFoundException(
+                'Fund code {} is not mapped to any asset'.format(code))
+        asset_id = raw_asset[0]
+        asset = Asset.query.get(asset_id)
 
-    # NOTE: I know this looks really stupid, but we'll stick with this
-    # temporary workaround until we figure out how to create an instance of
-    # Asset model from a raw query result
-    # (sqlalchemy.engine.result.RowProxy)
-    query = "SELECT * FROM asset WHERE data->>'code' = :code LIMIT 1"
-    raw_asset = db.session.execute(query, {'code': code}).first()
-    if not raw_asset:
-        raise AssetNotFoundException(
-            'Fund code {} is not mapped to any asset'.format(code))
-    asset_id = raw_asset[0]
-    asset = Asset.query.get(asset_id)
+        # FIXME: Target asset should also be determined by asset.data.code
+        base_asset = Asset.query.filter_by(name='KRW').first()
 
-    # FIXME: Target asset should also be determined by asset.data.code
-    base_asset = Asset.query.filter_by(name='KRW').first()
-
-    data = provider.fetch_data(
-        code, parse_date(from_date), parse_date(to_date))
-    for date, unit_price, quantity in data:
-        log.info('Import data on {}', date)
-        unit_price /= 1000.0
-        try:
-            AssetValue.create(
-                asset=asset, base_asset=base_asset,
-                evaluated_at=date, close=unit_price, granularity='1day')
-        except IntegrityError:
-            log.warn('Identical record has been found for {}. Skipping.',
-                     date)
-            db.session.rollback()
+        data = provider.fetch_data(
+            code, parse_date(from_date), parse_date(to_date))
+        for date, unit_price, quantity in data:
+            log.info('Import data on {}', date)
+            unit_price /= 1000.0
+            try:
+                AssetValue.create(
+                    asset=asset, base_asset=base_asset,
+                    evaluated_at=date, close=unit_price, granularity='1day')
+            except IntegrityError:
+                log.warn('Identical record has been found for {}. Skipping.',
+                         date)
+                db.session.rollback()
 
 
 if __name__ == '__main__':
