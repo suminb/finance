@@ -81,39 +81,42 @@ def insert_test_data():
 @cli.command()
 def import_sp500():
     app = create_app(__name__)
-    with app.app_context():
-        account_checking = Account.get(id=1001)
-        account_sp500 = Account.get(id=7001)
-        asset_krw = Asset.query.filter_by(name='KRW').first()
-        asset_sp500 = Asset.query.filter_by(name='KB S&P500').first()
+    app.app_context().push()
 
-        with open('sample-data/sp500.csv') as fin:
-            for line in fin:
-                cols = line.split()
-                if len(cols) != 5:
-                    continue
-                date = parse_date(cols[0], '%Y.%m.%d')
-                _type = cols[1]
-                quantity_krw, quantity_sp500 = \
-                    [int(extract_numbers(v)) for v in cols[2:4]]
+    account_checking = Account.get(id=1001)
+    account_sp500 = Account.get(id=7001)
+    asset_krw = Asset.query.filter_by(name='KRW').first()
+    asset_sp500 = Asset.query.filter_by(name='KB S&P500').first()
 
-                print(cols)
+    import pdb; pdb.set_trace()
 
-                withdraw = _type == '일반입금'
+    with open('sample-data/sp500.csv') as fin:
+        for line in fin:
+            cols = line.split()
+            if len(cols) != 5:
+                continue
+            date = parse_date(cols[0], '%Y.%m.%d')
+            _type = cols[1]
+            quantity_krw, quantity_sp500 = \
+                [int(extract_numbers(v)) for v in cols[2:4]]
 
-                with Transaction.create() as t:
-                    if withdraw:
-                        Record.create(
-                            created_at=date, account=account_checking,
-                            asset=asset_krw, quantity=-quantity_krw,
-                            transaction=t)
+            print(cols)
+
+            withdraw = _type == '일반입금'
+
+            with Transaction.create() as t:
+                if withdraw:
                     Record.create(
-                        created_at=date, account=account_sp500,
-                        asset=asset_sp500, quantity=quantity_sp500,
+                        created_at=date, account=account_checking,
+                        asset=asset_krw, quantity=-quantity_krw,
                         transaction=t)
+                Record.create(
+                    created_at=date, account=account_sp500,
+                    asset=asset_sp500, quantity=quantity_sp500,
+                    transaction=t)
 
-        # print(account_sp500.net_worth(parse_date('2016-02-25'),
-        #      base_asset=asset_krw))
+    # print(account_sp500.net_worth(parse_date('2016-02-25'),
+    #      base_asset=asset_krw))
 
 
 @cli.command()
