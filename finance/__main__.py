@@ -10,7 +10,7 @@ import requests
 from finance import create_app
 from finance.exceptions import AssetNotFoundException
 from finance.models import *  # noqa
-from finance.providers import _8Percent
+from finance.providers import _8Percent, Kofia
 from finance.utils import (
     AssetValueSchema, extract_numbers, import_8percent_data,
     insert_asset, insert_asset_value, insert_record, parse_date)
@@ -226,76 +226,42 @@ def import_rf():
 def import_fund(code, from_date, to_date):
     """Imports fund data from KOFIA.
 
-    :param from_date: e.g., 20160101
-    :param to_date: e.g., 20160228
+    :param from_date: e.g., 2016-01-01
+    :param to_date: e.g., 2016-02-28
     """
-    url = 'http://dis.kofia.or.kr/proframeWeb/XMLSERVICES/'
-    headers = {
-        'Origin': 'http://dis.kofia.or.kr',
-        'Accept-Encoding': 'gzip, deflate',
-        'Accept-Language': 'en-US,en;q=0.8,ko;q=0.6',
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_3) '
-                      'AppleWebKit/537.36 (KHTML, like Gecko) '
-                      'Chrome/48.0.2564.109 Safari/537.36',
-        'Content-Type': 'text/xml',
-        'Accept': 'text/xml',
-        'Referer': 'http://dis.kofia.or.kr/websquare/popup.html?w2xPath='
-                   '/wq/com/popup/DISComFundSmryInfo.xml&companyCd=20090602&'
-                   'standardCd=KR5223941018&standardDt=20160219&grntGb=S&'
-                   'search=&check=1&isMain=undefined&companyGb=A&uFundNm='
-                   '/v8ASwBCwqTQwLv4rW0AUwAmAFAANQAwADDHeLNxwqTJna2Mx5DSLMeQwu'
-                   'DQwQBbyPzC3QAt0wzA%0A3dYVAF0AQwAtAEU%3D&popupID=undefined&'
-                   'w2xHome=/wq/fundann/&w2xDocumentRoot=',
-    }
-    data = """<?xml version="1.0" encoding="utf-8"?>
-        <message>
-            <proframeHeader>
-                <pfmAppName>FS-COM</pfmAppName>
-                <pfmSvcName>COMFundPriceModSO</pfmSvcName>
-                <pfmFnName>priceModSrch</pfmFnName>
-            </proframeHeader>
-            <systemHeader></systemHeader>
-            <COMFundUnityInfoInputDTO>
-                <standardCd>{code}</standardCd>
-                <companyCd>A01031</companyCd>
-                <vSrchTrmFrom>{from_date}</vSrchTrmFrom>
-                <vSrchTrmTo>{to_date}</vSrchTrmTo>
-                <vSrchStd>1</vSrchStd>
-            </COMFundUnityInfoInputDTO>
-        </message>
-    """.format(code=code, from_date=from_date, to_date=to_date)
-    resp = requests.post(url, headers=headers, data=data)
+    provider = Kofia()
 
     app = create_app(__name__)
-    with app.app_context():
-        # NOTE: I know this looks really stupid, but we'll stick with this
-        # temporary workaround until we figure out how to create an instance of
-        # Asset model from a raw query result
-        # (sqlalchemy.engine.result.RowProxy)
-        query = "SELECT * FROM asset WHERE data->>'code' = :code LIMIT 1"
-        raw_asset = db.session.execute(query, {'code': code}).first()
-        if not raw_asset:
-            raise AssetNotFoundException(
-                'Fund code {} is not mapped to any asset'.format(code))
-        asset_id = raw_asset[0]
-        asset = Asset.query.get(asset_id)
+    app.app_context().push()
 
-        # FIXME: Target asset should also be determined by asset.data.code
-        base_asset = Asset.query.filter_by(name='KRW').first()
+    # NOTE: I know this looks really stupid, but we'll stick with this
+    # temporary workaround until we figure out how to create an instance of
+    # Asset model from a raw query result
+    # (sqlalchemy.engine.result.RowProxy)
+    query = "SELECT * FROM asset WHERE data->>'code' = :code LIMIT 1"
+    raw_asset = db.session.execute(query, {'code': code}).first()
+    if not raw_asset:
+        raise AssetNotFoundException(
+            'Fund code {} is not mapped to any asset'.format(code))
+    asset_id = raw_asset[0]
+    asset = Asset.query.get(asset_id)
 
-        schema = AssetValueSchema()
-        schema.load(resp.text)
-        for date, unit_price, original_quantity in schema.get_data():
-            log.info('Import data on {}', date)
-            unit_price /= 1000.0
-            try:
-                AssetValue.create(
-                    asset=asset, base_asset=base_asset,
-                    evaluated_at=date, close=unit_price, granularity='1day')
-            except IntegrityError:
-                log.warn('Identical record has been found for {}. Skipping.',
-                         date)
-                db.session.rollback()
+    # FIXME: Target asset should also be determined by asset.data.code
+    base_asset = Asset.query.filter_by(name='KRW').first()
+
+    data = provider.fetch_data(
+        code, parse_date(from_date), parse_date(to_date))
+    for date, unit_price, quantity in data:
+        log.info('Import data on {}', date)
+        unit_price /= 1000.0
+        try:
+            AssetValue.create(
+                asset=asset, base_asset=base_asset,
+                evaluated_at=date, close=unit_price, granularity='1day')
+        except IntegrityError:
+            log.warn('Identical record has been found for {}. Skipping.',
+                     date)
+            db.session.rollback()
 
 
 if __name__ == '__main__':
