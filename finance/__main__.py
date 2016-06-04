@@ -80,6 +80,8 @@ def insert_test_data():
 
 @cli.command()
 def import_sp500():
+    """Import S&P500 fund sample data. Expects a tab seprated value document.
+    """
     app = create_app(__name__)
     app.app_context().push()
 
@@ -88,22 +90,33 @@ def import_sp500():
     asset_krw = Asset.query.filter_by(name='KRW').first()
     asset_sp500 = Asset.query.filter_by(name='KB S&P500').first()
 
-    import pdb; pdb.set_trace()
+    # Expected number of columns
+    expected_col_count = 6
 
     with open('sample-data/sp500.csv') as fin:
+        # Skip the first row (headers)
+        headers = next(fin)
+        col_count = len(headers.split())
+        if col_count != expected_col_count:
+            raise Exception(
+                'Expected number of columns = {}, '
+                'actual number of columns = {}'.format(
+                    expected_col_count, col_count))
+
         for line in fin:
-            cols = line.split()
-            if len(cols) != 5:
+            cols = line.split('\t')
+            if len(cols) != expected_col_count:
                 continue
             date = parse_date(cols[0], '%Y.%m.%d')
             _type = cols[1]
             quantity_krw, quantity_sp500 = \
-                [int(extract_numbers(v)) for v in cols[2:4]]
+                [int(extract_numbers(v)) for v in cols[3:5]]
 
             print(cols)
 
             withdraw = _type == '일반입금'
 
+            # TODO: Check if identical records exist
             with Transaction.create() as t:
                 if withdraw:
                     Record.create(
