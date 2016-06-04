@@ -356,6 +356,10 @@ record_types = (RecordType.deposit, RecordType.withdraw,
 
 
 class Record(db.Model, CRUDMixin):
+    # NOTE: Is this okay to do this?
+    __table_args__ = (db.UniqueConstraint(
+        'account_id', 'created_at', 'quantity'), {})
+
     account_id = db.Column(db.BigInteger, db.ForeignKey('account.id'))
     asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
     # asset = db.relationship(Asset, uselist=False)

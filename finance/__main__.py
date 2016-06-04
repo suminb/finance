@@ -118,15 +118,24 @@ def import_sp500():
 
             # TODO: Check if identical records exist
             with Transaction.create() as t:
-                if withdraw:
+                try:
+                    if withdraw:
+                        Record.create(
+                            created_at=date, account=account_checking,
+                            asset=asset_krw, quantity=-quantity_krw,
+                            transaction=t)
+                except IntegrityError:
+                    log.warn('Identical record exists')
+                    db.session.rollback()
+
+                try:
                     Record.create(
-                        created_at=date, account=account_checking,
-                        asset=asset_krw, quantity=-quantity_krw,
+                        created_at=date, account=account_sp500,
+                        asset=asset_sp500, quantity=quantity_sp500,
                         transaction=t)
-                Record.create(
-                    created_at=date, account=account_sp500,
-                    asset=asset_sp500, quantity=quantity_sp500,
-                    transaction=t)
+                except IntegrityError:
+                    log.warn('Identical record exists')
+                    db.session.rollback()
 
     # print(account_sp500.net_worth(parse_date('2016-02-25'),
     #      base_asset=asset_krw))
