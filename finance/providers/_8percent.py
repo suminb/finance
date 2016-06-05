@@ -1,4 +1,5 @@
 import json
+import os
 import pickle
 
 from logbook import Logger
@@ -17,7 +18,8 @@ log = Logger(__name__)
 class _8Percent(Provider):
     session = None
 
-    def login(self, username, password):
+    def login(self, username=os.environ.get('_8PERCENT_USERNAME'),
+              password=os.environ.get('_8PERCENT_PASSWORD')):
         """Returns a cookie string if login is successful."""
         self.session = session = requests.session()
 

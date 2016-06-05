@@ -162,6 +162,7 @@ def fetch_8percent(filename):
     bond_ids = [int(x) for x in
                 re.findall(r'/my/repayment_detail/(\d+)', raw)]
     provider = _8Percent()
+    provider.login()
     for bond_id in bond_ids:
         target_path = os.path.join(BASE_PATH, 'sample-data',
                                    '8percent-{}.html'.format(bond_id))
