@@ -13,10 +13,10 @@ def app(request):
     """Session-wide test `Flask` application."""
     settings_override = {
         'TESTING': True,
-
-        # FIXME: This is a temporary workaround
-        'SQLALCHEMY_DATABASE_URI': os.environ.get('DB_URI')[:-8] + 'test'
     }
+    if 'TEST_DB_URI' in os.environ:
+        settings_override['SQLALCHEMY_DATABASE_URI'] = \
+            os.environ.get('TEST_DB_URI')
     app = create_app(__name__, config=settings_override)
 
     # Establish an application context before running the tests.
