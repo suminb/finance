@@ -57,7 +57,7 @@ def test_portfolio(account_hf, asset_hf1, account_checking, asset_krw):
     # Initial asset value
     AssetValue.create(
         evaluated_at=parse_date('2015-12-04'), asset=asset_hf1,
-        base_asset=asset_krw, granularity='1day', close=500000)
+        base_asset=asset_krw, granularity=Granularity.day, close=500000)
 
     net_worth = portfolio.net_worth(evaluated_at=parse_date('2015-12-04'),
                                     granularity=Granularity.day)
@@ -72,7 +72,7 @@ def test_portfolio(account_hf, asset_hf1, account_checking, asset_krw):
     # Remaining principle value after the 1st payment
     AssetValue.create(
         evaluated_at=parse_date('2016-01-08'), asset=asset_hf1,
-        base_asset=asset_krw, granularity='1day', close=472253)
+        base_asset=asset_krw, granularity=Granularity.day, close=472253)
 
     net_worth = portfolio.net_worth(evaluated_at=parse_date('2016-01-08'),
                                     granularity=Granularity.day)
@@ -86,7 +86,7 @@ def test_portfolio(account_hf, asset_hf1, account_checking, asset_krw):
     # Remaining principle value after the 2nd payment
     AssetValue.create(
         evaluated_at=parse_date('2016-02-05'), asset=asset_hf1,
-        base_asset=asset_krw, granularity='1day', close=450195)
+        base_asset=asset_krw, granularity=Granularity.day, close=450195)
 
     db.session.delete(portfolio)
     db.session.commit()
@@ -147,7 +147,7 @@ def test_records(account_checking, asset_krw):
             quantity=1000)
 
         # Make sure the record type has been set implictly
-        assert 'deposit' == record.type
+        assert RecordType.deposit == record.type
 
     with Transaction.create() as t:
         record = Record.create(
@@ -156,16 +156,16 @@ def test_records(account_checking, asset_krw):
             quantity=-2000)
 
         # Make sure the record type has been set implictly
-        assert 'withdraw' == record.type
+        assert RecordType.withdraw == record.type
 
     with Transaction.create() as t:
         record = Record.create(
             created_at=parse_date('2016-03-14'), transaction=t,
             account=account_checking, asset=asset_krw,
-            quantity=3000, type='balance_adjustment')
+            quantity=3000, type=RecordType.balance_adjustment)
 
         # Make sure the record type has been set explicitly
-        assert 'balance_adjustment' == record.type
+        assert RecordType.balance_adjustment == record.type
 
 
 def test_net_worth_without_asset_value(request, account_sp500, asset_krw,
@@ -244,16 +244,16 @@ def test_net_worth_1(account_checking, asset_krw):
 def test_net_worth_2(account_checking, account_sp500, asset_krw, asset_sp500):
     AssetValue.create(
         evaluated_at=parse_date('2016-02-25'), asset=asset_sp500,
-        base_asset=asset_krw, granularity='1day', close=921.77)
+        base_asset=asset_krw, granularity=Granularity.day, close=921.77)
     AssetValue.create(
         evaluated_at=parse_date('2016-02-24'), asset=asset_sp500,
-        base_asset=asset_krw, granularity='1day', close=932.00)
+        base_asset=asset_krw, granularity=Granularity.day, close=932.00)
     AssetValue.create(
         evaluated_at=parse_date('2016-02-23'), asset=asset_sp500,
-        base_asset=asset_krw, granularity='1day', close=921.06)
+        base_asset=asset_krw, granularity=Granularity.day, close=921.06)
     AssetValue.create(
         evaluated_at=parse_date('2016-02-22'), asset=asset_sp500,
-        base_asset=asset_krw, granularity='1day', close=921.76)
+        base_asset=asset_krw, granularity=Granularity.day, close=921.76)
 
     with Transaction.create() as t:
         Record.create(
