@@ -18,8 +18,16 @@ def date_range(start, end, step=1):
                                   'supported at the moment')
     if isinstance(start, str):
         start = parse_date(start)
+    elif isinstance(start, int):
+        start = datetime.now() + timedelta(days=start)
+
     if isinstance(end, str):
         end = parse_date(end)
+    elif isinstance(end, int):
+        end = datetime.now() + timedelta(days=end)
+
+    if start > end:
+        raise ValueError('Start date must be smaller than end date')
 
     delta = end - start
     for i in range(0, delta.days):

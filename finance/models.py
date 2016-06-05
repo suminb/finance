@@ -10,6 +10,7 @@ import uuid64
 
 from finance.exceptions import (
     AssetValueUnavailableException, InvalidTargetAssetException)
+from finance.utils import date_range
 
 
 db = SQLAlchemy()
@@ -293,6 +294,13 @@ class Portfolio(db.Model, CRUDMixin):
             net += account.net_worth(evaluated_at, granularity, True,
                                      self.base_asset)
         return net
+
+    def daily_net_worth(self, date_from, date_to, granularity=Granularity.day):
+        """NOTE: This probably shouldn't be here, but we'll leave it here for
+        demonstration purposes.
+        """
+        for date in date_range(date_from, date_to):
+            yield date, self.net_worth(date)
 
 
 class TransactionState(object):

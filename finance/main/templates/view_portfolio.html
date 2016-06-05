@@ -23,4 +23,22 @@
     {% endfor %}
   </ul>
 
+  <h2>Recent Trends</h2>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>NAV</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for date, nav in entity.daily_net_worth(-30, 0) %}
+      <tr>
+        <td>{{ date }}</td>
+        <td>{{ nav }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
 {% endblock %}

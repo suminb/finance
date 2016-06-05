@@ -271,3 +271,36 @@ def test_net_worth_2(account_checking, account_sp500, asset_krw, asset_sp500):
     assert 921770 == account_sp500.net_worth(
         evaluated_at=parse_date('2016-03-01'), approximation=True,
         base_asset=asset_krw)
+
+
+def test_granularity_enum():
+    assert Granularity.sec
+    assert Granularity.min
+    assert Granularity.five_min
+    assert Granularity.hour
+    assert Granularity.day
+    assert Granularity.week
+    assert Granularity.month
+    assert Granularity.year
+
+    with pytest.raises(AttributeError):
+        Granularity.nano_sec
+
+
+def test_transaction_state_enum():
+    assert TransactionState.initiated
+    assert TransactionState.closed
+    assert TransactionState.pending
+    assert TransactionState.invalid
+
+    with pytest.raises(AttributeError):
+        TransactionState.error
+
+
+def test_record_type_enum():
+    assert RecordType.deposit
+    assert RecordType.withdraw
+    assert RecordType.balance_adjustment
+
+    with pytest.raises(AttributeError):
+        RecordType.steal
