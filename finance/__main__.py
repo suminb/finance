@@ -164,11 +164,12 @@ def fetch_8percent(filename):
     provider = _8Percent()
     provider.login()
     for bond_id in bond_ids:
+        log.info('Fetching bond ID = {}', bond_id)
         target_path = os.path.join(BASE_PATH, 'sample-data',
                                    '8percent-{}.html'.format(bond_id))
-        raw = provider.fetch_data(bond_id)
+        resp = provider.fetch_data(bond_id)
         with open(target_path, 'w') as fout:
-            fout.write(raw)
+            fout.write(resp.text)
 
 
 @cli.command()
