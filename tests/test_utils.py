@@ -1,6 +1,8 @@
 import os
 import types
 
+import pytest
+
 from finance.utils import (
     date_range, extract_numbers, parse_date)
 
@@ -18,6 +20,39 @@ def test_date_range():
     assert 14 == len(r)
     assert r[0] == parse_date('2016-01-01')
     assert r[13] == parse_date('2016-01-14')
+
+
+@pytest.mark.parametrize('start, end, count', [
+    (0, 0, 0),
+    (-1, 0, 1),
+    (-10, 0, 10),
+    (-1, -1, 0),
+    (-10, -5, 5),
+])
+def test_date_range_relative(start, end, count):
+    r = date_range(start, end)
+
+    try:
+        prev_date = next(r)
+    except StopIteration:
+        n = 0
+    else:
+        n = 1
+
+    for date in r:
+        assert prev_date < date
+        n += 1
+
+    assert n == count
+
+
+@pytest.mark.parametrize('start, end', [
+    ('2016-01-01', '2015-01-01'),
+    (0, -1),
+])
+def test_date_range_exceptions(start, end):
+    with pytest.raises(ValueError):
+        [x for x in date_range(start, end)]
 
 
 def test_extract_numbers():
