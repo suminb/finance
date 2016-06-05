@@ -1,4 +1,5 @@
 from functools import partial
+import os
 
 import pytest
 
@@ -12,6 +13,9 @@ def app(request):
     """Session-wide test `Flask` application."""
     settings_override = {
         'TESTING': True,
+
+        # FIXME: This is a temporary workaround
+        'SQLALCHEMY_DATABASE_URI': os.environ.get('DB_URI')[:-8] + 'test'
     }
     app = create_app(__name__, config=settings_override)
 
