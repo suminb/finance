@@ -23,6 +23,16 @@ NOTE: 제가 주로 사용하는 에디터인 vim 에서 한글 타이핑이 불
 * 데이터베이스 모델: 기본적인 틀은 갖추어졌지만, 아직 부족한 점이 많아 앞으로 점진적으로 개선해 나갈 계획입니다. 데이터베이스 마이그레이션 도구로는 `Alembic <https://pypi.python.org/pypi/Flask-Alembic>`_ 을 사용할 계획입니다.
   * 웹 인터페이스: 지금은 일자별 net asset value를 계산해서 보여주는 것만 겨우 돌아가도록 만들어놓은 상태입니다. 발표용으로 급조한거(...)
 
+Daily Net Asset Values
+**********************
+
+매일 총 자산 가치(net asset value; NAV)를 합산하여 그래프로 보여줍니다. 이는 펀드의 단위 가격을 산정하는데 필수적인 데이터입니다.
+
+.. figure:: http://s33.postimg.org/duyhsnxrz/net_worth.png
+    :align: center
+    :alt: Daily net asset values
+
+
 앞으로 할 일들
 --------------
 * 웹 인터페이스: 포트폴리오 구성을 한 눈에 볼 수 있는 인터페이스를 만들 계획입니다.
