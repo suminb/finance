@@ -161,5 +161,6 @@ class _8Percent(Provider):
             'duration': duration,
             'annual_percentage_yield': apy,
             'amount': amount,
+            'originator': '8percent',
             'records': list(gen_records(rows)),
         }
