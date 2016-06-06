@@ -129,11 +129,25 @@ class AssetValue(db.Model, CRUDMixin):
     close = db.Column(db.Numeric(precision=20, scale=4))
 
 
+class AssetType(object):
+    currency = 'currency'
+    stock = 'stock'
+    bond = 'bond'
+    p2p_bond = 'p2p_bond'
+    security = 'security'  # NOTE: Is this necessary?
+    fund = 'fund'
+    commodity = 'commodity'
+
+
+asset_types = (
+    AssetType.currency, AssetType.stock, AssetType.bond, AssetType.p2p_bond,
+    AssetType.security, AssetType.fund, AssetType.commodity)
+
+
 class Asset(db.Model, CRUDMixin):
     """Represents an asset."""
 
-    type = db.Column(db.Enum('currency', 'stock', 'bond', 'security', 'fund',
-                             'commodity', name='asset_type'))
+    type = db.Column(db.Enum(*asset_types, name='asset_type'))
     name = db.Column(db.String)
     description = db.Column(db.Text)
 
