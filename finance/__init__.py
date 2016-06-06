@@ -55,4 +55,7 @@ def create_app(name=__name__, config={},
     login_manager = LoginManager(app)
     login_manager.login_view = 'user.login'
 
+    from finance.utils import date_range
+    app.jinja_env.filters['date_range'] = date_range
+
     return app
