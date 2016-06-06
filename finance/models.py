@@ -174,6 +174,30 @@ class Asset(db.Model, CRUDMixin):
     def current_value(self):
         raise NotImplementedError
 
+    #
+    # P2P bonds only features
+    #
+    def is_delayed(self):
+        raise NotImplementedError
+
+    def is_defaulted(self):
+        raise NotImplementedError
+
+    def last_payment(self):
+        raise NotImplementedError
+
+    def principle(self):
+        return self.asset_values \
+            .order_by(AssetValue.evaluated_at).first().close
+
+    def returned_principle(self):
+        now = datetime.now()
+        return self.asset_values.filter(AssetValue.evaluated_at <= now) \
+            .order_by(AssetValue.evaluated_at.desc()).first().close
+    #
+    # End of P2P bonds only features
+    #
+
 
 class Account(db.Model, CRUDMixin):
     """Represents an account. An account may contain multiple records based
