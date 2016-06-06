@@ -74,7 +74,8 @@ def import_8percent_data(parsed_data, account_checking, account_8p, asset_krw):
     asset_data = {
         'started_at': parsed_data.started_at.isoformat()
     }
-    keys = ['annual_percentage_yield', 'amount', 'grade', 'duration']
+    keys = ['annual_percentage_yield', 'amount', 'grade', 'duration',
+            'originator']
     for key in keys:
         asset_data[key] = parsed_data[key]
 
