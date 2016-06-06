@@ -16,15 +16,12 @@ def date_range(start, end, step=1):
     if step != 1:
         raise NotImplementedError('Any value of step that is not 1 is not '
                                   'supported at the moment')
-    if isinstance(start, str):
-        start = parse_date(start)
-    elif isinstance(start, int):
-        start = datetime.now() + timedelta(days=start)
 
-    if isinstance(end, str):
+    if isinstance(start, str) or isinstance(start, int):
+        start = parse_date(start)
+
+    if isinstance(end, str) or isinstance(end, int):
         end = parse_date(end)
-    elif isinstance(end, int):
-        end = datetime.now() + timedelta(days=end)
 
     if start > end:
         raise ValueError('Start date must be smaller than end date')
