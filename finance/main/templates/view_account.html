@@ -9,6 +9,12 @@
     {{ entity.net_worth(approximation=True, base_asset=entity.portfolio.base_asset) }}
   </div>
 
+  <ul>
+    {% for asset, balance in entity.balance().items() %}
+    <li>{{ asset }}: {{ balance }}</li>
+    {% endfor %}
+  </ul>
+
   <h3>Records</h3>
   <table class="table">
     <thead>
