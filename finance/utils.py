@@ -43,12 +43,15 @@ def extract_numbers(value, type=str):
     return type(''.join(extract(value)))
 
 
-def parse_date(strdate, format='%Y-%m-%d'):
+def parse_date(date, format='%Y-%m-%d'):
     """Make a datetime object from a string.
 
-    :type strdate: str
+    :type date: str or int
     """
-    return datetime.strptime(strdate, format)
+    if isinstance(date, int):
+        return datetime.now().date() + timedelta(days=date)
+    else:
+        return datetime.strptime(date, format)
 
 
 def parse_decimal(v):

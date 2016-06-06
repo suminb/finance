@@ -1,3 +1,4 @@
+from datetime import timedelta
 import os
 import types
 
@@ -64,3 +65,11 @@ def test_extract_numbers():
     assert 3925321 == extract_numbers('3,925,321', int)
 
     assert 150.25 == extract_numbers('150.25', float)
+
+
+def test_parse_date():
+    date = parse_date('2016-06-06')
+    assert date.strftime('%Y-%m-%d') == '2016-06-06'
+
+    delta = parse_date(7) - parse_date(2)
+    assert delta == timedelta(days=5)
