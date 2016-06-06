@@ -63,15 +63,25 @@ def parse_nullable_str(v):
 
 
 def import_8percent_data(parsed_data, account_checking, account_8p, asset_krw):
-    from finance.models import Asset, AssetValue, Record, Transaction
+    from finance.models import Asset, AssetType, AssetValue, Record, \
+        Transaction
 
     assert account_checking
     assert account_8p
     assert asset_krw
 
-    asset_8p = Asset.create(name=parsed_data['name'])
-    remaining_value = parsed_data['amount']
-    started_at = parsed_data['started_at']
+    parsed_data = DictReader(parsed_data)
+    asset_data = {
+        'started_at': parsed_data.started_at.isoformat()
+    }
+    keys = ['annual_percentage_yield', 'amount', 'grade', 'duration']
+    for key in keys:
+        asset_data[key] = parsed_data[key]
+
+    asset_8p = Asset.create(name=parsed_data.name, type=AssetType.p2p_bond,
+                            data=asset_data)
+    remaining_value = parsed_data.amount
+    started_at = parsed_data.started_at
 
     with Transaction.create() as t:
         Record.create(
@@ -84,7 +94,7 @@ def import_8percent_data(parsed_data, account_checking, account_8p, asset_krw):
         evaluated_at=started_at, asset=asset_8p,
         base_asset=asset_krw, granularity='1day', close=remaining_value)
 
-    for record in parsed_data['records']:
+    for record in parsed_data.records:
         date, principle, interest, tax, fees = record
         returned = principle + interest - (tax + fees)
         remaining_value -= principle
@@ -140,3 +150,16 @@ def insert_record(row, account, asset, transaction):
 
 class AssetValueImporter(object):
     pass
+
+
+class DictReader(object):
+    def __init__(self, value):
+        if not isinstance(value, dict):
+            raise ValueError('DictReader only accepts dict type')
+        self.value = value
+
+    def __getattr__(self, name):
+        return self.value[name]
+
+    def __getitem__(self, key):
+        return self.value[key]
