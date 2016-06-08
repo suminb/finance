@@ -1,7 +1,7 @@
 from click.testing import CliRunner
 
-from finance.__main__ import (
-    create_all, drop_all, import_8percent, import_sp500, insert_test_data)
+from finance.__main__ import *  # noqa
+from finance.exceptions import AssetNotFoundException
 
 
 def test_drop_all():
@@ -32,6 +32,19 @@ def _test_import_sp500():
     runner = CliRunner()
     result = runner.invoke(import_sp500)
     assert result.exit_code == 0
+
+
+def test_import_fund():
+    runner = CliRunner()
+    result = runner.invoke(import_fund,
+                           ['KR5223941018', '2016-01-01', '2016-01-31'])
+    assert result.exit_code == 0
+
+
+def test_import_non_existing_fund():
+    runner = CliRunner()
+    result = runner.invoke(import_fund, ['???', '2016-01-01', '2016-01-31'])
+    assert isinstance(result.exception, AssetNotFoundException)
 
 
 def teardown_module(module):

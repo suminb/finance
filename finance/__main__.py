@@ -2,17 +2,17 @@ import os
 import re
 
 import click
+from click.testing import CliRunner
 from logbook import Logger
 from sqlalchemy.exc import IntegrityError
-import requests
 
 from finance import create_app
 from finance.exceptions import AssetNotFoundException
 from finance.models import *  # noqa
-from finance.providers import _8Percent
+from finance.providers import _8Percent, Kofia
 from finance.utils import (
-    AssetValueSchema, extract_numbers, import_8percent_data,
-    insert_asset, insert_asset_value, insert_record, parse_date)
+    extract_numbers, import_8percent_data, insert_asset, insert_record,
+    parse_date)
 
 
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -79,41 +79,76 @@ def insert_test_data():
 
 
 @cli.command()
-def import_sp500():
+def import_sp500_asset_values():
+    runner = CliRunner()
+    runner.invoke(import_fund, ['KR5223941018', '2015-01-01', '2016-06-01'],
+                  catch_exceptions=True)
+
+
+@cli.command()
+def import_sp500_records():
+    """Import S&P500 fund sample data. Expects a tab seprated value document.
+    """
     app = create_app(__name__)
-    with app.app_context():
-        account_checking = Account.get(id=1001)
-        account_sp500 = Account.get(id=7001)
-        asset_krw = Asset.query.filter_by(name='KRW').first()
-        asset_sp500 = Asset.query.filter_by(name='KB S&P500').first()
+    app.app_context().push()
 
-        with open('sample-data/sp500.csv') as fin:
-            for line in fin:
-                cols = line.split()
-                if len(cols) != 5:
-                    continue
-                date = parse_date(cols[0], '%Y.%m.%d')
-                _type = cols[1]
-                quantity_krw, quantity_sp500 = \
-                    [int(extract_numbers(v)) for v in cols[2:4]]
+    account_checking = Account.get(id=1001)
+    account_sp500 = Account.get(id=7001)
+    asset_krw = Asset.query.filter_by(name='KRW').first()
+    asset_sp500 = Asset.query.filter_by(name='KB S&P500').first()
 
-                print(cols)
+    # Expected number of columns
+    expected_col_count = 6
 
-                withdraw = _type == '일반입금'
+    with open('sample-data/sp500.csv') as fin:
+        # Skip the first row (headers)
+        headers = next(fin)
+        col_count = len(headers.split())
+        if col_count != expected_col_count:
+            raise Exception(
+                'Expected number of columns = {}, '
+                'actual number of columns = {}'.format(
+                    expected_col_count, col_count))
 
-                with Transaction.create() as t:
-                    if withdraw:
-                        Record.create(
-                            created_at=date, account=account_checking,
-                            asset=asset_krw, quantity=-quantity_krw,
-                            transaction=t)
+        for line in fin:
+            cols = line.split('\t')
+            if len(cols) != expected_col_count:
+                continue
+            date = parse_date(cols[0], '%Y.%m.%d')
+            _type = cols[1]
+            quantity_krw, quantity_sp500 = \
+                [int(extract_numbers(v)) for v in cols[3:5]]
+
+            log.info(', '.join([c.strip() for c in cols]))
+
+            if not (_type == '일반입금' or _type == '일반신규'):
+                log.info('Record type \'{}\' will be ignored', _type)
+                continue
+
+            with Transaction.create() as t:
+                # NOTE: The actual deposit date and the buying date generally
+                # differ by a few days. Need to figure out how to parse this
+                # properly from the raw data.
+                try:
+                    Record.create(
+                        created_at=date, account=account_checking,
+                        asset=asset_krw, quantity=-quantity_krw,
+                        transaction=t)
+                except IntegrityError:
+                    log.warn('Identical record exists')
+                    db.session.rollback()
+
+                try:
                     Record.create(
                         created_at=date, account=account_sp500,
                         asset=asset_sp500, quantity=quantity_sp500,
                         transaction=t)
+                except IntegrityError:
+                    log.warn('Identical record exists')
+                    db.session.rollback()
 
-        # print(account_sp500.net_worth(parse_date('2016-02-25'),
-        #      base_asset=asset_krw))
+    # print(account_sp500.net_worth(parse_date('2016-02-25'),
+    #      base_asset=asset_krw))
 
 
 @cli.command()
@@ -127,12 +162,14 @@ def fetch_8percent(filename):
     bond_ids = [int(x) for x in
                 re.findall(r'/my/repayment_detail/(\d+)', raw)]
     provider = _8Percent()
+    provider.login()
     for bond_id in bond_ids:
+        log.info('Fetching bond ID = {}', bond_id)
         target_path = os.path.join(BASE_PATH, 'sample-data',
                                    '8percent-{}.html'.format(bond_id))
-        raw = provider.fetch_data(bond_id)
+        resp = provider.fetch_data(bond_id)
         with open(target_path, 'w') as fout:
-            fout.write(raw)
+            fout.write(resp.text)
 
 
 @cli.command()
@@ -190,45 +227,10 @@ def import_rf():
 def import_fund(code, from_date, to_date):
     """Imports fund data from KOFIA.
 
-    :param from_date: e.g., 20160101
-    :param to_date: e.g., 20160228
+    :param from_date: e.g., 2016-01-01
+    :param to_date: e.g., 2016-02-28
     """
-    url = 'http://dis.kofia.or.kr/proframeWeb/XMLSERVICES/'
-    headers = {
-        'Origin': 'http://dis.kofia.or.kr',
-        'Accept-Encoding': 'gzip, deflate',
-        'Accept-Language': 'en-US,en;q=0.8,ko;q=0.6',
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_3) '
-                      'AppleWebKit/537.36 (KHTML, like Gecko) '
-                      'Chrome/48.0.2564.109 Safari/537.36',
-        'Content-Type': 'text/xml',
-        'Accept': 'text/xml',
-        'Referer': 'http://dis.kofia.or.kr/websquare/popup.html?w2xPath='
-                   '/wq/com/popup/DISComFundSmryInfo.xml&companyCd=20090602&'
-                   'standardCd=KR5223941018&standardDt=20160219&grntGb=S&'
-                   'search=&check=1&isMain=undefined&companyGb=A&uFundNm='
-                   '/v8ASwBCwqTQwLv4rW0AUwAmAFAANQAwADDHeLNxwqTJna2Mx5DSLMeQwu'
-                   'DQwQBbyPzC3QAt0wzA%0A3dYVAF0AQwAtAEU%3D&popupID=undefined&'
-                   'w2xHome=/wq/fundann/&w2xDocumentRoot=',
-    }
-    data = """<?xml version="1.0" encoding="utf-8"?>
-        <message>
-            <proframeHeader>
-                <pfmAppName>FS-COM</pfmAppName>
-                <pfmSvcName>COMFundPriceModSO</pfmSvcName>
-                <pfmFnName>priceModSrch</pfmFnName>
-            </proframeHeader>
-            <systemHeader></systemHeader>
-            <COMFundUnityInfoInputDTO>
-                <standardCd>{code}</standardCd>
-                <companyCd>A01031</companyCd>
-                <vSrchTrmFrom>{from_date}</vSrchTrmFrom>
-                <vSrchTrmTo>{to_date}</vSrchTrmTo>
-                <vSrchStd>1</vSrchStd>
-            </COMFundUnityInfoInputDTO>
-        </message>
-    """.format(code=code, from_date=from_date, to_date=to_date)
-    resp = requests.post(url, headers=headers, data=data)
+    provider = Kofia()
 
     app = create_app(__name__)
     with app.app_context():
@@ -247,9 +249,9 @@ def import_fund(code, from_date, to_date):
         # FIXME: Target asset should also be determined by asset.data.code
         base_asset = Asset.query.filter_by(name='KRW').first()
 
-        schema = AssetValueSchema()
-        schema.load(resp.text)
-        for date, unit_price, original_quantity in schema.get_data():
+        data = provider.fetch_data(
+            code, parse_date(from_date), parse_date(to_date))
+        for date, unit_price, quantity in data:
             log.info('Import data on {}', date)
             unit_price /= 1000.0
             try:

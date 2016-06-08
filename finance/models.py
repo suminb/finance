@@ -10,6 +10,7 @@ import uuid64
 
 from finance.exceptions import (
     AssetValueUnavailableException, InvalidTargetAssetException)
+from finance.utils import date_range
 
 
 db = SQLAlchemy()
@@ -128,11 +129,25 @@ class AssetValue(db.Model, CRUDMixin):
     close = db.Column(db.Numeric(precision=20, scale=4))
 
 
+class AssetType(object):
+    currency = 'currency'
+    stock = 'stock'
+    bond = 'bond'
+    p2p_bond = 'p2p_bond'
+    security = 'security'  # NOTE: Is this necessary?
+    fund = 'fund'
+    commodity = 'commodity'
+
+
+asset_types = (
+    AssetType.currency, AssetType.stock, AssetType.bond, AssetType.p2p_bond,
+    AssetType.security, AssetType.fund, AssetType.commodity)
+
+
 class Asset(db.Model, CRUDMixin):
     """Represents an asset."""
 
-    type = db.Column(db.Enum('currency', 'stock', 'bond', 'security', 'fund',
-                             'commodity', name='asset_type'))
+    type = db.Column(db.Enum(*asset_types, name='asset_type'))
     name = db.Column(db.String)
     description = db.Column(db.Text)
 
@@ -158,6 +173,30 @@ class Asset(db.Model, CRUDMixin):
     @property
     def current_value(self):
         raise NotImplementedError
+
+    #
+    # P2P bonds only features
+    #
+    def is_delayed(self):
+        raise NotImplementedError
+
+    def is_defaulted(self):
+        raise NotImplementedError
+
+    def last_payment(self):
+        raise NotImplementedError
+
+    def principle(self):
+        return self.asset_values \
+            .order_by(AssetValue.evaluated_at).first().close
+
+    def returned_principle(self):
+        now = datetime.now()
+        return self.asset_values.filter(AssetValue.evaluated_at <= now) \
+            .order_by(AssetValue.evaluated_at.desc()).first().close
+    #
+    # End of P2P bonds only features
+    #
 
 
 class Account(db.Model, CRUDMixin):
@@ -294,6 +333,13 @@ class Portfolio(db.Model, CRUDMixin):
                                      self.base_asset)
         return net
 
+    def daily_net_worth(self, date_from, date_to, granularity=Granularity.day):
+        """NOTE: This probably shouldn't be here, but we'll leave it here for
+        demonstration purposes.
+        """
+        for date in date_range(date_from, date_to):
+            yield date, self.net_worth(date)
+
 
 class TransactionState(object):
     initiated = 'initiated'
@@ -356,6 +402,10 @@ record_types = (RecordType.deposit, RecordType.withdraw,
 
 
 class Record(db.Model, CRUDMixin):
+    # NOTE: Is this okay to do this?
+    __table_args__ = (db.UniqueConstraint(
+        'account_id', 'created_at', 'quantity'), {})
+
     account_id = db.Column(db.BigInteger, db.ForeignKey('account.id'))
     asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
     # asset = db.relationship(Asset, uselist=False)
@@ -370,7 +420,7 @@ class Record(db.Model, CRUDMixin):
         # Record.type could be 'balance_adjustment'
         if 'type' not in kwargs and 'quantity' in kwargs:
             if kwargs['quantity'] < 0:
-                kwargs['type'] = 'withdraw'
+                kwargs['type'] = RecordType.withdraw
             else:
-                kwargs['type'] = 'deposit'
+                kwargs['type'] = RecordType.deposit
         super(self.__class__, self).__init__(*args, **kwargs)

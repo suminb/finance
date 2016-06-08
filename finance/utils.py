@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 
 from logbook import Logger
-import xmltodict
 
 
 log = Logger('finance')
@@ -17,10 +16,15 @@ def date_range(start, end, step=1):
     if step != 1:
         raise NotImplementedError('Any value of step that is not 1 is not '
                                   'supported at the moment')
-    if isinstance(start, str):
+
+    if isinstance(start, str) or isinstance(start, int):
         start = parse_date(start)
-    if isinstance(end, str):
+
+    if isinstance(end, str) or isinstance(end, int):
         end = parse_date(end)
+
+    if start > end:
+        raise ValueError('Start date must be smaller than end date')
 
     delta = end - start
     for i in range(0, delta.days):
@@ -36,12 +40,15 @@ def extract_numbers(value, type=str):
     return type(''.join(extract(value)))
 
 
-def parse_date(strdate, format='%Y-%m-%d'):
+def parse_date(date, format='%Y-%m-%d'):
     """Make a datetime object from a string.
 
-    :type strdate: str
+    :type date: str or int
     """
-    return datetime.strptime(strdate, format)
+    if isinstance(date, int):
+        return datetime.now().date() + timedelta(days=date)
+    else:
+        return datetime.strptime(date, format)
 
 
 def parse_decimal(v):
@@ -56,15 +63,26 @@ def parse_nullable_str(v):
 
 
 def import_8percent_data(parsed_data, account_checking, account_8p, asset_krw):
-    from finance.models import Asset, AssetValue, Record, Transaction
+    from finance.models import Asset, AssetType, AssetValue, Record, \
+        Transaction
 
     assert account_checking
     assert account_8p
     assert asset_krw
 
-    asset_8p = Asset.create(name=parsed_data['name'])
-    remaining_value = parsed_data['amount']
-    started_at = parsed_data['started_at']
+    parsed_data = DictReader(parsed_data)
+    asset_data = {
+        'started_at': parsed_data.started_at.isoformat()
+    }
+    keys = ['annual_percentage_yield', 'amount', 'grade', 'duration',
+            'originator']
+    for key in keys:
+        asset_data[key] = parsed_data[key]
+
+    asset_8p = Asset.create(name=parsed_data.name, type=AssetType.p2p_bond,
+                            data=asset_data)
+    remaining_value = parsed_data.amount
+    started_at = parsed_data.started_at
 
     with Transaction.create() as t:
         Record.create(
@@ -77,7 +95,7 @@ def import_8percent_data(parsed_data, account_checking, account_8p, asset_krw):
         evaluated_at=started_at, asset=asset_8p,
         base_asset=asset_krw, granularity='1day', close=remaining_value)
 
-    for record in parsed_data['records']:
+    for record in parsed_data.records:
         date, principle, interest, tax, fees = record
         returned = principle + interest - (tax + fees)
         remaining_value -= principle
@@ -135,26 +153,14 @@ class AssetValueImporter(object):
     pass
 
 
-class AssetValueSchema(object):
-    def __init__(self):
-        self.raw = None
-        self.parsed = None
+class DictReader(object):
+    def __init__(self, value):
+        if not isinstance(value, dict):
+            raise ValueError('DictReader only accepts dict type')
+        self.value = value
 
-    def load(self, raw_data):
-        """Loads raw data.
+    def __getattr__(self, name):
+        return self.value[name]
 
-        :type raw_data: str
-        """
-        self.raw = raw_data
-        self.parsed = xmltodict.parse(raw_data)
-
-    def get_data(self):
-        message = self.parsed['root']['message']
-        price_records = message['COMFundPriceModListDTO']['priceModList']
-        for pr in price_records:
-            date_str = pr['standardDt']
-            date = datetime.strptime(date_str, '%Y%m%d')
-            unit_price = float(pr['standardCot'])
-            original_quantity = float(pr['uOriginalAmt'])
-
-            yield date, unit_price, original_quantity * 1000000
+    def __getitem__(self, key):
+        return self.value[key]

@@ -8,7 +8,7 @@ from flask.ext.login import current_user, LoginManager
 from logbook import Logger, StreamHandler
 
 
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 __author__ = 'Sumin Byeon'
 __email__ = 'suminb@gmail.com'
 
@@ -54,5 +54,8 @@ def create_app(name=__name__, config={},
 
     login_manager = LoginManager(app)
     login_manager.login_view = 'user.login'
+
+    from finance.utils import date_range
+    app.jinja_env.filters['date_range'] = date_range
 
     return app

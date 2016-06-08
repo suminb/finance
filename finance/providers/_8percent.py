@@ -1,4 +1,5 @@
 import json
+import os
 import pickle
 
 from logbook import Logger
@@ -17,7 +18,8 @@ log = Logger(__name__)
 class _8Percent(Provider):
     session = None
 
-    def login(self, username, password):
+    def login(self, username=os.environ.get('_8PERCENT_USERNAME'),
+              password=os.environ.get('_8PERCENT_PASSWORD')):
         """Returns a cookie string if login is successful."""
         self.session = session = requests.session()
 
@@ -134,16 +136,23 @@ class _8Percent(Provider):
                 interest = etnc(row, 'Cell_448', int)
                 tax = etnc(row, 'Cell_449', int)
                 fees = etnc(row, 'Cell_452', int)
+
+                # NOTE: Early payments may cause some portion of the fees
+                # to be refunded
+                refunded_fees = etnc(row, 'Cell_759', int)
+
                 returned = etnc(row, 'Cell_453', int)
 
                 # Make sure the parsed data is correct
                 try:
-                    assert returned == principle + interest - (tax + fees)
+                    assert returned \
+                        == principle + interest - (tax + fees - refunded_fees)
                 except AssertionError:
-                    import pdb; pdb.set_trace()
+                    import pdb
+                    pdb.set_trace()
                     pass
 
-                yield date, principle, interest, tax, fees
+                yield date, principle, interest, tax, fees - refunded_fees
 
         return {
             'name': name,
@@ -152,5 +161,6 @@ class _8Percent(Provider):
             'duration': duration,
             'annual_percentage_yield': apy,
             'amount': amount,
+            'originator': '8percent',
             'records': list(gen_records(rows)),
         }

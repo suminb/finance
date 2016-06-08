@@ -1,5 +1,8 @@
+from datetime import timedelta
 import os
 import types
+
+import pytest
 
 from finance.utils import (
     date_range, extract_numbers, parse_date)
@@ -20,6 +23,39 @@ def test_date_range():
     assert r[13] == parse_date('2016-01-14')
 
 
+@pytest.mark.parametrize('start, end, count', [
+    (0, 0, 0),
+    (-1, 0, 1),
+    (-10, 0, 10),
+    (-1, -1, 0),
+    (-10, -5, 5),
+])
+def test_date_range_relative(start, end, count):
+    r = date_range(start, end)
+
+    try:
+        prev_date = next(r)
+    except StopIteration:
+        n = 0
+    else:
+        n = 1
+
+    for date in r:
+        assert prev_date < date
+        n += 1
+
+    assert n == count
+
+
+@pytest.mark.parametrize('start, end', [
+    ('2016-01-01', '2015-01-01'),
+    (0, -1),
+])
+def test_date_range_exceptions(start, end):
+    with pytest.raises(ValueError):
+        [x for x in date_range(start, end)]
+
+
 def test_extract_numbers():
     assert '160' == extract_numbers('160')
     assert '1694' == extract_numbers('1,694')
@@ -29,3 +65,11 @@ def test_extract_numbers():
     assert 3925321 == extract_numbers('3,925,321', int)
 
     assert 150.25 == extract_numbers('150.25', float)
+
+
+def test_parse_date():
+    date = parse_date('2016-06-06')
+    assert date.strftime('%Y-%m-%d') == '2016-06-06'
+
+    delta = parse_date(7) - parse_date(2)
+    assert delta == timedelta(days=5)
