@@ -257,7 +257,8 @@ def import_fund(code, from_date, to_date):
             try:
                 AssetValue.create(
                     asset=asset, base_asset=base_asset,
-                    evaluated_at=date, close=unit_price, granularity='1day')
+                    evaluated_at=date, close=unit_price,
+                    granularity=Granularity.day)
             except IntegrityError:
                 log.warn('Identical record has been found for {}. Skipping.',
                          date)
