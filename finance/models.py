@@ -9,12 +9,32 @@ from sqlalchemy.dialects.postgresql import JSON
 import uuid64
 
 from finance.exceptions import (
-    AssetValueUnavailableException, InvalidTargetAssetException)
+    AssetNotFoundException, AssetValueUnavailableException,
+    InvalidTargetAssetException)
 from finance.utils import date_range
 
 
 db = SQLAlchemy()
 JsonType = db.String().with_variant(JSON(), 'postgresql')
+
+
+def get_asset_by_fund_code(code):
+    """Get an Asset instance mapped to the given fund code.
+
+    :param code: A fund code
+    :type code: str
+    """
+    # NOTE: I know this looks really stupid, but we'll stick with this
+    # temporary workaround until we figure out how to create an instance of
+    # Asset model from a raw query result
+    # (sqlalchemy.engine.result.RowProxy)
+    query = "SELECT * FROM asset WHERE data->>'code' = :code LIMIT 1"
+    raw_asset = db.session.execute(query, {'code': code}).first()
+    if not raw_asset:
+        raise AssetNotFoundException(
+            'Fund code {} is not mapped to any asset'.format(code))
+    asset_id = raw_asset[0]
+    return Asset.query.get(asset_id)
 
 
 class CRUDMixin(object):
@@ -337,6 +357,7 @@ class Portfolio(db.Model, CRUDMixin):
         """NOTE: This probably shouldn't be here, but we'll leave it here for
         demonstration purposes.
         """
+        # FIXME: Calculate the daily net worth incrementally
         for date in date_range(date_from, date_to):
             yield date, self.net_worth(date)
 

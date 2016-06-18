@@ -7,7 +7,6 @@ from logbook import Logger
 from sqlalchemy.exc import IntegrityError
 
 from finance import create_app
-from finance.exceptions import AssetNotFoundException
 from finance.models import *  # noqa
 from finance.providers import _8Percent, Kofia
 from finance.utils import (
@@ -220,6 +219,7 @@ def import_rf():
                 insert_record(line, account, asset, None)
 
 
+# NOTE: This will probably be called by AWS Lambda
 @cli.command()
 @click.argument('code')
 @click.argument('from-date')
@@ -227,6 +227,7 @@ def import_rf():
 def import_fund(code, from_date, to_date):
     """Imports fund data from KOFIA.
 
+    :param code: e.g., KR5223941018
     :param from_date: e.g., 2016-01-01
     :param to_date: e.g., 2016-02-28
     """
@@ -234,17 +235,7 @@ def import_fund(code, from_date, to_date):
 
     app = create_app(__name__)
     with app.app_context():
-        # NOTE: I know this looks really stupid, but we'll stick with this
-        # temporary workaround until we figure out how to create an instance of
-        # Asset model from a raw query result
-        # (sqlalchemy.engine.result.RowProxy)
-        query = "SELECT * FROM asset WHERE data->>'code' = :code LIMIT 1"
-        raw_asset = db.session.execute(query, {'code': code}).first()
-        if not raw_asset:
-            raise AssetNotFoundException(
-                'Fund code {} is not mapped to any asset'.format(code))
-        asset_id = raw_asset[0]
-        asset = Asset.query.get(asset_id)
+        asset = get_asset_by_fund_code(code)
 
         # FIXME: Target asset should also be determined by asset.data.code
         base_asset = Asset.query.filter_by(name='KRW').first()

@@ -90,7 +90,8 @@ def asset_krw(request, db):
 @pytest.fixture(scope='module')
 def asset_sp500(request, db):
     asset = Asset.create(
-        type='security', name='S&P 500', description='')
+        type='security', name='KB Star S&P500', description='',
+        data={'code': 'KR5223941018'})
     request.addfinalizer(partial(teardown, db=db, record=asset))
     return asset
 
