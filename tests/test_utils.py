@@ -4,8 +4,7 @@ import types
 
 import pytest
 
-from finance.utils import (
-    date_range, extract_numbers, parse_date)
+from finance.utils import *  # noqa
 
 
 BASE_PATH = os.path.abspath(os.path.dirname(__file__))
@@ -65,6 +64,12 @@ def test_extract_numbers():
     assert 3925321 == extract_numbers('3,925,321', int)
 
     assert 150.25 == extract_numbers('150.25', float)
+
+    with pytest.raises(TypeError):
+        extract_numbers(1)
+
+    with pytest.raises(TypeError):
+        extract_numbers(b'\x00')
 
 
 def test_parse_date():
