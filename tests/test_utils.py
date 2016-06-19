@@ -78,3 +78,8 @@ def test_parse_date():
 
     delta = parse_date(7) - parse_date(2)
     assert delta == timedelta(days=5)
+
+
+def test_parse_decimal():
+    assert parse_decimal('1.1') == 1.1
+    assert parse_decimal(1) == 1.0
