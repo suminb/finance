@@ -50,6 +50,7 @@ def index():
     return render_template('index.html', **context)
 
 
+# FIXME: deprecated
 @main_module.route('/data')
 def data():
     portfolio = Portfolio.query.first()
@@ -62,6 +63,17 @@ def data():
             yield date.strftime('%Y%m%d'), v, v, v, v, 0
 
     return jsonify({'data': [x for x in gen(start, end)]})
+
+
+@main_module.route('/portfolios/<int:portfolio_id>/nav')
+def nav(portfolio_id):
+    """Returns the net asset values (NAVs) for a given period of time."""
+    portfolio = Portfolio.query.get(portfolio_id)
+    start, end = map(request.args.get, ['start', 'end'])
+
+    portfolio.daily_net_worth(start, end)
+
+    return ''
 
 
 @main_module.route('/entities/<entity_type>')

@@ -5,7 +5,7 @@ import pytest
 from typedecorator import setup_typecheck
 
 from finance import create_app
-from finance.models import Account, Asset
+from finance.models import Account, Asset, Portfolio
 from finance.models import db as _db
 
 
@@ -32,6 +32,11 @@ def app(request):
 
     request.addfinalizer(teardown)
     return app
+
+
+@pytest.fixture
+def testapp(app, db):
+    return app.test_client()
 
 
 @pytest.fixture(scope='module')
@@ -106,6 +111,22 @@ def asset_usd(request, db):
         type='currency', name='USD', description='United States Dollar')
     request.addfinalizer(partial(teardown, db=db, record=asset))
     return asset
+
+
+@pytest.fixture(scope='function')
+def portfolio(request, db, asset_krw, account_checking, account_sp500):
+    p = Portfolio.create(base_asset=asset_krw)
+    p.add_accounts(account_checking, account_sp500)
+
+    def teardown():
+        # NOTE: The following statement is necessary because the scope of
+        # `asset_krw` is a module, whereas the scope of `p` is a function.
+        p.base_asset = None
+        db.session.delete(p)
+        db.session.commit()
+
+    request.addfinalizer(teardown)
+    return p
 
 
 def teardown(db, record):
