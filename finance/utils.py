@@ -63,6 +63,41 @@ def parse_nullable_str(v):
     return v if v else None
 
 
+def parse_stock_data(stream):
+    first_header, second_header = next(stream), next(stream)
+    while True:
+        try:
+            first_line, second_line = next(stream), next(stream)
+        except StopIteration:
+            break
+
+        cols1 = first_line.split('\t')[:13]
+        cols2 = second_line.split('\t')[:12]
+
+        date, category1, code, quantity, subtotal, 미수발생_변제, interest, \
+            fees, late_fees, 상대처, 변동금액, 대출일, 처리자 = cols1
+
+        상품, category2, name, unit_price, 신용_대출금, 신용_대출이자, \
+            예탁금이용료, 제세금, channel, 의뢰자명, final_amount, 만기일 \
+            = cols2
+
+        yield {
+            'date': date,
+            'category1': category1,
+            'category2': category2,
+            'code': code,
+            'name': name,
+            'unit_price': unit_price,
+            'quantity': quantity,
+            'subtotal': subtotal,
+            'interest': interest,
+            'fees': fees,
+            'late_fees': late_fees,
+            'channel': channel,
+            'final_amount': final_amount,
+        }
+
+
 def import_8percent_data(parsed_data, account_checking, account_8p, asset_krw):
     from finance.models import Asset, AssetType, AssetValue, Record, \
         Transaction

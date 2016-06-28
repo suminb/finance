@@ -11,7 +11,7 @@ from finance.models import *  # noqa
 from finance.providers import _8Percent, Kofia
 from finance.utils import (
     extract_numbers, import_8percent_data, insert_asset, insert_record,
-    parse_date)
+    parse_date, parse_stock_data)
 
 
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -254,6 +254,14 @@ def import_fund(code, from_date, to_date):
                 log.warn('Identical record has been found for {}. Skipping.',
                          date)
                 db.session.rollback()
+
+
+@cli.command()
+@click.argument('filename')
+def import_stocks(filename):
+    """Parses exported data from the Shinhan HTS."""
+    with open(filename) as fin:
+        parse_stock_data(fin)
 
 
 if __name__ == '__main__':

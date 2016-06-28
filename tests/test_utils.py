@@ -83,3 +83,19 @@ def test_parse_date():
 def test_parse_decimal():
     assert parse_decimal('1.1') == 1.1
     assert parse_decimal(1) == 1.0
+
+
+def test_parse_stock_data():
+    sample_file = 'tests/data/stocks.csv'
+    flag = True
+    expected_keys = ('date', 'category1', 'category2', 'code', 'name',
+                     'quantity', 'unit_price', 'subtotal', 'interest', 'fees',
+                     'late_fees', 'channel', 'final_amount')
+    with open(sample_file) as fin:
+        for data in parse_stock_data(fin):
+            flag = False
+            for key in expected_keys:
+                assert key in data
+
+    if flag:
+        pytest.fail('No data was read.')
