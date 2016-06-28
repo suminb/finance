@@ -81,8 +81,20 @@ def parse_stock_data(stream):
             예탁금이용료, 제세금, channel, 의뢰자명, final_amount, 만기일 \
             = cols2
 
+        # NOTE: Date is in some peculiar format as following:
+        #
+        #     20160222000000000000000003
+        #     20160222000000000000000002
+        #     20160222000000000000000001
+        #
+        # where '20160202' is a date (YYYYMMDD) and the tailing number
+        # appears to be the sequence of the day. In this case, the first row
+        # indicates the transaction was the third one on 2016-02-02.
+        date, sequence = parse_date(date[:8], '%Y%m%d'), int(date[8:])
+
         yield {
             'date': date,
+            'sequence': sequence,
             'category1': category1,
             'category2': category2,
             'code': code,
