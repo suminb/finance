@@ -52,11 +52,20 @@ def parse_date(date, format='%Y-%m-%d'):
         return datetime.strptime(date, format)
 
 
-def parse_decimal(v):
+def parse_decimal(v, type=float):
     try:
-        return float(v)
+        return type(v)
     except ValueError:
         return None
+
+
+def parse_int(v):
+    """Parses a string as an integer value. Falls back to zero when failed to
+    parse."""
+    try:
+        return int(v)
+    except ValueError:
+        return 0
 
 
 def parse_nullable_str(v):
@@ -99,14 +108,14 @@ def parse_stock_data(stream):
             'category2': category2,
             'code': code,
             'name': name,
-            'unit_price': unit_price,
-            'quantity': quantity,
-            'subtotal': subtotal,
-            'interest': interest,
-            'fees': fees,
-            'late_fees': late_fees,
+            'unit_price': parse_int(unit_price),
+            'quantity': parse_int(quantity),
+            'subtotal': parse_int(subtotal),
+            'interest': parse_int(interest),
+            'fees': parse_int(fees),
+            'late_fees': parse_int(late_fees),
             'channel': channel,
-            'final_amount': final_amount,
+            'final_amount': parse_int(final_amount),
         }
 
 

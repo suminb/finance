@@ -85,17 +85,50 @@ def test_parse_decimal():
     assert parse_decimal(1) == 1.0
 
 
+"""
+
+            'unit_price': int(unit_price),
+            'quantity': int(quantity),
+            'subtotal': int(subtotal),
+            'interest': int(interest),
+            'fees': int(fees),
+            'late_fees': int(late_fees),
+            'channel': channel,
+            'final_amount': int(final_amount),
+"""
+
+
 def test_parse_stock_data():
     sample_file = 'tests/data/stocks.csv'
     flag = True
-    expected_keys = ('date', 'category1', 'category2', 'code', 'name',
-                     'quantity', 'unit_price', 'subtotal', 'interest', 'fees',
-                     'late_fees', 'channel', 'final_amount')
+    expected_keys = ('date', 'sequence', 'category1', 'category2', 'code',
+                     'name', 'quantity', 'unit_price', 'subtotal', 'interest',
+                     'fees', 'late_fees', 'channel', 'final_amount')
+    expected_types = {
+        'date': datetime,
+        'sequence': int,
+        'unit_price': int,
+        'quantity': int,
+        'subtotal': int,
+        'interest': int,
+        'fees': int,
+        'late_fees': int,
+        'final_amount': int,
+    }
+
     with open(sample_file) as fin:
         for data in parse_stock_data(fin):
             flag = False
             for key in expected_keys:
                 assert key in data
+
+            for k, t in expected_types.items():
+                assert isinstance(data[k], t)
+
+            # print(data['date'], data['sequence'], data['category1'],
+            #       data['category2'], data['code'], data['name'],
+            #       data['unit_price'], data['quantity'], data['subtotal'],
+            #       data['final_amount'])
 
     if flag:
         pytest.fail('No data was read.')
