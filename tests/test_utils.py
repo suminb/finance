@@ -85,17 +85,13 @@ def test_parse_decimal():
     assert parse_decimal(1) == 1.0
 
 
-"""
-
-            'unit_price': int(unit_price),
-            'quantity': int(quantity),
-            'subtotal': int(subtotal),
-            'interest': int(interest),
-            'fees': int(fees),
-            'late_fees': int(late_fees),
-            'channel': channel,
-            'final_amount': int(final_amount),
-"""
+@pytest.mark.parametrize('code, result', [
+    ('A145210', '145210'),
+    ('051500', '051500'),
+    ('', None),
+])
+def test_parse_stock_code(code, result):
+    assert parse_stock_code(code) == result
 
 
 def test_parse_stock_data():

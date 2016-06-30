@@ -72,6 +72,16 @@ def parse_nullable_str(v):
     return v if v else None
 
 
+def parse_stock_code(code: str):
+    """Parses a stock code. NOTE: Only works for the Shinhan HTS"""
+    if code.startswith('A'):
+        return code[1:]
+    elif code == '':
+        return None
+    else:
+        return code
+
+
 def parse_stock_data(stream):
     first_header, second_header = next(stream), next(stream)
     while True:
@@ -106,7 +116,7 @@ def parse_stock_data(stream):
             'sequence': sequence,
             'category1': category1,
             'category2': category2,
-            'code': code,
+            'code': parse_stock_code(code),
             'name': name,
             'unit_price': parse_int(unit_price),
             'quantity': parse_int(quantity),
