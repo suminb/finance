@@ -113,6 +113,24 @@ def asset_usd(request, db):
     return asset
 
 
+@pytest.fixture(scope='module')
+def asset_stock_ncsoft(request, db):
+    asset = Asset.create(
+        type='stock', name='NCsoft Corporation', code='036570.KS',
+        description='NCsoft Corporation')
+    request.addfinalizer(partial(teardown, db=db, record=asset))
+    return asset
+
+
+@pytest.fixture(scope='module')
+def asset_stock_nvda(request, db):
+    asset = Asset.create(
+        type='stock', name='NVDA', code='NVDA',
+        description='NVIDIA Corporation')
+    request.addfinalizer(partial(teardown, db=db, record=asset))
+    return asset
+
+
 @pytest.fixture(scope='function')
 def portfolio(request, db, asset_krw, account_checking, account_sp500):
     p = Portfolio.create(base_asset=asset_krw)

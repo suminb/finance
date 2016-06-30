@@ -37,6 +37,10 @@ def get_asset_by_fund_code(code):
     return Asset.query.get(asset_id)
 
 
+def get_asset_by_stock_code(code: str):
+    return Asset.query.filter(Asset.code == code).first()
+
+
 class CRUDMixin(object):
     """Copied from https://realpython.com/blog/python/python-web-applications-with-flask-part-ii/
     """  # noqa
@@ -169,6 +173,7 @@ class Asset(db.Model, CRUDMixin):
 
     type = db.Column(db.Enum(*asset_types, name='asset_type'))
     name = db.Column(db.String)
+    code = db.Column(db.String)
     description = db.Column(db.Text)
 
     #: Arbitrary data
