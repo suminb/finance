@@ -11,11 +11,50 @@ from finance.models import *  # noqa
 from finance.providers import _8Percent, Kofia
 from finance.utils import (
     extract_numbers, import_8percent_data, insert_asset, insert_record,
-    parse_date, parse_stock_data)
+    insert_stock_record, parse_date, parse_stock_data)
 
 
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 log = Logger('finance')
+
+
+def insert_accounts(user):
+    yield Account.create(
+        id=1001, type='checking', name='Shinhan Checking', user=user)
+    yield Account.create(
+        id=9001, type='investment', name='Woori Gold Banking', user=user)
+    yield Account.create(
+        id=7001, type='investment', name='S&P500 Fund', user=user)
+    yield Account.create(
+        id=7002, type='investment', name='East Spring China Fund',
+        user=user)
+    yield Account.create(
+        id=7003, type='investment', name='키움일본인덱스 주식재간접',
+        user=user)
+    yield Account.create(
+        id=8003, type='investment', name='신한 주식', user=user)
+    yield Account.create(
+        id=8001, type='virtual', name='8퍼센트', user=user)
+    yield Account.create(
+        id=8002, type='virtual', name='어니스트펀드', user=user)
+
+
+def insert_stock_assets():
+    """NOTE: This is a temporary workaround. All stock informaion shall be
+    fetched automatically on the fly.
+    """
+    rows = [
+        ('036570.KS', 'NCsoft Corporation'),
+        ('145210.KS', 'SAEHWA IMC'),
+        ('069080.KQ', 'Webzen'),
+        ('053800.KQ', 'Ahnlab Inc.'),
+        ('017670.KS', 'SK Telecom Co. Ltd.'),
+        ('005380.KS', 'Hyundai Motor'),
+    ]
+
+    for code, description in rows:
+        log.info('Inserting {} ({})...', code, description)
+        yield Asset.create(type='stock', code=code, description=description)
 
 
 @click.group()
@@ -44,22 +83,9 @@ def insert_test_data():
         user = User.create(
             family_name='Byeon', given_name='Sumin', email='suminb@gmail.com')
 
-        account_checking = Account.create(
-            id=1001, type='checking', name='Shinhan Checking', user=user)
-        account_gold = Account.create(
-            id=9001, type='investment', name='Woori Gold Banking', user=user)
-        account_sp500 = Account.create(
-            id=7001, type='investment', name='S&P500 Fund', user=user)
-        account_esch = Account.create(
-            id=7002, type='investment', name='East Spring China Fund',
-            user=user)
-        account_kjp = Account.create(
-            id=7003, type='investment', name='키움일본인덱스 주식재간접',
-            user=user)
-        account_8p = Account.create(
-            id=8001, type='investment', name='8퍼센트', user=user)
-        account_hf = Account.create(
-            id=8002, type='virtual', name='어니스트펀드', user=user)
+        account_checking, _, _, _, _, account_stock, account_8p, _ = \
+            insert_accounts(user)
+        insert_stock_assets()
 
         asset_krw = insert_asset('currency, KRW, Korean Won')
         asset_usd = insert_asset('currency, USD, United States Dollar')
@@ -74,7 +100,7 @@ def insert_test_data():
 
         portfolio = Portfolio()
         portfolio.base_asset = asset_krw
-        portfolio.add_accounts(account_checking, account_8p)
+        portfolio.add_accounts(account_checking, account_stock, account_8p)
 
 
 @cli.command()
