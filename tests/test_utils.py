@@ -5,6 +5,7 @@ import types
 
 import pytest
 
+from finance.models import Asset
 from finance.utils import *  # noqa
 
 
@@ -71,6 +72,32 @@ def test_extract_numbers():
 
     with pytest.raises(TypeError):
         extract_numbers(b'\x00')
+
+
+def test_insert_stock_record(db):
+    data = {
+        'date': parse_date('2016-06-30'),
+        'sequence': 1,
+        'category1': '장내매수',
+        'category2': '매수',
+        'code': '005380',
+        'name': '현대차',
+        'unit_price': 136000,
+        'quantity': 10,
+        'subtotal': 1360000,
+        'interest': 0,
+        'fees': 200,
+        'late_fees': 0,
+        'channel': '',
+        'final_amount': 1670200,
+    }
+    asset = Asset.create(type='stock', code='005380.KS', description='현대차')
+    record = insert_stock_record(data)
+
+    # TODO: Automate this process
+    db.session.delete(record)
+    db.session.delete(asset)
+    db.session.commit()
 
 
 def test_parse_date():

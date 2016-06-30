@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 from logbook import Logger
 from typedecorator import typed
 
+# NOTE: finance.models should not be imported here in order to avoid circular
+# depencencies
 
 log = Logger('finance')
 
@@ -132,7 +134,7 @@ def parse_stock_data(stream):
         }
 
 
-def insert_stock_record(record: dict):
+def insert_stock_record(data: dict):
     """
     account_id = db.Column(db.BigInteger, db.ForeignKey('account.id'))
     asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
@@ -144,10 +146,28 @@ def insert_stock_record(record: dict):
     category = db.Column(db.String)
     quantity = db.Column(db.Numeric(precision=20, scale=4))
     """
-    # TODO: Figure out which asset it is based on record['code']
+    from finance.models import get_asset_by_stock_code, Record
+
+    if data['category1'].startswith('장내'):
+        code_suffix = '.KS'
+    elif data['category1'].startswith('코스닥'):
+        code_suffix = '.KQ'
+    else:
+        raise ValueError(
+            "code_suffix could not be determined with the category '{}'"
+            ''.format(data['category1']))
+
+    code = data['code'] + code_suffix
+
+    asset = get_asset_by_stock_code(code)
+    if asset is None:
+        raise ValueError(
+            "Asset object could not be retrived with code '{}'".format(code))
+
     return Record.create(
-        created_at=record['date'],
-        quantity=record['quantity']
+        created_at=data['date'],
+        quantity=data['quantity'],
+        asset=asset,
     )
 
 
