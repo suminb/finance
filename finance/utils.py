@@ -83,6 +83,9 @@ def parse_stock_code(code: str):
 
 
 def parse_stock_data(stream):
+    """
+    :param stream: A steam to read in a CSV file.
+    """
     first_header, second_header = next(stream), next(stream)
     while True:
         try:

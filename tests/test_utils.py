@@ -1,5 +1,6 @@
 from datetime import timedelta
 import os
+import re
 import types
 
 import pytest
@@ -120,6 +121,9 @@ def test_parse_stock_data():
 
             for k, t in expected_types.items():
                 assert isinstance(data[k], t)
+
+            # It should be either a six-digit code or None
+            assert data['code'] is None or re.match(r'^\d{6}$', data['code'])
 
             # print(data['date'], data['sequence'], data['category1'],
             #       data['category2'], data['code'], data['name'],
