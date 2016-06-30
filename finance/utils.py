@@ -132,6 +132,25 @@ def parse_stock_data(stream):
         }
 
 
+def insert_stock_record(record: dict):
+    """
+    account_id = db.Column(db.BigInteger, db.ForeignKey('account.id'))
+    asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
+    # asset = db.relationship(Asset, uselist=False)
+    transaction_id = db.Column(db.BigInteger, db.ForeignKey('transaction.id'))
+    type = db.Column(db.Enum(*record_types, name='record_type'))
+    # NOTE: We'll always use the UTC time
+    created_at = db.Column(db.DateTime(timezone=False))
+    category = db.Column(db.String)
+    quantity = db.Column(db.Numeric(precision=20, scale=4))
+    """
+    # TODO: Figure out which asset it is based on record['code']
+    return Record.create(
+        created_at=record['date'],
+        quantity=record['quantity']
+    )
+
+
 def import_8percent_data(parsed_data, account_checking, account_8p, asset_krw):
     from finance.models import Asset, AssetType, AssetValue, Record, \
         Transaction
