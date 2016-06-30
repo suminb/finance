@@ -18,11 +18,10 @@ db = SQLAlchemy()
 JsonType = db.String().with_variant(JSON(), 'postgresql')
 
 
-def get_asset_by_fund_code(code):
-    """Get an Asset instance mapped to the given fund code.
+def get_asset_by_fund_code(code: str):
+    """Gets an Asset instance mapped to the given fund code.
 
     :param code: A fund code
-    :type code: str
     """
     # NOTE: I know this looks really stupid, but we'll stick with this
     # temporary workaround until we figure out how to create an instance of
