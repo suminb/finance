@@ -1,8 +1,9 @@
+from datetime import datetime
 import os
 
 import pytest
 
-from finance.providers import _8Percent, Kofia
+from finance.providers import _8Percent, Kofia, Yahoo
 from finance.utils import parse_date
 
 
@@ -136,6 +137,23 @@ def test_kofia_fetch_data():
     data = provider.fetch_data('KR5223941018', from_date, to_date)
 
     for date, unit_price, quantity in data:
+        assert isinstance(date, datetime)
         assert from_date <= date <= to_date
         assert isinstance(unit_price, float)
         assert isinstance(quantity, float)
+
+
+def test_yahoo_fetch_data():
+    provider = Yahoo()
+    from_date, to_date = parse_date('2014-01-01'), parse_date('2015-12-31')
+    data = provider.fetch_data('005380.KS', 2014, 2015)
+
+    for date, open_, high, low, close_, volume, adj_close in data:
+        assert isinstance(date, datetime)
+        # assert from_date <= date <= to_date
+        assert isinstance(open_, float)
+        assert isinstance(high, float)
+        assert isinstance(low, float)
+        assert isinstance(close_, float)
+        assert isinstance(volume, int)
+        assert isinstance(adj_close, float)
