@@ -2,6 +2,7 @@ from datetime import datetime
 import os
 
 import pytest
+from requests.exceptions import HTTPError
 
 from finance.providers import _8Percent, Kofia, Yahoo
 from finance.utils import parse_date
@@ -145,7 +146,7 @@ def test_kofia_fetch_data():
 
 def test_yahoo_fetch_data():
     provider = Yahoo()
-    from_date, to_date = parse_date('2014-01-01'), parse_date('2015-12-31')
+    # from_date, to_date = parse_date('2014-01-01'), parse_date('2015-12-31')
     data = provider.fetch_data('005380.KS', 2014, 2015)
 
     for date, open_, high, low, close_, volume, adj_close in data:
@@ -157,3 +158,10 @@ def test_yahoo_fetch_data():
         assert isinstance(close_, float)
         assert isinstance(volume, int)
         assert isinstance(adj_close, float)
+
+
+def test_yahoo_fetch_data_with_invalid_code():
+    provider = Yahoo()
+    with pytest.raises(HTTPError):
+        data = provider.fetch_data('!@#$%', 2000, 2016)
+        next(data)

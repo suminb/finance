@@ -48,6 +48,9 @@ class Yahoo(Provider):
         resp = requests.get(self.request_url, headers=self.request_headers,
                             params=params)
 
+        if resp.status_code != 200:
+            resp.raise_for_status()
+
         stream = io.StringIO(resp.text)
 
         # Headers are in the following format.
