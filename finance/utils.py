@@ -171,52 +171,6 @@ def insert_stock_record(data: dict):
     )
 
 
-def import_8percent_data(parsed_data, account_checking, account_8p, asset_krw):
-    from finance.models import Asset, AssetType, AssetValue, Record, \
-        Transaction
-
-    assert account_checking
-    assert account_8p
-    assert asset_krw
-
-    parsed_data = DictReader(parsed_data)
-    asset_data = {
-        'started_at': parsed_data.started_at.isoformat()
-    }
-    keys = ['annual_percentage_yield', 'amount', 'grade', 'duration',
-            'originator']
-    for key in keys:
-        asset_data[key] = parsed_data[key]
-
-    asset_8p = Asset.create(name=parsed_data.name, type=AssetType.p2p_bond,
-                            data=asset_data)
-    remaining_value = parsed_data.amount
-    started_at = parsed_data.started_at
-
-    with Transaction.create() as t:
-        Record.create(
-            created_at=started_at, transaction=t, account=account_checking,
-            asset=asset_krw, quantity=-remaining_value)
-        Record.create(
-            created_at=started_at, transaction=t, account=account_8p,
-            asset=asset_8p, quantity=1)
-    AssetValue.create(
-        evaluated_at=started_at, asset=asset_8p,
-        base_asset=asset_krw, granularity='1day', close=remaining_value)
-
-    for record in parsed_data.records:
-        date, principle, interest, tax, fees = record
-        returned = principle + interest - (tax + fees)
-        remaining_value -= principle
-        with Transaction.create() as t:
-            Record.create(
-                created_at=date, transaction=t,
-                account=account_checking, asset=asset_krw, quantity=returned)
-        AssetValue.create(
-            evaluated_at=date, asset=asset_8p,
-            base_asset=asset_krw, granularity='1day', close=remaining_value)
-
-
 def insert_asset(row, data=None):
     """Parses a comma separated values to fill in an Asset object.
     (type, name, description)
@@ -256,10 +210,6 @@ def insert_record(row, account, asset, transaction):
     return Record.create(
         account=account, asset=asset, transaction=transaction, type=type,
         created_at=created_at, category=category, quantity=quantity)
-
-
-class AssetValueImporter(object):
-    pass
 
 
 class DictReader(object):

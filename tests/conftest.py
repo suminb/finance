@@ -67,6 +67,13 @@ def account_savings(request, db):
 
 
 @pytest.fixture(scope='function')
+def account_8p(request, db):
+    account = Account.create(type='virtual', name='8퍼센트')
+    request.addfinalizer(partial(teardown, db=db, record=account))
+    return account
+
+
+@pytest.fixture(scope='function')
 def account_hf(request, db):
     account = Account.create(type='virtual', name='어니스트펀드')
     request.addfinalizer(partial(teardown, db=db, record=account))

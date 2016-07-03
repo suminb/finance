@@ -22,9 +22,10 @@ def test_insert_test_data_all():
     assert result.exit_code == 0
 
 
-def test_import_8percent():
+def test_import_8percent(account_checking, account_8p, asset_krw):
     runner = CliRunner()
-    result = runner.invoke(import_8percent, ['tests/data/8percent-829.html'])
+    result = runner.invoke(import_8percent, ['tests/data/8percent-829.html'],
+                           catch_exceptions=False)
     assert result.exit_code == 0
 
 

@@ -8,11 +8,12 @@ from sqlalchemy.exc import IntegrityError
 
 from finance import create_app
 from finance.importers import \
+    import_8percent_data, \
     import_stock_values as import_stock_values_  # Avoid name clashes
 from finance.models import *  # noqa
 from finance.providers import _8Percent, Kofia, Yahoo
 from finance.utils import (
-    extract_numbers, import_8percent_data, insert_asset, insert_record,
+    extract_numbers, insert_asset, insert_record,
     insert_stock_record, parse_date, parse_stock_data)
 
 
@@ -22,7 +23,7 @@ log = Logger('finance')
 
 def insert_accounts(user):
     yield Account.create(
-        id=1001, type='checking', name='Shinhan Checking', user=user)
+        id=1001, type='checking', name='신한은행 입출금', user=user)
     yield Account.create(
         id=9001, type='investment', name='Woori Gold Banking', user=user)
     yield Account.create(
@@ -209,9 +210,9 @@ def import_8percent(filename):
     with app.app_context():
         with open(filename) as fin:
             raw = fin.read()
-        account_8p = Account.query.get(8001)
+        account_8p = Account.query.filter(Account.name == '8퍼센트').first()
         account_checking = Account.query.filter(
-            Account.name == 'Shinhan Checking').first()
+            Account.name == '신한은행 입출금').first()
         asset_krw = Asset.query.filter(Asset.name == 'KRW').first()
 
         parsed_data = provider.parse_data(raw)
