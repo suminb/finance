@@ -150,6 +150,7 @@ class AssetValue(db.Model, CRUDMixin):
     high = db.Column(db.Numeric(precision=20, scale=4))
     low = db.Column(db.Numeric(precision=20, scale=4))
     close = db.Column(db.Numeric(precision=20, scale=4))
+    volume = db.Column(db.Integer)
 
 
 class AssetType(object):
@@ -188,7 +189,8 @@ class Asset(db.Model, CRUDMixin):
                               lazy='dynamic', cascade='all,delete-orphan')
 
     def __repr__(self):
-        return 'Asset <{} ({})>'.format(self.name, self.description)
+        name = self.code if self.code is not None else self.name
+        return 'Asset <{} ({})>'.format(name, self.description)
 
     @property
     def unit_price(self):

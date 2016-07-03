@@ -34,7 +34,7 @@ def date_range(start, end, step=1):
         yield start + timedelta(days=i)
 
 
-def extract_numbers(value: str, type=str):
+def extract_numbers(value, type=str):
     """Extracts numbers only from a string."""
     def extract(vs):
         for v in vs:

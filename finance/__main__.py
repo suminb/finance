@@ -7,8 +7,10 @@ from logbook import Logger
 from sqlalchemy.exc import IntegrityError
 
 from finance import create_app
+from finance.importers import \
+    import_stock_values as import_stock_values_  # Avoid name clashes
 from finance.models import *  # noqa
-from finance.providers import _8Percent, Kofia
+from finance.providers import _8Percent, Kofia, Yahoo
 from finance.utils import (
     extract_numbers, import_8percent_data, insert_asset, insert_record,
     insert_stock_record, parse_date, parse_stock_data)
@@ -49,7 +51,7 @@ def insert_stock_assets():
         ('069080.KQ', 'Webzen'),
         ('053800.KQ', 'Ahnlab Inc.'),
         ('017670.KS', 'SK Telecom Co. Ltd.'),
-        ('005380.KS', 'Hyundai Motor'),
+        ('005380.KS', 'Hyundai Motor Company'),
     ]
 
     for code, description in rows:
@@ -85,7 +87,8 @@ def insert_test_data():
 
         account_checking, _, _, _, _, account_stock, account_8p, _ = \
             insert_accounts(user)
-        insert_stock_assets()
+        for _ in insert_stock_assets():
+            pass
 
         asset_krw = insert_asset('currency, KRW, Korean Won')
         asset_usd = insert_asset('currency, USD, United States Dollar')
@@ -280,6 +283,21 @@ def import_fund(code, from_date, to_date):
                 log.warn('Identical record has been found for {}. Skipping.',
                          date)
                 db.session.rollback()
+
+
+@cli.command()
+@click.argument('code')
+@click.argument('from-date')
+@click.argument('to-date')
+def import_stock_values(code, from_date, to_date):
+    """Import stock price information."""
+    provider = Yahoo()
+    app = create_app(__name__)
+    with app.app_context():
+        # NOTE: We assume all Asset records are already in the database, but
+        # this is a temporary workaround. We should implement some mechanism to
+        # automatically insert an Asset record when it is not found.
+        import_stock_values_(provider, code, None, None)
 
 
 @cli.command()
