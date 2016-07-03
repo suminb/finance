@@ -15,6 +15,11 @@ def test_get_asset_by_fund_code_non_existing(asset_sp500):
         get_asset_by_fund_code('non-exisiting')
 
 
+def test_get_asset_by_stock_code(asset_stock_ncsoft):
+    asset = get_asset_by_stock_code('036570.KS')
+    assert asset.description == 'NCsoft Corporation'
+
+
 def test_balance(account_checking, asset_krw, asset_usd):
     assert account_checking.balance() == {}
 

@@ -22,9 +22,10 @@ def test_insert_test_data_all():
     assert result.exit_code == 0
 
 
-def test_import_8percent():
+def test_import_8percent(account_checking, account_8p, asset_krw):
     runner = CliRunner()
-    result = runner.invoke(import_8percent, ['tests/data/8percent-829.html'])
+    result = runner.invoke(import_8percent, ['tests/data/8percent-829.html'],
+                           catch_exceptions=False)
     assert result.exit_code == 0
 
 
@@ -45,6 +46,25 @@ def test_import_non_existing_fund():
     runner = CliRunner()
     result = runner.invoke(import_fund, ['???', '2016-01-01', '2016-01-31'])
     assert isinstance(result.exception, AssetNotFoundException)
+
+
+def test_import_stock_values():
+    runner = CliRunner()
+    result = runner.invoke(import_stock_values,
+                           ['005380.KS', '2000-01-01', '2016-07-03'],
+                           catch_exceptions=False)
+    assert result.exit_code == 0
+
+
+def test_import_stock_records(asset_krw, account_stock, account_checking):
+    from finance.__main__ import insert_stock_assets
+    for _ in insert_stock_assets():
+        pass
+
+    runner = CliRunner()
+    result = runner.invoke(import_stock_records, ['tests/data/stocks.csv'],
+                           catch_exceptions=False)
+    assert result.exit_code == 0
 
 
 def teardown_module(module):

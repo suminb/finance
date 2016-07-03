@@ -67,6 +67,13 @@ def account_savings(request, db):
 
 
 @pytest.fixture(scope='function')
+def account_8p(request, db):
+    account = Account.create(type='virtual', name='8퍼센트')
+    request.addfinalizer(partial(teardown, db=db, record=account))
+    return account
+
+
+@pytest.fixture(scope='function')
 def account_hf(request, db):
     account = Account.create(type='virtual', name='어니스트펀드')
     request.addfinalizer(partial(teardown, db=db, record=account))
@@ -76,6 +83,13 @@ def account_hf(request, db):
 @pytest.fixture(scope='function')
 def account_sp500(request, db):
     account = Account.create(type='investment', name='S&P500 Fund')
+    request.addfinalizer(partial(teardown, db=db, record=account))
+    return account
+
+
+@pytest.fixture(scope='function')
+def account_stock(request, db):
+    account = Account.create(type='investment', name='신한 주식')
     request.addfinalizer(partial(teardown, db=db, record=account))
     return account
 
@@ -109,6 +123,24 @@ def asset_sp500(request, db):
 def asset_usd(request, db):
     asset = Asset.create(
         type='currency', name='USD', description='United States Dollar')
+    request.addfinalizer(partial(teardown, db=db, record=asset))
+    return asset
+
+
+@pytest.fixture(scope='module')
+def asset_stock_ncsoft(request, db):
+    asset = Asset.create(
+        type='stock', name='NCsoft Corporation', code='036570.KS',
+        description='NCsoft Corporation')
+    request.addfinalizer(partial(teardown, db=db, record=asset))
+    return asset
+
+
+@pytest.fixture(scope='module')
+def asset_stock_nvda(request, db):
+    asset = Asset.create(
+        type='stock', name='NVDA', code='NVDA',
+        description='NVIDIA Corporation')
     request.addfinalizer(partial(teardown, db=db, record=asset))
     return asset
 
