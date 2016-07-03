@@ -1,4 +1,5 @@
 import csv
+from datetime import datetime
 from contextlib import closing
 import io
 
@@ -43,8 +44,9 @@ class Yahoo(AssetValueProvider):
         }
 
     @typed
-    def fetch_data(self: object, code: str, start_year: int, end_year: int):
-        params = self.request_params(code, start_year, end_year)
+    def fetch_data(self: object, code: str, from_date: datetime,
+                   to_date: datetime):
+        params = self.request_params(code, from_date.year, to_date.year)
         resp = requests.get(self.request_url, headers=self.request_headers,
                             params=params)
 

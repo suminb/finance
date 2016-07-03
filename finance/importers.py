@@ -5,7 +5,7 @@ from typedecorator import typed
 
 from finance.models import Asset, AssetValue, get_asset_by_stock_code, \
     Granularity
-from finance.providers.provider import AssetValueProvider
+from finance.providers import Yahoo
 from finance.utils import DictReader
 
 
@@ -57,8 +57,8 @@ def import_8percent_data(parsed_data, account_checking, account_8p, asset_krw):
 
 
 @typed
-def import_stock_values(provider: AssetValueProvider, code: str,
-                        from_date: datetime, to_date: datetime):
+def import_stock_values(code: str, from_date: datetime, to_date: datetime):
+    provider = Yahoo()
     asset = get_asset_by_stock_code(code)
     data = provider.fetch_data(code, from_date, to_date)
     for date, open_, high, low, close_, volume, adj_close in data:

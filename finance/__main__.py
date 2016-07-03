@@ -14,7 +14,7 @@ from finance.models import *  # noqa
 from finance.providers import _8Percent, Kofia, Yahoo
 from finance.utils import (
     extract_numbers, insert_asset, insert_record,
-    insert_stock_record, parse_date, parse_stock_data)
+    insert_stock_record, parse_date, parse_stock_records)
 
 
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))

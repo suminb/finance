@@ -122,7 +122,7 @@ def test_parse_stock_code(code, result):
     assert parse_stock_code(code) == result
 
 
-def test_parse_stock_data():
+def test_parse_stock_records():
     sample_file = 'tests/data/stocks.csv'
     flag = True
     expected_keys = ('date', 'sequence', 'category1', 'category2', 'code',
@@ -141,7 +141,7 @@ def test_parse_stock_data():
     }
 
     with open(sample_file) as fin:
-        for data in parse_stock_data(fin):
+        for data in parse_stock_records(fin):
             flag = False
             for key in expected_keys:
                 assert key in data

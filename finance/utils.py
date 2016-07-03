@@ -84,7 +84,7 @@ def parse_stock_code(code: str):
         return code
 
 
-def parse_stock_data(stream):
+def parse_stock_records(stream):
     """
     :param stream: A steam to read in a CSV file.
     """
