@@ -1,8 +1,23 @@
 import pytest
 
-from finance.exceptions import AssetValueUnavailableException
+from finance.exceptions import *  # noqa
 from finance.models import *  # noqa
 from finance.utils import parse_date
+
+
+def test_get_asset_by_fund_code(asset_sp500):
+    asset = get_asset_by_fund_code('KR5223941018')
+    assert asset.name == 'KB Star S&P500'
+
+
+def test_get_asset_by_fund_code_non_existing(asset_sp500):
+    with pytest.raises(AssetNotFoundException):
+        get_asset_by_fund_code('non-exisiting')
+
+
+def test_get_asset_by_stock_code(asset_stock_ncsoft):
+    asset = get_asset_by_stock_code('036570.KS')
+    assert asset.description == 'NCsoft Corporation'
 
 
 def test_balance(account_checking, asset_krw, asset_usd):

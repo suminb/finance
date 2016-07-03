@@ -4,7 +4,7 @@ from logbook import Logger
 import requests
 import xmltodict
 
-from finance.providers.provider import Provider
+from finance.providers.provider import AssetValueProvider
 
 
 DATE_FORMAT = '%Y%m%d'
@@ -12,7 +12,7 @@ DATE_FORMAT = '%Y%m%d'
 log = Logger(__name__)
 
 
-class Kofia(Provider):
+class Kofia(AssetValueProvider):
     """Korea Financial Investment Association (금융투자협회)"""
 
     @property

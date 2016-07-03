@@ -9,12 +9,35 @@ from sqlalchemy.dialects.postgresql import JSON
 import uuid64
 
 from finance.exceptions import (
-    AssetValueUnavailableException, InvalidTargetAssetException)
+    AssetNotFoundException, AssetValueUnavailableException,
+    InvalidTargetAssetException)
 from finance.utils import date_range
 
 
 db = SQLAlchemy()
 JsonType = db.String().with_variant(JSON(), 'postgresql')
+
+
+def get_asset_by_fund_code(code: str):
+    """Gets an Asset instance mapped to the given fund code.
+
+    :param code: A fund code
+    """
+    # NOTE: I know this looks really stupid, but we'll stick with this
+    # temporary workaround until we figure out how to create an instance of
+    # Asset model from a raw query result
+    # (sqlalchemy.engine.result.RowProxy)
+    query = "SELECT * FROM asset WHERE data->>'code' = :code LIMIT 1"
+    raw_asset = db.session.execute(query, {'code': code}).first()
+    if not raw_asset:
+        raise AssetNotFoundException(
+            'Fund code {} is not mapped to any asset'.format(code))
+    asset_id = raw_asset[0]
+    return Asset.query.get(asset_id)
+
+
+def get_asset_by_stock_code(code: str):
+    return Asset.query.filter(Asset.code == code).first()
 
 
 class CRUDMixin(object):
@@ -127,6 +150,7 @@ class AssetValue(db.Model, CRUDMixin):
     high = db.Column(db.Numeric(precision=20, scale=4))
     low = db.Column(db.Numeric(precision=20, scale=4))
     close = db.Column(db.Numeric(precision=20, scale=4))
+    volume = db.Column(db.Integer)
 
 
 class AssetType(object):
@@ -149,6 +173,7 @@ class Asset(db.Model, CRUDMixin):
 
     type = db.Column(db.Enum(*asset_types, name='asset_type'))
     name = db.Column(db.String)
+    code = db.Column(db.String)
     description = db.Column(db.Text)
 
     #: Arbitrary data
@@ -164,7 +189,8 @@ class Asset(db.Model, CRUDMixin):
                               lazy='dynamic', cascade='all,delete-orphan')
 
     def __repr__(self):
-        return 'Asset <{} ({})>'.format(self.name, self.description)
+        name = self.code if self.code is not None else self.name
+        return 'Asset <{} ({})>'.format(name, self.description)
 
     @property
     def unit_price(self):
@@ -209,6 +235,7 @@ class Account(db.Model, CRUDMixin):
     type = db.Column(db.Enum('checking', 'savings', 'investment',
                              'credit_card', 'virtual', name='account_type'))
     name = db.Column(db.String)
+    number = db.Column(db.String)  # Account number
     description = db.Column(db.Text)
 
     #: Arbitrary data
@@ -337,6 +364,7 @@ class Portfolio(db.Model, CRUDMixin):
         """NOTE: This probably shouldn't be here, but we'll leave it here for
         demonstration purposes.
         """
+        # FIXME: Calculate the daily net worth incrementally
         for date in date_range(date_from, date_to):
             yield date, self.net_worth(date)
 
@@ -404,7 +432,7 @@ record_types = (RecordType.deposit, RecordType.withdraw,
 class Record(db.Model, CRUDMixin):
     # NOTE: Is this okay to do this?
     __table_args__ = (db.UniqueConstraint(
-        'account_id', 'created_at', 'quantity'), {})
+        'account_id', 'asset_id', 'created_at', 'quantity'), {})
 
     account_id = db.Column(db.BigInteger, db.ForeignKey('account.id'))
     asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
