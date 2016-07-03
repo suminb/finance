@@ -74,7 +74,7 @@ def test_extract_numbers():
         extract_numbers(b'\x00')
 
 
-def test_insert_stock_record(db):
+def test_insert_stock_record(db, account_stock, account_checking):
     data = {
         'date': parse_date('2016-06-30'),
         'sequence': 1,
@@ -92,7 +92,7 @@ def test_insert_stock_record(db):
         'final_amount': 1670200,
     }
     asset = Asset.create(type='stock', code='005380.KS', description='현대차')
-    record = insert_stock_record(data)
+    record = insert_stock_record(data, account_stock, account_checking)
 
     # TODO: Automate this process
     db.session.delete(record)

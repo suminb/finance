@@ -146,8 +146,8 @@ def test_kofia_fetch_data():
 
 def test_yahoo_fetch_data():
     provider = Yahoo()
-    # from_date, to_date = parse_date('2014-01-01'), parse_date('2015-12-31')
-    data = provider.fetch_data('005380.KS', 2014, 2015)
+    from_date, to_date = parse_date('2014-01-01'), parse_date('2015-12-31')
+    data = provider.fetch_data('005380.KS', from_date, to_date)
 
     for date, open_, high, low, close_, volume, adj_close in data:
         assert isinstance(date, datetime)
@@ -162,6 +162,7 @@ def test_yahoo_fetch_data():
 
 def test_yahoo_fetch_data_with_invalid_code():
     provider = Yahoo()
+    from_date, to_date = parse_date('2014-01-01'), parse_date('2015-12-31')
     with pytest.raises(HTTPError):
-        data = provider.fetch_data('!@#$%', 2000, 2016)
+        data = provider.fetch_data('!@#$%', from_date, to_date)
         next(data)
