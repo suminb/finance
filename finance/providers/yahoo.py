@@ -5,11 +5,11 @@ import io
 import requests
 from typedecorator import typed
 
-from finance.providers.provider import Provider
+from finance.providers.provider import AssetValueProvider
 from finance.utils import parse_date
 
 
-class Yahoo(Provider):
+class Yahoo(AssetValueProvider):
     @property
     def request_url(self):
         return 'http://real-chart.finance.yahoo.com/table.csv'
