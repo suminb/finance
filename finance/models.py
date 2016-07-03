@@ -235,6 +235,7 @@ class Account(db.Model, CRUDMixin):
     type = db.Column(db.Enum('checking', 'savings', 'investment',
                              'credit_card', 'virtual', name='account_type'))
     name = db.Column(db.String)
+    number = db.Column(db.String)  # Account number
     description = db.Column(db.Text)
 
     #: Arbitrary data
