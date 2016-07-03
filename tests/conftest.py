@@ -87,6 +87,13 @@ def account_sp500(request, db):
     return account
 
 
+@pytest.fixture(scope='function')
+def account_stock(request, db):
+    account = Account.create(type='investment', name='신한 주식')
+    request.addfinalizer(partial(teardown, db=db, record=account))
+    return account
+
+
 @pytest.fixture(scope='module')
 def asset_hf1(request, db):
     asset = Asset.create(

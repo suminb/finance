@@ -56,6 +56,17 @@ def test_import_stock_values():
     assert result.exit_code == 0
 
 
+def test_import_stock_records(asset_krw, account_stock, account_checking):
+    from finance.__main__ import insert_stock_assets
+    for _ in insert_stock_assets():
+        pass
+
+    runner = CliRunner()
+    result = runner.invoke(import_stock_records, ['tests/data/stocks.csv'],
+                           catch_exceptions=False)
+    assert result.exit_code == 0
+
+
 def teardown_module(module):
     runner = CliRunner()
     runner.invoke(drop_all)

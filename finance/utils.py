@@ -114,7 +114,17 @@ def parse_stock_records(stream):
         # where '20160202' is a date (YYYYMMDD) and the tailing number
         # appears to be the sequence of the day. In this case, the first row
         # indicates the transaction was the third one on 2016-02-02.
-        date, sequence = parse_date(date[:8], '%Y%m%d'), int(date[8:])
+        #
+        # date, sequence = parse_date(date[:8], '%Y%m%d'), int(date[8:])
+        sequence = int(date[8:])
+        # NOTE: The Record table has a unique constaint with
+        # (account, asset, created_at, quantity) quadriple. As such, if we
+        # have multiple transactions in the stock account with the same
+        # code and the same quantity, it will cause a unique key constraint
+        # violation. As a temporary workaround, we will put the daily sequence
+        # as a microsecond portion of the datetime. If we have more than a
+        # million transactions per day this will cause a problem.
+        date = parse_date('{}.{:06d}'.format(date[:8], sequence), '%Y%m%d.%f')
 
         yield {
             'date': date,
@@ -134,7 +144,9 @@ def parse_stock_records(stream):
         }
 
 
-def insert_stock_record(data: dict):
+@typed
+def insert_stock_record(data: dict, stock_account: object,
+                        bank_account: object):
     """
     account_id = db.Column(db.BigInteger, db.ForeignKey('account.id'))
     asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
@@ -146,13 +158,25 @@ def insert_stock_record(data: dict):
     category = db.Column(db.String)
     quantity = db.Column(db.Numeric(precision=20, scale=4))
     """
-    from finance.models import get_asset_by_stock_code, Record
+    if data['category2'] in ['매도', '매수']:
+        return insert_stock_trading_record(data, stock_account)
+    elif data['category2'] in ['제휴입금', '매매대금출금']:
+        return insert_stock_transfer_record(data, bank_account)
+    else:
+        log.info('Skipping {} record...', data['category2'])
+        return None
 
+
+@typed
+def insert_stock_trading_record(data: dict, stock_account: object):
+    """Inserts a stock trading (i.e., buying or selling stocks) records."""
+    from finance.models import get_asset_by_stock_code, Record
     if data['category1'].startswith('장내'):
         code_suffix = '.KS'
     elif data['category1'].startswith('코스닥'):
         code_suffix = '.KQ'
     else:
+        code_suffix = ''
         raise ValueError(
             "code_suffix could not be determined with the category '{}'"
             ''.format(data['category1']))
@@ -168,7 +192,36 @@ def insert_stock_record(data: dict):
         created_at=data['date'],
         quantity=data['quantity'],
         asset=asset,
+        account=stock_account,
     )
+
+
+@typed
+def insert_stock_transfer_record(data: dict, bank_account: object):
+    """Inserts a transfer record between a bank account and a stock account.
+    """
+    from finance.models import Asset, Record
+
+    # FIXME: Not a good idea to use a hard coded value
+    asset_krw = Asset.query.filter(Asset.name == 'KRW').first()
+
+    if data['name'] == '증거금이체':
+        # Transfer from a bank account to a stock account
+        return Record.create(
+            created_at=data['date'],
+            quantity=-data['subtotal'],
+            asset=asset_krw,
+            account=bank_account)
+    elif data['name'] == '매매대금정산':
+        # Transfer from a stock account to a bank account
+        return Record.create(
+            created_at=data['date'],
+            quantity=data['subtotal'],
+            asset=asset_krw,
+            account=bank_account)
+    else:
+        raise ValueError(
+            "Unrecognized transfer type '{}'".format(data['name']))
 
 
 def insert_asset(row, data=None):

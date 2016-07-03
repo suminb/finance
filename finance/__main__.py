@@ -11,7 +11,7 @@ from finance.importers import \
     import_8percent_data, \
     import_stock_values as import_stock_values_  # Avoid name clashes
 from finance.models import *  # noqa
-from finance.providers import _8Percent, Kofia, Yahoo
+from finance.providers import _8Percent, Kofia
 from finance.utils import (
     extract_numbers, insert_asset, insert_record,
     insert_stock_record, parse_date, parse_stock_records)
@@ -53,6 +53,8 @@ def insert_stock_assets():
         ('053800.KQ', 'Ahnlab Inc.'),
         ('017670.KS', 'SK Telecom Co. Ltd.'),
         ('005380.KS', 'Hyundai Motor Company'),
+        ('056080.KQ', 'Yujin Robot Co., Ltd.'),
+        ('069500.KS', 'KODEX 200'),
     ]
 
     for code, description in rows:
@@ -292,21 +294,27 @@ def import_fund(code, from_date, to_date):
 @click.argument('to-date')
 def import_stock_values(code, from_date, to_date):
     """Import stock price information."""
-    provider = Yahoo()
     app = create_app(__name__)
     with app.app_context():
         # NOTE: We assume all Asset records are already in the database, but
         # this is a temporary workaround. We should implement some mechanism to
         # automatically insert an Asset record when it is not found.
-        import_stock_values_(provider, code, None, None)
+        import_stock_values_(code, parse_date(from_date), parse_date(to_date))
 
 
 @cli.command()
 @click.argument('filename')
-def import_stocks(filename):
+def import_stock_records(filename):
     """Parses exported data from the Shinhan HTS."""
-    with open(filename) as fin:
-        parse_stock_data(fin)
+    app = create_app(__name__)
+    with app.app_context():
+        account_bank = Account.query \
+            .filter(Account.name == '신한 입출금').first()
+        account_stock = Account.query \
+            .filter(Account.name == '신한 주식').first()
+        with open(filename) as fin:
+            for parsed in parse_stock_records(fin):
+                insert_stock_record(parsed, account_stock, account_bank)
 
 
 if __name__ == '__main__':
