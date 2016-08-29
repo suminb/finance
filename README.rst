@@ -39,6 +39,11 @@ Daily Net Asset Values
 .. figure:: http://s33.postimg.org/duyhsnxrz/net_worth.png
     :align: center
     :alt: Daily net asset values
+    
+
+지금 고민중인 내용들
+--------------------
+* `수익률 계산 <https://github.com/suminb/finance/wiki/%EC%88%98%EC%9D%B5%EB%A5%A0-%EA%B3%84%EC%82%B0>`_
 
 
 앞으로 할 일들
