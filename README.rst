@@ -52,3 +52,26 @@ Daily Net Asset Values
 * 자동으로 데이터 받아오기: 주식, 펀드 가격 등 거래소에 공시되는 가격을 주기적으로 받아오는 무언가를 만들어야 합니다. 사용할 도구로는 AWS Lambda가 적당해보입니다.
 
 (TODO: 내용 계속 채워넣기)
+
+Some Technical Details
+----------------------
+
+If you fail to build the ``psycopg2`` package on Mac OS X with an error
+message saying the following,
+
+.. code::
+
+    ld: library not found for -lssl
+
+You may want to build ``pscycopg2`` as follows:
+
+.. code::
+
+    env LDFLAGS="-I/usr/local/opt/openssl/include -L/usr/local/opt/openssl/lib" pip install psycopg2
+
+That's assuming you have ``openssl`` installed in your system. If you are
+using ``brew`` you may install ``openssl`` as following:
+
+.. code::
+
+    brew install openssl
