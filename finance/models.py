@@ -3,8 +3,8 @@ from datetime import datetime
 import functools
 import operator
 
-from flask.ext.login import UserMixin
-from flask.ext.sqlalchemy import SQLAlchemy
+from flask_login import UserMixin
+from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.postgresql import JSON
 import uuid64
 
