@@ -96,15 +96,14 @@ def insert_test_data():
             pass
 
         asset_krw = insert_asset('currency, KRW, Korean Won')
-        asset_usd = insert_asset('currency, USD, United States Dollar')
-        asset_gold = insert_asset('commodity, Gold, Gold')
-        asset_sp500 = insert_asset('security, KB S&P500,',
-                                   data={'code': 'KR5223941018'})
-        asset_esch = insert_asset('security, 이스트스프링차이나펀드,',
-                                  data={'code': 'KR5229221225'})
-        asset_kjp = insert_asset('security, 키움일본인덱스,',
-                                 data={'code': 'KR5206689717'})
-        asset_hf1 = insert_asset('bond, 포트폴리오 투자상품 1호,')
+        insert_asset('currency, USD, United States Dollar')
+        insert_asset('commodity, Gold, Gold')
+        insert_asset('security, KB S&P500,', data={'code': 'KR5223941018'})
+        insert_asset('security, 이스트스프링차이나펀드,',
+                     data={'code': 'KR5229221225'})
+        insert_asset('security, 키움일본인덱스,',
+                     data={'code': 'KR5206689717'})
+        insert_asset('bond, 포트폴리오 투자상품 1호,')
 
         portfolio = Portfolio()
         portfolio.base_asset = asset_krw
