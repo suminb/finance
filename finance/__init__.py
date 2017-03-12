@@ -16,7 +16,7 @@ __email__ = 'suminb@gmail.com'
 # FIXME: This is temporaroy
 ADMINS = ['suminb@gmail.com']
 
-StreamHandler(sys.stdout).push_application()
+StreamHandler(sys.stderr).push_application()
 log = Logger('finance')
 
 
