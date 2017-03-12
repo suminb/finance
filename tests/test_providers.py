@@ -4,7 +4,7 @@ import os
 import pytest
 from requests.exceptions import HTTPError
 
-from finance.providers import _8Percent, Kofia, Yahoo
+from finance.providers import _8Percent, Dart, Kofia, Yahoo
 from finance.utils import parse_date
 
 
@@ -166,3 +166,10 @@ def test_yahoo_fetch_data_with_invalid_code():
     with pytest.raises(HTTPError):
         data = provider.fetch_data('!@#$%', from_date, to_date)
         next(data)
+
+
+def test_dart_fetch_data():
+    provider = Dart()
+    data = provider.fetch_data('삼성전자')
+    import pdb; pdb.set_trace()
+    pass
