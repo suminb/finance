@@ -35,7 +35,7 @@ def _test_import_sp500():
     assert result.exit_code == 0
 
 
-def test_import_fund():
+def test_import_fund(asset_sp500):
     runner = CliRunner()
     result = runner.invoke(import_fund,
                            ['KR5223941018', '2016-01-01', '2016-01-31'])
