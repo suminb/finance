@@ -10,7 +10,9 @@ from finance import create_app
 from finance.importers import \
     import_8percent_data, \
     import_stock_values as import_stock_values_  # Avoid name clashes
-from finance.models import *  # noqa
+from finance.models import (
+    Account, Asset, AssetValue, db, get_asset_by_fund_code, Granularity,
+    Portfolio, Record, Transaction, User)
 from finance.providers import _8Percent, Kofia
 from finance.utils import (
     extract_numbers, insert_asset, insert_record,
