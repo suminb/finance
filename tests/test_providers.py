@@ -170,4 +170,4 @@ def test_yahoo_fetch_data_with_invalid_code():
 
 def test_dart_fetch_data():
     provider = Dart()
-    data = provider.fetch_data('삼성전자')
+    reports = provider.fetch_reports('삼성전자')
