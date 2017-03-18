@@ -107,3 +107,8 @@ class Record(object):
         return '{} ({}, {}, {})'.format(
             self.title, self.id,
             self.registered_at.strftime('%Y-%m-%d'), self.entity)
+
+    def __iter__(self):
+        attrs = ['id', 'registered_at', 'title', 'entity', 'reporter']
+        for attr in attrs:
+            yield attr, getattr(self, attr)
