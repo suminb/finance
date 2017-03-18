@@ -18,6 +18,43 @@ curl 'http://m.dart.fss.or.kr/md3002/search.st?currentPage=2&maxResultCnt=15&cor
 """
 
 
+class AbstractField(object):
+
+    def __init__(self):
+        self._values = {}
+
+    def __get__(self, instance, instance_type, default=None):
+        if instance is None:
+            return self
+        else:
+            return self._values.get(instance, default)
+
+    def __set__(self, instance, value):
+        self._values[instance] = value
+
+
+class DateTime(AbstractField):
+
+    def __init__(self, date_format='%Y-%m-%d'):
+        self.date_format = date_format
+        super(self.__class__, self).__init__()
+
+    def __set__(self, instance, value):
+        self._values[instance] = parse_date(value, self.date_format)
+
+
+class Integer(AbstractField):
+
+    def __set__(self, instance, value):
+        self._values[instance] = int(value)
+
+
+class String(AbstractField):
+
+    def __set__(self, instance, value):
+        self._values[instance] = value.strip()
+
+
 class Dart(Provider):
 
     def fetch_data(self, entity_name):
@@ -53,13 +90,18 @@ class Dart(Provider):
 
 class Record(object):
 
+    id = Integer()
+    registered_at = DateTime(date_format='%Y.%m.%d')
+    title = String()
+    entity = String()
+    reporter = String()
+
     def __init__(self, **kwargs):
-        # TODO: Refactor the following part - use descriptors
-        self.id = kwargs['rcp_no'].strip()
-        self.registered_at = parse_date(kwargs['rcp_dm'], '%Y.%m.%d')
-        self.title = kwargs['rptNm'].strip()
-        self.entity = kwargs['ifm_nm'].strip()
-        self.reporter = kwargs['ifm_nm2'].strip()
+        self.id = kwargs['rcp_no']
+        self.registered_at = kwargs['rcp_dm']
+        self.title = kwargs['rptNm']
+        self.entity = kwargs['ifm_nm']
+        self.reporter = kwargs['ifm_nm2']
 
     def __repr__(self):
         return '{} ({}, {}, {})'.format(
