@@ -13,7 +13,7 @@ from finance.importers import \
 from finance.models import (
     Account, Asset, AssetValue, db, get_asset_by_fund_code, Granularity,
     Portfolio, Record, Transaction, User)
-from finance.providers import _8Percent, Kofia
+from finance.providers import _8Percent, Dart, Kofia
 from finance.utils import (
     extract_numbers, insert_asset, insert_record,
     insert_stock_record, parse_date, parse_stock_records)
@@ -108,6 +108,16 @@ def insert_test_data():
         portfolio = Portfolio()
         portfolio.base_asset = asset_krw
         portfolio.add_accounts(account_checking, account_stock, account_8p)
+
+
+@cli.command()
+def fetch_dart():
+    """Fetch all records from DART (전자공시)."""
+
+    provider = Dart()
+    records = provider.fetch_data('삼성전자')
+    for record in records:
+        print(record)
 
 
 @cli.command()

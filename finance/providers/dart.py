@@ -8,7 +8,7 @@ except:
 
 import requests
 
-from finance import log
+from finance.utils import parse_date
 from finance.providers.provider import Provider
 
 DART_HOST = 'm.dart.fss.or.kr'
@@ -28,7 +28,7 @@ class Dart(Provider):
         params = {
             'maxResultCnt': 15,
             'corporationType': None,
-            'textCrpNm': quote_plus(entity_name),  # TODO: URL encode
+            'textCrpNm': quote_plus(entity_name),
             'textCrpCik': '00126380',  # NOTE: What is this?
             'startDate': '20160912',
             'endDate': '20170312',
@@ -39,5 +39,29 @@ class Dart(Provider):
             # and more...
         }
         resp = requests.get(url, params=params)
-        return json.loads(resp.text)
+        data = json.loads(resp.text)
+        return self.process_data(data)
 
+    def process_data(self, json_data):
+        # page_count = json_data['totalPage']
+        # record_count = json_data['totCount']
+        records = json_data['rlist']
+
+        for record in records:
+            yield Record(**record)
+
+
+class Record(object):
+
+    def __init__(self, **kwargs):
+        # TODO: Refactor the following part - use descriptors
+        self.id = kwargs['rcp_no'].strip()
+        self.registered_at = parse_date(kwargs['rcp_dm'], '%Y.%m.%d')
+        self.title = kwargs['rptNm'].strip()
+        self.entity = kwargs['ifm_nm'].strip()
+        self.reporter = kwargs['ifm_nm2'].strip()
+
+    def __repr__(self):
+        return '{} ({}, {}, {})'.format(
+            self.title, self.id,
+            self.registered_at.strftime('%Y-%m-%d'), self.entity)
