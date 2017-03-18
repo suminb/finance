@@ -455,10 +455,11 @@ class Record(CRUDMixin, db.Model):
         super(self.__class__, self).__init__(*args, **kwargs)
 
 
-class DartRecord(CRUDMixin, db.Model):
+class DartReport(CRUDMixin, db.Model):
     """NOTE: We need a more generic name for this..."""
 
     registered_at = db.Column(db.DateTime(timezone=False))
     title = db.Column(db.String)
     entity = db.Column(db.String)
     reporter = db.Column(db.String)
+    content = db.Column(db.Text)

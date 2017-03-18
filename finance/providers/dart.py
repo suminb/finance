@@ -57,10 +57,12 @@ class String(AbstractField):
 
 class Dart(Provider):
 
-    def fetch_data(self, entity_name):
+    def fetch_reports(self, entity_name):
         """
         :param entity_name: Financial entity name (e.g., 삼성전자)
         """
+        # NOTE: What is going to happen when we provide an invalid entity name?
+
         url = 'http://{}/md3002/search.st'.format(DART_HOST)
         params = {
             'maxResultCnt': 15,
@@ -76,25 +78,37 @@ class Dart(Provider):
             # and more...
         }
         resp = requests.get(url, params=params)
-        data = json.loads(resp.text)
-        return self.process_data(data)
+        report_listings = json.loads(resp.text)
+        return self.process_data(report_listings)
+
+    def fetch_report(self, id):
+        """Fetches a full report."""
+
+        url = 'http://{}/viewer/main.st'.format(DART_HOST)
+        params = {'rcpNo': id}
+        resp = requests.get(url, params=params)
+        parsed = json.loads(resp.text)
+        return parsed
 
     def process_data(self, json_data):
         # page_count = json_data['totalPage']
         # record_count = json_data['totCount']
-        records = json_data['rlist']
 
-        for record in records:
-            yield Record(**record)
+        for listing in json_data['rlist']:
+            report = self.fetch_report(listing['rcp_no'])
+            report['self_'] = report.pop('self')
+            merged = {**listing, **report}  # noqa, new syntax in Python 3.5
+            yield Report(**merged)
 
 
-class Record(object):
+class Report(object):
 
     id = Integer()
     registered_at = DateTime(date_format='%Y.%m.%d')
     title = String()
     entity = String()
     reporter = String()
+    content = String()
 
     def __init__(self, **kwargs):
         self.id = kwargs['rcp_no']
@@ -102,6 +116,7 @@ class Record(object):
         self.title = kwargs['rptNm']
         self.entity = kwargs['ifm_nm']
         self.reporter = kwargs['ifm_nm2']
+        self.content = kwargs['reportBody']
 
     def __repr__(self):
         return '{} ({}, {}, {})'.format(
@@ -109,6 +124,7 @@ class Record(object):
             self.registered_at.strftime('%Y-%m-%d'), self.entity)
 
     def __iter__(self):
-        attrs = ['id', 'registered_at', 'title', 'entity', 'reporter']
+        attrs = ['id', 'registered_at', 'title', 'entity', 'reporter',
+                 'content']
         for attr in attrs:
             yield attr, getattr(self, attr)
