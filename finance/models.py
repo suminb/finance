@@ -431,6 +431,8 @@ record_types = (RecordType.deposit, RecordType.withdraw,
 
 
 class Record(CRUDMixin, db.Model):
+    """A financial transaction consists of one or more records."""
+
     # NOTE: Is this okay to do this?
     __table_args__ = (db.UniqueConstraint(
         'account_id', 'asset_id', 'created_at', 'quantity'), {})
