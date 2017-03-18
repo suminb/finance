@@ -92,7 +92,8 @@ class CRUDMixin(object):
         return commit and db.session.commit()
 
 
-class User(db.Model, CRUDMixin, UserMixin):
+class User(CRUDMixin, UserMixin, db.Model):
+
     given_name = db.Column(db.String)
     family_name = db.Column(db.String)
     email = db.Column(db.String, unique=True)
@@ -130,7 +131,7 @@ class Granularity(object):
         raise NotImplementedError
 
 
-class AssetValue(db.Model, CRUDMixin):
+class AssetValue(CRUDMixin, db.Model):
     """Represents a unit price of an asset at a particular point of time. The
     granularity of the 'particular point of time' may range from one second
     to a year. See `Granularity` for more details."""
@@ -168,7 +169,7 @@ asset_types = (
     AssetType.security, AssetType.fund, AssetType.commodity)
 
 
-class Asset(db.Model, CRUDMixin):
+class Asset(CRUDMixin, db.Model):
     """Represents an asset."""
 
     type = db.Column(db.Enum(*asset_types, name='asset_type'))
@@ -225,7 +226,7 @@ class Asset(db.Model, CRUDMixin):
     #
 
 
-class Account(db.Model, CRUDMixin):
+class Account(CRUDMixin, db.Model):
     """Represents an account. An account may contain multiple records based
     on different assets. For example, a single bank account may have a balance
     in different foreign currencies."""
@@ -324,7 +325,7 @@ class Account(db.Model, CRUDMixin):
         return net_asset_value
 
 
-class Portfolio(db.Model, CRUDMixin):
+class Portfolio(CRUDMixin, db.Model):
     """A collection of accounts (= a collection of assets)."""
     __table_args__ = (
         db.ForeignKeyConstraint(['base_asset_id'], ['asset.id']),
@@ -381,7 +382,7 @@ transaction_states = (
     TransactionState.pending, TransactionState.invalid)
 
 
-class Transaction(db.Model, CRUDMixin):
+class Transaction(CRUDMixin, db.Model):
     """A transaction consists of multiple records."""
     initiated_at = db.Column(db.DateTime(timezone=False))
     closed_at = db.Column(db.DateTime(timezone=False))
@@ -429,7 +430,7 @@ record_types = (RecordType.deposit, RecordType.withdraw,
                 RecordType.balance_adjustment)
 
 
-class Record(db.Model, CRUDMixin):
+class Record(CRUDMixin, db.Model):
     # NOTE: Is this okay to do this?
     __table_args__ = (db.UniqueConstraint(
         'account_id', 'asset_id', 'created_at', 'quantity'), {})
