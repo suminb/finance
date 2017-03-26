@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import json
 try:
     # Python 3
@@ -77,7 +78,16 @@ class Dart(Provider):
                 break
 
     def fetch_reports_by_page(self, entity_name, entity_code, page=1,
-                              reports_per_page=15):
+                              reports_per_page=15, start_date=None,
+                              end_date=None):
+        if end_date is None:
+            end_date = datetime.now()
+
+        if start_date is None:
+            start_date = end_date - timedelta(days=365)
+
+        date_format = '%Y%m%d'
+
         url = 'http://{}/md3002/search.st'.format(DART_HOST)
         params = {
             'currentPage': page,
@@ -85,8 +95,8 @@ class Dart(Provider):
             'corporationType': None,
             'textCrpNm': quote_plus(entity_name),
             'textCrpCik': entity_code,
-            'startDate': '20160912',
-            'endDate': '20170312',
+            'startDate': start_date.strftime(date_format),
+            'endDate': end_date.strftime(date_format),
             'publicType': None,
             'publicOrgType': None,
             'reportName': None,
