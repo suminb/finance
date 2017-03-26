@@ -112,6 +112,10 @@ class Dart(Provider):
         page_count = report_listings['totalPage']
         record_count = report_listings['totCount']
 
+        if not report_listings['rlist'] or record_count == 0:
+            # NOTE: Should we raise an exception or show a warning?
+            raise ValueError('No report was found for {}'.format(entity_name))
+
         return self.process_data(report_listings), page_count, record_count
 
     def fetch_report(self, id):

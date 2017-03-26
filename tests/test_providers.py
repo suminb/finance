@@ -178,3 +178,9 @@ def test_dart_fetch_data():
     assert len(reports) > 0
     for report in reports:
         assert isinstance(report, DartReport)
+
+
+def test_dart_fetch_data_with_invalid_code():
+    provider = Dart()
+    with pytest.raises(ValueError):
+        list(provider.fetch_reports('_', '_'))
