@@ -61,6 +61,7 @@ def parse_date(date, format='%Y-%m-%d'):
     """Make a datetime object from a string.
 
     :type date: str or int
+    :rtype: datetime.date
     """
     if isinstance(date, int):
         return datetime.now().date() + timedelta(days=date)

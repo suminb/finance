@@ -290,9 +290,10 @@ class Account(CRUDMixin, db.Model):
             evaluated_at = datetime.utcnow()
 
         if granularity == Granularity.day:
-            # NOTE: Any better way to handle this?
-            date = evaluated_at.date().timetuple()[:6]
-            evaluated_at = datetime(*date)
+            if isinstance(evaluated_at, datetime):
+                # NOTE: Any better way to handle this?
+                date = evaluated_at.date().timetuple()[:6]
+                evaluated_at = datetime(*date)
         else:
             raise NotImplementedError
 
