@@ -11,11 +11,11 @@ from finance.importers import \
     import_8percent_data, \
     import_stock_values as import_stock_values_  # Avoid name clashes
 from finance.models import (
-    Account, Asset, AssetValue, db, get_asset_by_fund_code, Granularity,
-    Portfolio, Record, Transaction, User)
-from finance.providers import _8Percent, Kofia
+    Account, Asset, AssetValue, DartReport, db, get_asset_by_fund_code,
+    Granularity, Portfolio, Record, Transaction, User)
+from finance.providers import _8Percent, Dart, Kofia
 from finance.utils import (
-    extract_numbers, insert_asset, insert_record,
+    extract_numbers, get_dart_code, insert_asset, insert_record,
     insert_stock_record, parse_date, parse_stock_records)
 
 
@@ -108,6 +108,30 @@ def insert_test_data():
         portfolio = Portfolio()
         portfolio.base_asset = asset_krw
         portfolio.add_accounts(account_checking, account_stock, account_8p)
+
+
+@cli.command()
+@click.argument('entity_name')
+def fetch_dart(entity_name):
+    """Fetch all reports from DART (전자공시)."""
+
+    entity_code = get_dart_code(entity_name)
+    provider = Dart()
+
+    log.info('Fetching DART reports for {}', entity_name)
+    reports = provider.fetch_reports(entity_name, entity_code)
+
+    app = create_app(__name__)
+    with app.app_context():
+
+        for report in reports:
+            try:
+                DartReport.create(**dict(report))
+            except IntegrityError:
+                log.info('DartReport-{} already exists', report.id)
+                db.session.rollback()
+            else:
+                print(report)
 
 
 @cli.command()

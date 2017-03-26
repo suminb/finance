@@ -431,6 +431,8 @@ record_types = (RecordType.deposit, RecordType.withdraw,
 
 
 class Record(CRUDMixin, db.Model):
+    """A financial transaction consists of one or more records."""
+
     # NOTE: Is this okay to do this?
     __table_args__ = (db.UniqueConstraint(
         'account_id', 'asset_id', 'created_at', 'quantity'), {})
@@ -453,3 +455,13 @@ class Record(CRUDMixin, db.Model):
             else:
                 kwargs['type'] = RecordType.deposit
         super(self.__class__, self).__init__(*args, **kwargs)
+
+
+class DartReport(CRUDMixin, db.Model):
+    """NOTE: We need a more generic name for this..."""
+
+    registered_at = db.Column(db.DateTime(timezone=False))
+    title = db.Column(db.String)
+    entity = db.Column(db.String)
+    reporter = db.Column(db.String)
+    content = db.Column(db.Text)

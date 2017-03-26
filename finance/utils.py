@@ -43,6 +43,20 @@ def extract_numbers(value, type=str):
     return type(''.join(extract(value)))
 
 
+def get_dart_codes():
+    """Returns all DART codes."""
+    with open('data/dart_codes.csv') as fin:
+        for line in fin.readlines():
+            yield [x.strip() for x in line.split(',')]
+
+
+def get_dart_code(entity_name):
+    for name, code in get_dart_codes():
+        if name == entity_name:
+            return code
+    raise ValueError('CRP code for {} is not found'.format(entity_name))
+
+
 def parse_date(date, format='%Y-%m-%d'):
     """Make a datetime object from a string.
 
