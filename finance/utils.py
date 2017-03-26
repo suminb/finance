@@ -45,7 +45,7 @@ def extract_numbers(value, type=str):
 
 def get_dart_codes():
     """Returns all DART codes."""
-    with open('sample-data/dart_codes.csv') as fin:
+    with open('data/dart_codes.csv') as fin:
         for line in fin.readlines():
             yield [x.strip() for x in line.split(',')]
 
