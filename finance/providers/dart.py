@@ -60,12 +60,11 @@ class Dart(Provider):
 
     def fetch_reports(self, entity_name, entity_code, start_date=None,
                       end_date=None):
-        """
+        """Fetches all DART reports for a single financial entity.
+
         :param entity_name: Financial entity name (e.g., 삼성전자)
         :param entity_code: Financial entity code (e.g., 00254045)
         """
-        # NOTE: What is going to happen when we provide an invalid entity name?
-
         page = 1
         while True:
             reports, page_count, record_count = \
@@ -83,6 +82,7 @@ class Dart(Provider):
     def fetch_reports_by_page(self, entity_name, entity_code, page=1,
                               reports_per_page=15, start_date=None,
                               end_date=None):
+        """Fetches DART reports for a single page."""
         if end_date is None:
             end_date = datetime.now()
 
