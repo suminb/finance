@@ -15,7 +15,7 @@ from finance.models import (
     Granularity, Portfolio, Record, Transaction, User)
 from finance.providers import _8Percent, Dart, Kofia
 from finance.utils import (
-    extract_numbers, insert_asset, insert_record,
+    extract_numbers, get_dart_code, insert_asset, insert_record,
     insert_stock_record, parse_date, parse_stock_records)
 
 
@@ -111,11 +111,15 @@ def insert_test_data():
 
 
 @cli.command()
-def fetch_dart():
+@click.argument('entity_name')
+def fetch_dart(entity_name):
     """Fetch all reports from DART (전자공시)."""
 
+    entity_code = get_dart_code(entity_name)
     provider = Dart()
-    reports = provider.fetch_reports('삼성전자')
+
+    log.info('Fetching DART reports for {}', entity_name)
+    reports = provider.fetch_reports(entity_name, entity_code)
 
     app = create_app(__name__)
     with app.app_context():

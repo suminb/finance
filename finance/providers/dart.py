@@ -57,9 +57,10 @@ class String(AbstractField):
 
 class Dart(Provider):
 
-    def fetch_reports(self, entity_name):
+    def fetch_reports(self, entity_name, entity_code):
         """
         :param entity_name: Financial entity name (e.g., 삼성전자)
+        :param entity_code: Financial entity code (e.g., 00254045)
         """
         # NOTE: What is going to happen when we provide an invalid entity name?
 
@@ -68,7 +69,7 @@ class Dart(Provider):
             'maxResultCnt': 15,
             'corporationType': None,
             'textCrpNm': quote_plus(entity_name),
-            'textCrpCik': '00126380',  # NOTE: What is this?
+            'textCrpCik': entity_code,
             'startDate': '20160912',
             'endDate': '20170312',
             'publicType': None,
