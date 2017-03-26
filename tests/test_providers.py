@@ -1,10 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 
 import pytest
 from requests.exceptions import HTTPError
 
 from finance.providers import _8Percent, Dart, Kofia, Yahoo
+from finance.providers.dart import Report as DartReport
 from finance.utils import parse_date
 
 
@@ -170,4 +171,10 @@ def test_yahoo_fetch_data_with_invalid_code():
 
 def test_dart_fetch_data():
     provider = Dart()
-    reports = provider.fetch_reports('삼성전자', '00126380')
+    end = datetime.now()
+    start = end - timedelta(days=7)
+    reports = list(provider.fetch_reports('삼성전자', '00126380', start, end))
+
+    assert len(reports) > 0
+    for report in reports:
+        assert isinstance(report, DartReport)

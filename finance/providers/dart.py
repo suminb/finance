@@ -58,7 +58,8 @@ class String(AbstractField):
 
 class Dart(Provider):
 
-    def fetch_reports(self, entity_name, entity_code):
+    def fetch_reports(self, entity_name, entity_code, start_date=None,
+                      end_date=None):
         """
         :param entity_name: Financial entity name (e.g., 삼성전자)
         :param entity_code: Financial entity code (e.g., 00254045)
@@ -68,7 +69,9 @@ class Dart(Provider):
         page = 1
         while True:
             reports, page_count, record_count = \
-                self.fetch_reports_by_page(entity_name, entity_code, page)
+                self.fetch_reports_by_page(
+                    entity_name, entity_code, page, start_date=start_date,
+                    end_date=end_date)
 
             for report in reports:
                 yield report
