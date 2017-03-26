@@ -64,9 +64,24 @@ class Dart(Provider):
         """
         # NOTE: What is going to happen when we provide an invalid entity name?
 
+        page = 1
+        while True:
+            reports, page_count, record_count = \
+                self.fetch_reports_by_page(entity_name, entity_code, page)
+
+            for report in reports:
+                yield report
+
+            page += 1
+            if page > page_count:
+                break
+
+    def fetch_reports_by_page(self, entity_name, entity_code, page=1,
+                              reports_per_page=15):
         url = 'http://{}/md3002/search.st'.format(DART_HOST)
         params = {
-            'maxResultCnt': 15,
+            'currentPage': page,
+            'maxResultCnt': reports_per_page,
             'corporationType': None,
             'textCrpNm': quote_plus(entity_name),
             'textCrpCik': entity_code,
@@ -80,7 +95,11 @@ class Dart(Provider):
         }
         resp = requests.get(url, params=params)
         report_listings = json.loads(resp.text)
-        return self.process_data(report_listings)
+
+        page_count = report_listings['totalPage']
+        record_count = report_listings['totCount']
+
+        return self.process_data(report_listings), page_count, record_count
 
     def fetch_report(self, id):
         """Fetches a full report."""
@@ -92,9 +111,6 @@ class Dart(Provider):
         return parsed
 
     def process_data(self, json_data):
-        # page_count = json_data['totalPage']
-        # record_count = json_data['totCount']
-
         for listing in json_data['rlist']:
             report = self.fetch_report(listing['rcp_no'])
             report['self_'] = report.pop('self')
