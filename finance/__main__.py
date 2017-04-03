@@ -12,8 +12,8 @@ from finance.importers import \
     import_stock_values as import_stock_values_  # Avoid name clashes
 from finance.models import (
     Account, Asset, AssetValue, DartReport, db, get_asset_by_fund_code,
-    Granularity, Portfolio, Record, Transaction, User)
-from finance.providers import _8Percent, Dart, Kofia
+    get_asset_by_stock_code, Granularity, Portfolio, Record, Transaction, User)
+from finance.providers import _8Percent, Dart, Kofia, Yahoo
 from finance.utils import (
     extract_numbers, get_dart_code, insert_asset, insert_record,
     insert_stock_record, parse_date, parse_stock_records)
@@ -226,6 +226,17 @@ def fetch_8percent(filename):
         resp = provider.fetch_data(bond_id)
         with open(target_path, 'w') as fout:
             fout.write(resp.text)
+
+@cli.command()
+@click.argument('stock_code')
+def fetch_stock_values(stock_code):
+    """Fetches stock values from Yahoo Finance."""
+    provider = Yahoo()
+    records = provider.fetch_data(stock_code, parse_date(-90), parse_date(0))
+    for date, open_, high, low, close_, volume, adj_close in records:
+        formatted = [date.strftime('%Y-%m-%d'), open_, high, low, close_,
+                     volume]
+        print(', '.join(map(str, formatted)))
 
 
 @cli.command()
