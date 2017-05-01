@@ -1,5 +1,7 @@
+import csv
 import os
 import re
+import sys
 
 import click
 from click.testing import CliRunner
@@ -13,7 +15,7 @@ from finance.importers import \
 from finance.models import (
     Account, Asset, AssetValue, DartReport, db, get_asset_by_fund_code,
     get_asset_by_stock_code, Granularity, Portfolio, Record, Transaction, User)
-from finance.providers import _8Percent, Dart, Kofia, Yahoo
+from finance.providers import _8Percent, Dart, Kofia, Miraeasset, Yahoo
 from finance.utils import (
     extract_numbers, get_dart_code, insert_asset, insert_record,
     insert_stock_record, parse_date, parse_stock_records)
@@ -203,8 +205,29 @@ def import_sp500_records():
                     log.warn('Identical record exists')
                     db.session.rollback()
 
-    # print(account_sp500.net_worth(parse_date('2016-02-25'),
-    #      base_asset=asset_krw))
+
+def __import_miraeasset_data__(filename, parse_func):
+    with open(filename) as fin:
+        records = parse_func(fin)
+        writer = csv.writer(sys.stdout)
+        for record in records:
+            writer.writerow(record.values())
+
+
+@cli.command()
+@click.argument('filename')
+def import_miraeasset_foreign_data(filename):
+    """Imports a CSV file exported in 해외거래내역 (9465)."""
+    provider = Miraeasset()
+    __import_miraeasset_data__(filename, provider.parse_foreign_transactions)
+
+
+@cli.command()
+@click.argument('filename')
+def import_miraeasset_local_data(filename):
+    """Imports a CSV file exported in 거래내역조회 (0650)."""
+    provider = Miraeasset()
+    __import_miraeasset_data__(filename, provider.parse_local_transactions)
 
 
 @cli.command()

@@ -11,49 +11,13 @@ import requests
 
 from finance.utils import parse_date
 from finance.providers.provider import Provider
+from finance.providers.record import DateTime, Integer, String
 
 DART_HOST = 'm.dart.fss.or.kr'
 
 """
 curl 'http://m.dart.fss.or.kr/md3002/search.st?currentPage=2&maxResultCnt=15&corporationType=&textCrpNm=%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90&textCrpCik=00126380&startDate=20160912&endDate=20170312&publicType=&publicOrgType=&reportName=&textPresenterNm=&finalReport=&lastRcpNo=20170310800637&totalPage=&textTerm=&_=1489313031578'
 """
-
-
-class AbstractField(object):
-
-    def __init__(self):
-        self._values = {}
-
-    def __get__(self, instance, instance_type, default=None):
-        if instance is None:
-            return self
-        else:
-            return self._values.get(instance, default)
-
-    def __set__(self, instance, value):
-        self._values[instance] = value
-
-
-class DateTime(AbstractField):
-
-    def __init__(self, date_format='%Y-%m-%d'):
-        self.date_format = date_format
-        super(self.__class__, self).__init__()
-
-    def __set__(self, instance, value):
-        self._values[instance] = parse_date(value, self.date_format)
-
-
-class Integer(AbstractField):
-
-    def __set__(self, instance, value):
-        self._values[instance] = int(value)
-
-
-class String(AbstractField):
-
-    def __set__(self, instance, value):
-        self._values[instance] = value.strip()
 
 
 class Dart(Provider):
