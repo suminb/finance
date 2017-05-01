@@ -1,5 +1,7 @@
+import csv
 import os
 import re
+import sys
 
 import click
 from click.testing import CliRunner
@@ -212,8 +214,9 @@ def import_miraeasset_data(filename):
     with open(filename) as fin:
         # records = provider.parse_foreign_transactions(fin)
         records = provider.parse_local_transactions(fin)
+        writer = csv.writer(sys.stdout)
         for record in records:
-            print(record)
+            writer.writerow(record.values())
 
 
 @cli.command()

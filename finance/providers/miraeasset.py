@@ -2,7 +2,8 @@ from finance.providers.provider import Provider
 from finance.providers.record import DateTime, Float, Integer, String
 
 
-DATE_FORMAT = '%Y/%m/%d'
+DATE_INPUT_FORMAT = '%Y/%m/%d'
+DATE_OUTPUT_FORMAT = '%Y-%m-%d'
 
 
 class Miraeasset(Provider):
@@ -59,7 +60,7 @@ class Miraeasset(Provider):
 class Record(object):
     """Represents a single transaction record."""
 
-    registered_at = DateTime(date_format='%Y/%m/%d')
+    registered_at = DateTime(date_format=DATE_INPUT_FORMAT)
     seq = Integer()
     category = String()
     amount = Float()  # FIXME: Use decimal type
@@ -86,5 +87,19 @@ class Record(object):
 
     def __repr__(self):
         return 'miraeasset.Record({}, {}, {}, {} ({}), {}, {})'.format(
-            self.registered_at.strftime('%Y-%m-%d'), self.category,
+            self.registered_at.strftime(DATE_OUTPUT_FORMAT), self.category,
             self.amount, self.name, self.code, self.unit_price, self.quantity)
+
+    def __iter__(self):
+        attrs = ['registered_at', 'seq', 'category', 'amount', 'code', 'name',
+                 'unit_price', 'quantity', 'fees', 'tax']
+        for attr in attrs:
+            yield attr, getattr(self, attr)
+
+    def values(self):
+        """Exports values only (in string)."""
+        for k, v in self:
+            if k == 'registered_at':
+                yield v.strftime(DATE_OUTPUT_FORMAT)
+            else:
+                yield str(v)
