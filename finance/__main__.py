@@ -206,17 +206,27 @@ def import_sp500_records():
                     db.session.rollback()
 
 
-@cli.command()
-@click.argument('filename')
-def import_miraeasset_data(filename):
-    """Imports a CSV file exported in 해외거래내역 (9465)."""
-    provider = Miraeasset()
+def __import_miraeasset_data__(filename, parse_func):
     with open(filename) as fin:
-        # records = provider.parse_foreign_transactions(fin)
-        records = provider.parse_local_transactions(fin)
+        records = parse_func(fin)
         writer = csv.writer(sys.stdout)
         for record in records:
             writer.writerow(record.values())
+
+@cli.command()
+@click.argument('filename')
+def import_miraeasset_foreign_data(filename):
+    """Imports a CSV file exported in 해외거래내역 (9465)."""
+    provider = Miraeasset()
+    __import_miraeasset_data__(filename, provider.parse_foreign_transactions)
+
+
+@cli.command()
+@click.argument('filename')
+def import_miraeasset_local_data(filename):
+    """Imports a CSV file exported in 거래내역조회 (0650)."""
+    provider = Miraeasset()
+    __import_miraeasset_data__(filename, provider.parse_local_transactions)
 
 
 @cli.command()
