@@ -26,6 +26,12 @@ class DateTime(AbstractField):
         self._values[instance] = parse_date(value, self.date_format)
 
 
+class Float(AbstractField):
+
+    def __set__(self, instance, value):
+        self._values[instance] = float(value)
+
+
 class Integer(AbstractField):
 
     def __set__(self, instance, value):

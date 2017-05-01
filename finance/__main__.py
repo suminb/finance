@@ -210,7 +210,7 @@ def import_miraeasset_data(filename):
     """Imports a CSV file exported in 해외거래내역 (9465)."""
     provider = Miraeasset()
     with open(filename) as fin:
-        records = provider.parse_data(fin)
+        records = provider.parse_foreign_transactions(fin)
         for record in records:
             print(record)
 
