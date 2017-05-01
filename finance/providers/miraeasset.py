@@ -22,8 +22,10 @@ class Miraeasset(Provider):
             if not self.is_local_transaction(category):
                 continue
 
-            # FIXME: Insert an empty value for 'code'
-            record = Record(*[cols[i] for i in [0, 1, 3, 4, 5, 5, 7, 6, 9, 16]])
+            fields = [cols[i] for i in [0, 1, 3, 4, 5, 7, 6, 9, 16]]
+            # Insert an empty string for code
+            fields.insert(4, '')
+            record = Record(*fields)
             yield record
 
     def parse_foreign_transactions(self, fin):
@@ -41,7 +43,8 @@ class Miraeasset(Provider):
             if not self.is_foreign_transaction(category):
                 continue
 
-            record = Record(*[cols[i] for i in [0, 1, 3, 5, 7, 8, 10, 9, 13, 14]])
+            record = Record(
+                *[cols[i] for i in [0, 1, 3, 5, 7, 8, 10, 9, 13, 14]])
             yield record
 
     def is_local_transaction(self, category):
@@ -60,6 +63,7 @@ class Record(object):
     seq = Integer()
     category = String()
     amount = Float()  # FIXME: Use decimal type
+    #!: ISIN (International Securities Identification Numbers)
     code = String()
     name = String()
     unit_price = Float()  # FIXME: Use decimal type
@@ -81,6 +85,6 @@ class Record(object):
         self.tax = tax
 
     def __repr__(self):
-        return 'miraeasset.Record({}, {}, {}, {}, {}, {})'.format(
+        return 'miraeasset.Record({}, {}, {}, {} ({}), {}, {})'.format(
             self.registered_at.strftime('%Y-%m-%d'), self.category,
-            self.amount, self.name, self.unit_price, self.quantity)
+            self.amount, self.name, self.code, self.unit_price, self.quantity)
