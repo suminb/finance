@@ -26,10 +26,9 @@ class Miraeasset(Provider):
             if not self.is_local_transaction(category):
                 continue
 
-            fields = [cols[i] for i in [0, 1, 3, 4, 5, 7, 6, 9, 16]]
-            # Insert an empty string for code
-            fields.insert(4, '')
-            record = Record(*fields)
+            record = Record(
+                cols[0], cols[1], cols[3], cols[4], 'KRW', '', cols[5],
+                cols[7], cols[6], cols[9], cols[16])
             yield record
 
     def parse_foreign_transactions(self, fin):
@@ -48,7 +47,7 @@ class Miraeasset(Provider):
                 continue
 
             record = Record(
-                *[cols[i] for i in [0, 1, 3, 5, 7, 8, 10, 9, 13, 14]])
+                *[cols[i] for i in [0, 1, 3, 5, 4, 7, 8, 10, 9, 13, 14]])
             yield record
 
     def is_local_transaction(self, category):
@@ -67,6 +66,7 @@ class Record(object):
     seq = Integer()
     category = String()
     amount = Float()  # FIXME: Use decimal type
+    currency = String()
     #!: ISIN (International Securities Identification Numbers)
     code = String()
     name = String()
@@ -75,12 +75,13 @@ class Record(object):
     fees = Float()  # FIXME: Use decimal type
     tax = Float()  # FIXME: Use decimal type
 
-    def __init__(self, registered_at, seq, category, amount, code, name,
-            unit_price, quantity, fees, tax):
+    def __init__(self, registered_at, seq, category, amount, currency, code,
+                 name, unit_price, quantity, fees, tax):
         self.registered_at = registered_at
         self.seq = seq
         self.category = category
         self.amount = amount
+        self.currency = currency
         self.code = code
         self.name = name
         self.unit_price = unit_price
@@ -94,8 +95,8 @@ class Record(object):
             self.amount, self.name, self.code, self.unit_price, self.quantity)
 
     def __iter__(self):
-        attrs = ['registered_at', 'seq', 'category', 'amount', 'code', 'name',
-                 'unit_price', 'quantity', 'fees', 'tax']
+        attrs = ['registered_at', 'seq', 'category', 'amount', 'currency',
+                 'code', 'name', 'unit_price', 'quantity', 'fees', 'tax']
         for attr in attrs:
             yield attr, getattr(self, attr)
 

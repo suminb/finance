@@ -203,3 +203,4 @@ def test_miraeasset_transactions(param):
             assert isinstance(record.registered_at, datetime)
             assert isinstance(record.seq, int)
             assert isinstance(record.quantity, int)
+            assert record.currency in ['KRW', 'USD']
