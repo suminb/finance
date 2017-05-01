@@ -213,6 +213,7 @@ def __import_miraeasset_data__(filename, parse_func):
         for record in records:
             writer.writerow(record.values())
 
+
 @cli.command()
 @click.argument('filename')
 def import_miraeasset_foreign_data(filename):

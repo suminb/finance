@@ -8,6 +8,9 @@ DATE_OUTPUT_FORMAT = '%Y-%m-%d'
 
 class Miraeasset(Provider):
 
+    # TODO: Ideally, we would like to unify the following two functions
+    # (local/foreign transactions)
+
     def parse_local_transactions(self, fin):
         """Parses local transactions (거래내역조회, 0650)."""
         headers = next(fin)
