@@ -129,6 +129,28 @@ def fetch_dart(entity_name):
 
 
 @cli.command()
+@click.argument('fin', type=click.File('r'))
+def import_dart(fin):
+    """Import DART (전자공시) data."""
+
+    try:
+        data = json.loads(fin.read())
+    except json.decoder.JSONDecodeError as e:
+        log.error('Valid JSON data expected: {}', e)
+
+    app = create_app(__name__)
+    with app.app_context():
+        for row in data:
+            try:
+                report = DartReport.create(**row)
+            except IntegrityError:
+                log.info('DartReport-{} already exists', row['id'])
+                db.session.rollback()
+            else:
+                log.info('Fetched report: {}', report)
+
+
+@cli.command()
 def import_sp500_asset_values():
     runner = CliRunner()
     runner.invoke(import_fund, ['KR5223941018', '2015-01-01', '2016-06-01'],
