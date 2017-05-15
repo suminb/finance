@@ -1,4 +1,5 @@
 import csv
+import json
 import os
 import re
 import sys
@@ -14,11 +15,11 @@ from finance.importers import \
     import_stock_values as import_stock_values_  # Avoid name clashes
 from finance.models import (
     Account, Asset, AssetValue, DartReport, db, get_asset_by_fund_code,
-    get_asset_by_stock_code, Granularity, Portfolio, Record, Transaction, User)
+    Granularity, Portfolio, Record, Transaction, User)
 from finance.providers import _8Percent, Dart, Kofia, Miraeasset, Yahoo
 from finance.utils import (
     extract_numbers, get_dart_code, insert_asset, insert_record,
-    insert_stock_record, parse_date, parse_stock_records)
+    insert_stock_record, parse_date, parse_stock_records, serialize_datetime)
 
 
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -123,17 +124,30 @@ def fetch_dart(entity_name):
     log.info('Fetching DART reports for {}', entity_name)
     reports = provider.fetch_reports(entity_name, entity_code)
 
+    # Apparently generators are not JSON serializable
+    print(json.dumps([dict(r) for r in reports], default=serialize_datetime))
+
+
+@cli.command()
+@click.argument('fin', type=click.File('r'))
+def import_dart(fin):
+    """Import DART (전자공시) data."""
+
+    try:
+        data = json.loads(fin.read())
+    except json.decoder.JSONDecodeError as e:
+        log.error('Valid JSON data expected: {}', e)
+
     app = create_app(__name__)
     with app.app_context():
-
-        for report in reports:
+        for row in data:
             try:
-                DartReport.create(**dict(report))
+                report = DartReport.create(**row)
             except IntegrityError:
-                log.info('DartReport-{} already exists', report.id)
+                log.info('DartReport-{} already exists', row['id'])
                 db.session.rollback()
             else:
-                print(report)
+                log.info('Fetched report: {}', report)
 
 
 @cli.command()
@@ -249,6 +263,7 @@ def fetch_8percent(filename):
         resp = provider.fetch_data(bond_id)
         with open(target_path, 'w') as fout:
             fout.write(resp.text)
+
 
 @cli.command()
 @click.argument('stock_code')

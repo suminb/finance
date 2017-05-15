@@ -103,7 +103,9 @@ def parse_stock_records(stream):
     """
     :param stream: A steam to read in a CSV file.
     """
-    first_header, second_header = next(stream), next(stream)
+    # Skip first two lines
+    next(stream), next(stream)
+
     while True:
         try:
             first_line, second_line = next(stream), next(stream)
@@ -278,6 +280,19 @@ def insert_record(row, account, asset, transaction):
     return Record.create(
         account=account, asset=asset, transaction=transaction, type=type,
         created_at=created_at, category=category, quantity=quantity)
+
+
+def serialize_datetime(obj):
+    """JSON serializer for objects not serializable by default json code. This
+    may be used as follows:
+
+        json.dumps(obj, default=serialize_datetime)
+    """
+
+    if isinstance(obj, datetime):
+        serial = obj.isoformat()
+        return serial
+    raise TypeError('Type not serializable')
 
 
 class DictReader(object):
