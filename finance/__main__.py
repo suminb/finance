@@ -1,4 +1,5 @@
 import csv
+import json
 import os
 import re
 import sys
@@ -18,7 +19,7 @@ from finance.models import (
 from finance.providers import _8Percent, Dart, Kofia, Miraeasset, Yahoo
 from finance.utils import (
     extract_numbers, get_dart_code, insert_asset, insert_record,
-    insert_stock_record, parse_date, parse_stock_records)
+    insert_stock_record, parse_date, parse_stock_records, serialize_datetime)
 
 
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -123,17 +124,8 @@ def fetch_dart(entity_name):
     log.info('Fetching DART reports for {}', entity_name)
     reports = provider.fetch_reports(entity_name, entity_code)
 
-    app = create_app(__name__)
-    with app.app_context():
-
-        for report in reports:
-            try:
-                DartReport.create(**dict(report))
-            except IntegrityError:
-                log.info('DartReport-{} already exists', report.id)
-                db.session.rollback()
-            else:
-                print(report)
+    # Apparently generators are not JSON serializable
+    print(json.dumps([dict(r) for r in reports], default=serialize_datetime))
 
 
 @cli.command()

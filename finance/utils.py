@@ -280,6 +280,19 @@ def insert_record(row, account, asset, transaction):
         created_at=created_at, category=category, quantity=quantity)
 
 
+def serialize_datetime(obj):
+    """JSON serializer for objects not serializable by default json code. This
+    may be used as follows:
+
+        json.dumps(obj, default=serialize_datetime)
+    """
+
+    if isinstance(obj, datetime):
+        serial = obj.isoformat()
+        return serial
+    raise TypeError('Type not serializable')
+
+
 class DictReader(object):
     def __init__(self, value):
         if not isinstance(value, dict):
