@@ -103,7 +103,9 @@ def parse_stock_records(stream):
     """
     :param stream: A steam to read in a CSV file.
     """
-    first_header, second_header = next(stream), next(stream)
+    # Skip first two lines
+    next(stream), next(stream)
+
     while True:
         try:
             first_line, second_line = next(stream), next(stream)

@@ -9,14 +9,17 @@ except:
 
 import requests
 
-from finance.utils import parse_date
 from finance.providers.provider import Provider
 from finance.providers.record import DateTime, Integer, String
 
 DART_HOST = 'm.dart.fss.or.kr'
 
 """
-curl 'http://m.dart.fss.or.kr/md3002/search.st?currentPage=2&maxResultCnt=15&corporationType=&textCrpNm=%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90&textCrpCik=00126380&startDate=20160912&endDate=20170312&publicType=&publicOrgType=&reportName=&textPresenterNm=&finalReport=&lastRcpNo=20170310800637&totalPage=&textTerm=&_=1489313031578'
+curl 'http://m.dart.fss.or.kr/md3002/search.st?currentPage=2&maxResultCnt=15
+&corporationType=&textCrpNm=%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90
+&textCrpCik=00126380&startDate=20160912&endDate=20170312&publicType=
+&publicOrgType=&reportName=&textPresenterNm=&finalReport=
+&lastRcpNo=20170310800637&totalPage=&textTerm=&_=1489313031578'
 """
 
 

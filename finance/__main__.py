@@ -264,6 +264,7 @@ def fetch_8percent(filename):
         with open(target_path, 'w') as fout:
             fout.write(resp.text)
 
+
 @cli.command()
 @click.argument('stock_code')
 def fetch_stock_values(stock_code):
