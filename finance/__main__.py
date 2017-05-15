@@ -15,7 +15,7 @@ from finance.importers import \
     import_stock_values as import_stock_values_  # Avoid name clashes
 from finance.models import (
     Account, Asset, AssetValue, DartReport, db, get_asset_by_fund_code,
-    get_asset_by_stock_code, Granularity, Portfolio, Record, Transaction, User)
+    Granularity, Portfolio, Record, Transaction, User)
 from finance.providers import _8Percent, Dart, Kofia, Miraeasset, Yahoo
 from finance.utils import (
     extract_numbers, get_dart_code, insert_asset, insert_record,
