@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, render_template, request
 from logbook import Logger
 
 from finance.models import Account, Asset, DartReport, Portfolio
-from finance.utils import date_range
+from finance.utils import date_range, json_requested
 
 main_module = Blueprint('main', __name__, template_folder='templates')
 log = Logger()
@@ -83,10 +83,14 @@ def nav(portfolio_id):
 def list_entities(entity_type):
     entity_class = get_entity_class(entity_type)
     entities = entity_class.query.all()
-    context = {
-        'entities': entities,
-    }
-    return render_template('list_entities.html', **context)
+
+    if json_requested():
+        return jsonify(records=[r.as_dict() for r in entities])
+    else:
+        context = {
+            'entities': entities,
+        }
+        return render_template('list_entities.html', **context)
 
 
 @main_module.route('/entities/<entity_type>:<int:entity_id>')
@@ -94,8 +98,12 @@ def view_entity(entity_type, entity_id):
     entity_class = get_entity_class(entity_type)
     view_template = get_view_template(entity_type)
     entity = entity_class.query.get(entity_id)
-    context = {
-        'entity': entity,
-        'entity_class': entity_class,
-    }
-    return render_template(view_template, **context)
+
+    if json_requested():
+        return jsonify(entity.as_dict())
+    else:
+        context = {
+            'entity': entity,
+            'entity_class': entity_class,
+        }
+        return render_template(view_template, **context)

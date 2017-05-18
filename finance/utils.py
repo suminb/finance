@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+from flask import request
 from logbook import Logger
 from typedecorator import typed
 
@@ -280,6 +281,15 @@ def insert_record(row, account, asset, transaction):
     return Record.create(
         account=account, asset=asset, transaction=transaction, type=type,
         created_at=created_at, category=category, quantity=quantity)
+
+
+def json_requested():
+    """Determines whether the requested content type is application/json."""
+    best = request.accept_mimetypes \
+        .best_match(['application/json', 'text/plain'])
+    return best == 'application/json' and \
+        request.accept_mimetypes[best] > \
+        request.accept_mimetypes['text/plain']
 
 
 def serialize_datetime(obj):
