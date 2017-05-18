@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { Http } from '@angular/http';
 import { AppService } from './app.service';
 
 @Component({
@@ -10,9 +11,9 @@ import { AppService } from './app.service';
 export class AppComponent {
   title = 'app works!';
   body = 'This is a body';
-  records = [];
+  records;
 
   constructor(private appService: AppService) {
-    this.records = appService.getRecords();
+    this.records = appService.getRecords().map(v => v['records'])
   }
 }

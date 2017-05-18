@@ -1,10 +1,13 @@
 <h1>
-  {{title}}
+  DART Reports
 </h1>
 
 <ul>
-  <li *ngFor="let r of records">
-    R: {{ r }}
+  <li *ngFor="let r of records | async">
+    {{ r.id }}
+    {{ r.registered_at }}
+    {{ r.entity }} {{ r.reporter }}
+    {{ r.title }}
   </li>
 </ul>
 

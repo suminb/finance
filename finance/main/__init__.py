@@ -84,13 +84,7 @@ def list_entities(entity_type):
     entity_class = get_entity_class(entity_type)
     entities = entity_class.query.all()
 
-    if json_requested():
-        return jsonify(records=[r.as_dict() for r in entities])
-    else:
-        context = {
-            'entities': entities,
-        }
-        return render_template('list_entities.html', **context)
+    return jsonify(records=[r.as_dict() for r in entities])
 
 
 @main_module.route('/entities/<entity_type>:<int:entity_id>')

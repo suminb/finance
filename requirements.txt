@@ -2,6 +2,7 @@ Flask>=0.10.1
 Flask-Admin>=1.4.0
 Flask-Login>=0.3.2
 Flask-SQLAlchemy>=2.2
+Flask-Cors>=3.0.2
 Jinja2>=2.8
 Logbook>=0.12.5
 MarkupSafe>=0.23

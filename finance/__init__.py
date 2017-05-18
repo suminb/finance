@@ -4,6 +4,7 @@ import sys
 from flask import Flask
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
+from flask_cors import CORS
 from flask_login import current_user, LoginManager
 from logbook import Logger, StreamHandler
 
@@ -36,6 +37,8 @@ def create_app(name=__name__, config={},
     app.config['DEBUG'] = bool(os.environ.get('DEBUG', False))
 
     app.config.update(config)
+
+    CORS(app, resources={r"/entities/*": {"origins": "*"}})
 
     from finance.models import db
     db.init_app(app)
