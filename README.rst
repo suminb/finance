@@ -61,6 +61,21 @@ Daily Net Asset Values
 Some Technical Details
 ----------------------
 
+PostgreSQL in Docker
+====================
+
+.. code::
+
+    docker run -d \
+        -p 5432:5432 -e POSTGRES_USER=postgres \
+        -e POSTGRES_PASSWORD=qwerasdf \
+        -e POSTGRES_DB=finance \
+        -v $HOME/postgres:/var/lib/postgresql/data \
+        -t postgres
+
+psycopg2 on Mac
+===============
+
 If you fail to build the ``psycopg2`` package on Mac OS X with an error
 message saying the following,
 
@@ -80,3 +95,4 @@ using ``brew`` you may install ``openssl`` as following:
 .. code::
 
     brew install openssl
+
