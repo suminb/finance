@@ -62,7 +62,7 @@ Some Technical Details
 ----------------------
 
 PostgreSQL in Docker
-====================
+********************
 
 .. code::
 
@@ -74,7 +74,7 @@ PostgreSQL in Docker
         -t postgres
 
 psycopg2 on Mac
-===============
+***************
 
 If you fail to build the ``psycopg2`` package on Mac OS X with an error
 message saying the following,
