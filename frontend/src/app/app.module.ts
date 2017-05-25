@@ -1,20 +1,35 @@
-import { BrowserModule } from '@angular/platform-browser';
-import { NgModule } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { NgModule }       from '@angular/core';
+import { BrowserModule }  from '@angular/platform-browser';
+import { FormsModule }    from '@angular/forms';
 import { HttpModule } from '@angular/http';
+import { RouterModule } from '@angular/router';
 
-import { AppComponent } from './app.component';
+import { AppComponent }        from './app.component';
+import { ListDartComponent }     from './listdart.component';
+import { DartService }         from './dart.service';
 
 @NgModule({
-  declarations: [
-    AppComponent
-  ],
   imports: [
     BrowserModule,
     FormsModule,
-    HttpModule
+    HttpModule,
+    RouterModule.forRoot([
+      {
+        path: 'listdart',
+        component: ListDartComponent
+      }
+    ])
   ],
-  providers: [],
-  bootstrap: [AppComponent]
+  declarations: [
+    AppComponent,
+    ListDartComponent,
+  ],
+  providers: [
+    DartService
+  ],
+  bootstrap: [ AppComponent ]
 })
-export class AppModule { }
+
+
+export class AppModule {
+}

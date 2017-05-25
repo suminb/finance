@@ -4,7 +4,7 @@ import { Observable } from 'rxjs/Observable';
 import 'rxjs/add/operator/map';
 
 @Injectable()
-export class AppService {
+export class DartService {
   constructor(private http: Http) { }
 
   getRecords(): Observable<string[]> {
