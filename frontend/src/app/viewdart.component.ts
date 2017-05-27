@@ -3,8 +3,10 @@ import { ActivatedRoute, Params } from '@angular/router';
 import { Http } from '@angular/http';
 import { Observable } from 'rxjs/Observable';
 import 'rxjs/add/operator/map';
+import 'rxjs/add/operator/switchMap';
 
 import { DartService } from './dart.service';
+import { DartReport } from './dart.model';
 
 @Component({
     selector: 'app-root',
@@ -13,7 +15,6 @@ import { DartService } from './dart.service';
     providers: [DartService]
 })
 export class ViewDartComponent implements OnInit {
-    id: Observable<string>;
     report;
 
     constructor(
@@ -22,7 +23,10 @@ export class ViewDartComponent implements OnInit {
     }
 
     ngOnInit(): void {
-        this.id = this.route.snapshot.params['id'];
+        this.route.params
+            .map(params => params['id'])
+            .switchMap(id => this.dartService.getRecord(id))
+            .subscribe(report => this.report = report);
     }
 }
 

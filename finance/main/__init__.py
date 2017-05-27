@@ -58,6 +58,7 @@ def index():
 def data():
     portfolio = Portfolio.query.first()
     start, end = map(request.args.get, ['start', 'end'])
+
     def gen(start, end):
         for date in date_range(start, end):
             log.info('Calculating net worth on {}', date)
@@ -93,11 +94,4 @@ def view_entity(entity_type, entity_id):
     view_template = get_view_template(entity_type)
     entity = entity_class.query.get(entity_id)
 
-    if json_requested():
-        return jsonify(entity.as_dict())
-    else:
-        context = {
-            'entity': entity,
-            'entity_class': entity_class,
-        }
-        return render_template(view_template, **context)
+    return jsonify(entity.as_dict())

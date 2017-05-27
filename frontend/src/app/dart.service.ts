@@ -5,11 +5,17 @@ import 'rxjs/add/operator/map';
 
 @Injectable()
 export class DartService {
-  constructor(private http: Http) { }
+    constructor(private http: Http) { }
 
-  getRecords(): Observable<string[]> {
-    return this.http
-      .get('http://localhost:8002/entities/dart_report')
-      .map((resp: Response) => resp.json());
-  }
+    getRecord(id: number): Observable<string> {
+        return this.http
+            .get('http://localhost:8002/entities/dart_report:' + id)
+            .map((resp: Response) => resp.json());
+    }
+
+    getRecords(): Observable<string[]> {
+        return this.http
+            .get('http://localhost:8002/entities/dart_report')
+            .map((resp: Response) => resp.json());
+    }
 }

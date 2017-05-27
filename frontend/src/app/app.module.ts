@@ -16,11 +16,11 @@ import { DartService } from './dart.service';
         HttpModule,
         RouterModule.forRoot([
             {
-                path: 'listdart',
+                path: 'dart',
                 component: ListDartComponent
             },
             {
-                path: 'viewdart/:id',
+                path: 'dart/:id',
                 component: ViewDartComponent
             }
         ])

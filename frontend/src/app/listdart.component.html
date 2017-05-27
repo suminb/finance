@@ -7,6 +7,6 @@
     {{ r.id }}
     {{ r.registered_at }}
     {{ r.entity }} {{ r.reporter }}
-    <a href="/viewdart/{{ r.id }}">{{ r.title }}</a>
+    <a [routerLink]="['/dart', r.id]">{{ r.title }}</a>
   </li>
 </ul>
