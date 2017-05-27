@@ -10,11 +10,11 @@ import { DartReport } from './dart.model';
 
 @Component({
     selector: 'app-root',
-    templateUrl: './viewdart.component.html',
+    templateUrl: './dart-view.component.html',
     styleUrls: ['./app.component.css'],
     providers: [DartService]
 })
-export class ViewDartComponent implements OnInit {
+export class DartViewComponent implements OnInit {
     report;
 
     constructor(

@@ -5,11 +5,11 @@ import { DartService } from './dart.service';
 
 @Component({
     selector: 'app-root',
-    templateUrl: './listdart.component.html',
+    templateUrl: './dart-list.component.html',
     styleUrls: ['./app.component.css'],
     providers: [DartService]
 })
-export class ListDartComponent implements OnInit {
+export class DartListComponent implements OnInit {
     records;
 
     constructor(private dartService: DartService) {}

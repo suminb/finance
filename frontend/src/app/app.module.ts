@@ -5,8 +5,8 @@ import { HttpModule } from '@angular/http';
 import { RouterModule } from '@angular/router';
 
 import { AppComponent } from './app.component';
-import { ListDartComponent } from './listdart.component';
-import { ViewDartComponent } from './viewdart.component';
+import { DartListComponent } from './dart-list.component';
+import { DartViewComponent } from './dart-view.component';
 import { DartService } from './dart.service';
 
 @NgModule({
@@ -17,18 +17,18 @@ import { DartService } from './dart.service';
         RouterModule.forRoot([
             {
                 path: 'dart',
-                component: ListDartComponent
+                component: DartListComponent
             },
             {
                 path: 'dart/:id',
-                component: ViewDartComponent
+                component: DartViewComponent
             }
         ])
     ],
     declarations: [
         AppComponent,
-        ListDartComponent,
-        ViewDartComponent,
+        DartListComponent,
+        DartViewComponent,
     ],
     providers: [
         DartService
