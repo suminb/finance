@@ -6,7 +6,6 @@ import 'rxjs/add/operator/map';
 import 'rxjs/add/operator/switchMap';
 
 import { DartService } from './dart.service';
-import { DartReport } from './dart.model';
 
 @Component({
     selector: 'app-root',
