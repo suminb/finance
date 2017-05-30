@@ -470,6 +470,7 @@ class DartReport(CRUDMixin, db.Model):
 
     registered_at = db.Column(db.DateTime(timezone=False))
     title = db.Column(db.String)
+    entity_id = db.Column(db.Integer)
     entity = db.Column(db.String)
     reporter = db.Column(db.String)
     content = db.Column(db.Text)

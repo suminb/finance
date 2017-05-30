@@ -107,7 +107,7 @@ class Report(object):
     id = Integer()
     registered_at = DateTime(date_format='%Y.%m.%d')
     title = String()
-    entity_crp = Integer()  # 전자공시 CRP code
+    entity_id = Integer()  # 전자공시 CRP code
     entity = String()
     reporter = String()
     content = String()
@@ -116,7 +116,7 @@ class Report(object):
         self.id = kwargs['rcp_no']
         self.registered_at = kwargs['rcp_dm']
         self.title = kwargs['rptNm']
-        self.entity_crp = kwargs['dsm_crp_cik']
+        self.entity_id = kwargs['dsm_crp_cik']
         self.entity = kwargs['ifm_nm']
         self.reporter = kwargs['ifm_nm2']
         self.content = kwargs['reportBody']
@@ -127,7 +127,7 @@ class Report(object):
             self.registered_at.strftime('%Y-%m-%d'), self.entity)
 
     def __iter__(self):
-        attrs = ['id', 'registered_at', 'title', 'entity_crp', 'entity',
+        attrs = ['id', 'registered_at', 'title', 'entity_id', 'entity',
                 'reporter', 'content']
         for attr in attrs:
             yield attr, getattr(self, attr)
