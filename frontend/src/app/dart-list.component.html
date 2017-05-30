@@ -2,11 +2,21 @@
   DART Reports
 </h1>
 
-<ul>
-  <li *ngFor="let r of records | async">
-    {{ r.id }}
-    {{ r.registered_at }}
-    {{ r.entity }} {{ r.reporter }}
-    <a [routerLink]="['/dart', r.id]">{{ r.title }}</a>
-  </li>
-</ul>
+<table class="ui called table">
+  <thead>
+    <tr>
+      <th>Registered At</th>
+      <th>Title</th>
+    </tr>
+  </thead>
+  <tbody>
+    <ng-container *ngFor="let r of records | async">
+      <tr>
+        <td>{{ r.registered_at }}</td>
+        <td>
+          <a [routerLink]="['/dart', r.id]">{{ r.title }}</a>
+        </td>
+      </tr>
+    </ng-container>
+  </tbody>
+</table>
