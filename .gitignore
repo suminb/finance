@@ -1,5 +1,9 @@
 provision.sh
 .cache
+frontend/src/assets
 sample-data/*
 *.pyc
 *.swp
+
+# Ignore .json files at root
+/*.json
