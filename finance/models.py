@@ -258,6 +258,10 @@ class Account(CRUDMixin, db.Model):
     def __repr__(self):
         return 'Account <{} ({})>'.format(self.name, self.type)
 
+    def assets(self):
+        """Returns all assets under this account."""
+        raise NotImplementedError
+
     def balance(self, evaluated_at=None):
         """Calculates the account balance on a given date."""
         if not evaluated_at:
@@ -350,6 +354,15 @@ class Portfolio(CRUDMixin, db.Model):
         if commit:
             db.session.commit()
 
+    def assets(self):
+        """Returns all assets contained by the accounts under this portfolio.
+        """
+        assets = []
+        for account in self.accounts:
+            assets.append(account.assets())
+
+        return set(assets)
+
     def balance(self, evaluated_at=None):
         """Calculates the sum of all account balances on a given date."""
         if not evaluated_at:
@@ -376,6 +389,14 @@ class Portfolio(CRUDMixin, db.Model):
         # FIXME: Calculate the daily net worth incrementally
         for date in date_range(date_from, date_to):
             yield date, self.net_worth(date)
+
+    def as_dict(self):
+        merged = super(Portfolio, self).as_dict()
+        # NOTE: Is there any fancier way to do this?
+        merged['accounts'] = [a.as_dict() for a in self.accounts.all()]
+        merged['net_worth'] = self.net_worth(datetime.utcnow())
+
+        return merged
 
 
 class TransactionState(object):

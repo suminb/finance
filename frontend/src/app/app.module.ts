@@ -8,6 +8,9 @@ import { AppComponent } from './app.component';
 import { DartListComponent } from './dart-list.component';
 import { DartViewComponent } from './dart-view.component';
 import { DartService } from './dart.service';
+import { PortfolioListComponent } from './portfolio-list.component';
+import { PortfolioViewComponent } from './portfolio-view.component';
+import { PortfolioService } from './portfolio.service';
 
 @NgModule({
     imports: [
@@ -22,6 +25,14 @@ import { DartService } from './dart.service';
             {
                 path: 'dart/:id',
                 component: DartViewComponent
+            },
+            {
+                path: 'portfolio',
+                component: PortfolioListComponent
+            },
+            {
+                path: 'portfolio/:id',
+                component: PortfolioViewComponent
             }
         ])
     ],
@@ -29,9 +40,12 @@ import { DartService } from './dart.service';
         AppComponent,
         DartListComponent,
         DartViewComponent,
+        PortfolioListComponent,
+        PortfolioViewComponent,
     ],
     providers: [
-        DartService
+        DartService,
+        PortfolioService
     ],
     bootstrap: [AppComponent]
 })

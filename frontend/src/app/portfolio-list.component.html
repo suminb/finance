@@ -1,0 +1,23 @@
+<h1>
+  Portfolios
+</h1>
+
+<table class="ui called table">
+  <thead>
+    <tr>
+      <th>Registered At</th>
+      <th>Name</th>
+    </tr>
+  </thead>
+  <tbody>
+    <ng-container *ngFor="let r of records | async">
+      <tr>
+        <td></td>
+        <td>
+          <a [routerLink]="['/portfolio', r.id]">{{ r.name }}</a>
+        </td>
+      </tr>
+    </ng-container>
+  </tbody>
+</table>
+
