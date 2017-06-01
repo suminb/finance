@@ -220,7 +220,7 @@ def import_sp500_records():
                     db.session.rollback()
 
 
-def __import_miraeasset_data__(filename, parse_func):
+def _parse_miraeasset_data(filename, parse_func):
     with open(filename) as fin:
         records = parse_func(fin)
         writer = csv.writer(sys.stdout)
@@ -230,18 +230,26 @@ def __import_miraeasset_data__(filename, parse_func):
 
 @cli.command()
 @click.argument('filename')
-def import_miraeasset_foreign_data(filename):
-    """Imports a CSV file exported in 해외거래내역 (9465)."""
+def parse_miraeasset_foreign_data(filename):
+    """Parses a CSV file exported in 해외거래내역 (9465)."""
     provider = Miraeasset()
-    __import_miraeasset_data__(filename, provider.parse_foreign_transactions)
+    _parse_miraeasset_data(filename, provider.parse_foreign_transactions)
 
 
 @cli.command()
 @click.argument('filename')
-def import_miraeasset_local_data(filename):
-    """Imports a CSV file exported in 거래내역조회 (0650)."""
+def parse_miraeasset_local_data(filename):
+    """Parses CSV file exported in 거래내역조회 (0650)."""
     provider = Miraeasset()
-    __import_miraeasset_data__(filename, provider.parse_local_transactions)
+    _parse_miraeasset_data(filename, provider.parse_local_transactions)
+
+
+@cli.command()
+@click.argument('filename')
+def import_miraeasset_foreign_data(filename):
+    """Imports a CSV file exported in 해외거래내역 (9465)."""
+    provider = Miraeasset()
+    _import_miraeasset_data(filename, provider.parse_foreign_transactions)
 
 
 @cli.command()
