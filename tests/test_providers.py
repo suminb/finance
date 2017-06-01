@@ -204,7 +204,7 @@ def test_miraeasset_transactions(param):
             raise ValueError('Unknown transaction kind: {}'.format(param))
 
         for record in records:
-            assert isinstance(record.registered_at, datetime)
+            assert isinstance(record.created_at, datetime)
             assert isinstance(record.seq, int)
             assert isinstance(record.quantity, int)
             assert record.currency in ['KRW', 'USD']
