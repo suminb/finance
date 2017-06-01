@@ -381,8 +381,10 @@ class Portfolio(CRUDMixin, db.Model):
         merged = super(Portfolio, self).as_dict()
         # NOTE: Is there any fancier way to do this?
         merged['accounts'] = [a.as_dict() for a in self.accounts.all()]
+        merged['net_worth'] = self.net_worth(datetime.utcnow())
 
         return merged
+
 
 class TransactionState(object):
     initiated = 'initiated'
