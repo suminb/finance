@@ -91,7 +91,6 @@ def list_entities(entity_type):
 @main_module.route('/entities/<entity_type>:<int:entity_id>')
 def view_entity(entity_type, entity_id):
     entity_class = get_entity_class(entity_type)
-    view_template = get_view_template(entity_type)
     entity = entity_class.query.get(entity_id)
 
     return jsonify(entity.as_dict())
