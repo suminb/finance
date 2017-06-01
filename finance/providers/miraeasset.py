@@ -62,7 +62,7 @@ class Miraeasset(Provider):
 class Record(object):
     """Represents a single transaction record."""
 
-    registered_at = DateTime(date_format=DATE_INPUT_FORMAT)
+    created_at = DateTime(date_format=DATE_INPUT_FORMAT)
     seq = Integer()
     category = String()
     amount = Float()  # FIXME: Use decimal type
@@ -75,9 +75,9 @@ class Record(object):
     fees = Float()  # FIXME: Use decimal type
     tax = Float()  # FIXME: Use decimal type
 
-    def __init__(self, registered_at, seq, category, amount, currency, code,
+    def __init__(self, created_at, seq, category, amount, currency, code,
                  name, unit_price, quantity, fees, tax):
-        self.registered_at = registered_at
+        self.created_at = created_at
         self.seq = seq
         self.category = category
         self.amount = amount
@@ -91,11 +91,15 @@ class Record(object):
 
     def __repr__(self):
         return 'miraeasset.Record({}, {}, {}, {} ({}), {}, {})'.format(
-            self.registered_at.strftime(DATE_OUTPUT_FORMAT), self.category,
+            self.created_at.strftime(DATE_OUTPUT_FORMAT), self.category,
             self.amount, self.name, self.code, self.unit_price, self.quantity)
 
     def __iter__(self):
-        attrs = ['registered_at', 'seq', 'category', 'amount', 'currency',
+        """Allows an Record object to become a dictionary as:
+
+            dict(record)
+        """
+        attrs = ['created_at', 'seq', 'category', 'amount', 'currency',
                  'code', 'name', 'unit_price', 'quantity', 'fees', 'tax']
         for attr in attrs:
             yield attr, getattr(self, attr)
@@ -103,7 +107,7 @@ class Record(object):
     def values(self):
         """Exports values only (in string)."""
         for k, v in self:
-            if k == 'registered_at':
+            if k == 'created_at':
                 yield v.strftime(DATE_OUTPUT_FORMAT)
             else:
                 yield str(v)
