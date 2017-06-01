@@ -188,7 +188,7 @@ def insert_stock_record(data: dict, stock_account: object,
 @typed
 def insert_stock_trading_record(data: dict, stock_account: object):
     """Inserts a stock trading (i.e., buying or selling stocks) records."""
-    from finance.models import get_asset_by_stock_code, Record
+    from finance.models import Asset, Record
     if data['category1'].startswith('장내'):
         code_suffix = '.KS'
     elif data['category1'].startswith('코스닥'):
@@ -201,7 +201,7 @@ def insert_stock_trading_record(data: dict, stock_account: object):
 
     code = data['code'] + code_suffix
 
-    asset = get_asset_by_stock_code(code)
+    asset = Asset.get_by_symbol(code)
     if asset is None:
         raise ValueError(
             "Asset object could not be retrived with code '{}'".format(code))

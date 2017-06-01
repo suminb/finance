@@ -139,7 +139,7 @@ def asset_stock_ncsoft(request, db):
 @pytest.fixture(scope='module')
 def asset_stock_nvda(request, db):
     asset = Asset.create(
-        type='stock', name='NVDA', code='NVDA',
+        type='stock', name='NVDA', code='NVDA', isin='US67066G1040',
         description='NVIDIA Corporation')
     request.addfinalizer(partial(teardown, db=db, record=asset))
     return asset

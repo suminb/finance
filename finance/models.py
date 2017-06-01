@@ -36,10 +36,6 @@ def get_asset_by_fund_code(code: str):
     return Asset.query.get(asset_id)
 
 
-def get_asset_by_stock_code(code: str):
-    return Asset.query.filter(Asset.code == code).first()
-
-
 class CRUDMixin(object):
     """Copied from https://realpython.com/blog/python/python-web-applications-with-flask-part-ii/
     """  # noqa
@@ -182,6 +178,7 @@ class Asset(CRUDMixin, db.Model):
     type = db.Column(db.Enum(*asset_types, name='asset_type'))
     name = db.Column(db.String)
     code = db.Column(db.String)
+    isin = db.Column(db.String)
     description = db.Column(db.Text)
 
     #: Arbitrary data
@@ -231,6 +228,31 @@ class Asset(CRUDMixin, db.Model):
     #
     # End of P2P bonds only features
     #
+
+    @classmethod
+    def get_by_symbol(cls, symbol):
+        """Gets an asset by symbol (e.g., AMZN, NVDA)
+
+        NOTE: We may need to rename this method, when we find a more suitable
+        name (rather than 'symbol').
+        """
+        asset = cls.query.filter(cls.code == symbol).first()
+        if asset is None:
+            raise AssetNotFoundException
+        else:
+            return asset
+
+    @classmethod
+    def get_by_isin(cls, isin):
+        """Gets an asset by ISIN
+
+        :param isin: International Securities Identification Numbers
+        """
+        asset = cls.query.filter(cls.isin == isin).first()
+        if asset is None:
+            raise AssetNotFoundException
+        else:
+            return asset
 
 
 class Account(CRUDMixin, db.Model):

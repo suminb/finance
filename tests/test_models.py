@@ -15,9 +15,24 @@ def test_get_asset_by_fund_code_non_existing(asset_sp500):
         get_asset_by_fund_code('non-exisiting')
 
 
-def test_get_asset_by_stock_code(asset_stock_ncsoft):
-    asset = get_asset_by_stock_code('036570.KS')
+def test_get_asset_by_symbol(asset_stock_ncsoft):
+    asset = Asset.get_by_symbol('036570.KS')
     assert asset.description == 'NCsoft Corporation'
+
+
+def test_get_asset_by_symbol_non_existing(asset_sp500):
+    with pytest.raises(AssetNotFoundException):
+        Asset.get_by_symbol('non-exisiting')
+
+
+def test_get_asset_by_isin(asset_stock_nvda):
+    asset = Asset.get_by_isin('US67066G1040')
+    assert asset.code == 'NVDA'
+
+
+def test_get_asset_by_isin_non_existing(asset_stock_nvda):
+    with pytest.raises(AssetNotFoundException):
+        Asset.get_by_isin('non-exisiting')
 
 
 def test_balance(account_checking, asset_krw, asset_usd):
