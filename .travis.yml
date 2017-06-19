@@ -12,7 +12,7 @@ services:
 
 env:
   global:
-    - DB_URI="postgres:///finance"
+    - DB_URL="postgres:///finance"
     - PYTHONPATH=.
 
 install:

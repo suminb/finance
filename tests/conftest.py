@@ -18,9 +18,9 @@ def app(request):
     settings_override = {
         'TESTING': True,
     }
-    if 'TEST_DB_URI' in os.environ:
+    if 'TEST_DB_URL' in os.environ:
         settings_override['SQLALCHEMY_DATABASE_URI'] = \
-            os.environ.get('TEST_DB_URI')
+            os.environ.get('TEST_DB_URL')
     app = create_app(__name__, config=settings_override)
 
     # Establish an application context before running the tests.
