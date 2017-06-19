@@ -2,6 +2,7 @@ import csv
 from datetime import datetime
 from contextlib import closing
 import io
+import re
 
 import requests
 from typedecorator import typed
@@ -10,15 +11,21 @@ from finance.providers.provider import AssetValueProvider
 from finance.utils import parse_date
 
 
+def year_to_timestamp(year):
+    return datetime.strptime(str(year), '%Y').timestamp()
+
+
 class Yahoo(AssetValueProvider):
     @property
     def request_url(self):
-        return 'http://real-chart.finance.yahoo.com/table.csv'
+        return 'https://query1.finance.yahoo.com/v7/finance/download/{0}'
 
     @property
     def request_headers(self):
         """Looks like no special header is required."""
-        return {'Accept-Encoding': 'text/plain'}
+        return {
+            'Accept-Encoding': 'text/plain',
+        }
 
     @typed
     def request_params(self: object, code: str, start_year: int,
@@ -26,29 +33,25 @@ class Yahoo(AssetValueProvider):
         """
         Example request params:
 
-            d=6&e=2&f=2016&g=d&a=0&b=4&c=2000&ignore=.csv
+            period1=1495203609&period2=1497882009&interval=1d&events=history
+            &crumb=RWQ4NDixcmw
 
         """
 
-        # NOTE: Seems like 'f' and 'c' have no effect at all... It always
-        # returns data from 2000-01-01 to today's date
         return {
-            'd': 6,  # ???
-            'e': 2,  # ???
-            'f': end_year,
-            'g': 'd',  # ???
-            'b': 4,  # ???
-            'c': start_year,
-            's': code,
-            'ignore': '.csv',
+            'period1': int(year_to_timestamp(start_year)),
+            'period2': int(year_to_timestamp(end_year + 1)),
+            'events': 'history',
+            'crumb':  self.retrieve_crumb(code),
         }
 
     @typed
     def fetch_data(self: object, code: str, from_date: datetime,
                    to_date: datetime):
         params = self.request_params(code, from_date.year, to_date.year)
-        resp = requests.get(self.request_url, headers=self.request_headers,
-                            params=params)
+        resp = requests.get(self.request_url.format(code),
+                            headers=self.request_headers, params=params)
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36',
 
         if resp.status_code != 200:
             resp.raise_for_status()
@@ -63,3 +66,9 @@ class Yahoo(AssetValueProvider):
             date, open_, high, low, close_, volume, adj_close = row
             yield parse_date(date), float(open_), float(high), float(low), \
                 float(close_), int(volume), float(adj_close)
+
+    def retrieve_crumb(self, code):
+        url = 'https://finance.yahoo.com/quote/{0}/history?ltr=1'.format(code)
+        resp = requests.get(url, headers=self.request_headers)
+        s = re.search(r'"CrumbStore":{"crumb":"(\w+)"}', resp.text)
+        return s.group(1)
