@@ -171,7 +171,7 @@ def test_google_fetch_data_with_invalid_code():
 def test_dart_fetch_data():
     provider = Dart()
     end = datetime.now()
-    start = end - timedelta(days=7)
+    start = end - timedelta(days=90)
     reports = list(provider.fetch_reports('삼성전자', '00126380', start, end))
 
     assert len(reports) > 0
