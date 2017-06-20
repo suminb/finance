@@ -4,7 +4,7 @@ import os
 import pytest
 from requests.exceptions import HTTPError
 
-from finance.providers import _8Percent, Dart, Kofia, Miraeasset, Yahoo
+from finance.providers import _8Percent, Dart, Google, Kofia, Miraeasset
 from finance.providers.dart import Report as DartReport
 from finance.utils import parse_date
 
@@ -145,14 +145,12 @@ def test_kofia_fetch_data():
         assert isinstance(quantity, float)
 
 
-# FIXME: The Yahoo data provider seems broken. Needs to be fixed
-# but temporarily disabling for now.
-def _test_yahoo_fetch_data():
-    provider = Yahoo()
+def test_google_fetch_data():
+    provider = Google()
     from_date, to_date = parse_date('2014-01-01'), parse_date('2015-12-31')
-    data = provider.fetch_data('005380.KS', from_date, to_date)
+    data = provider.fetch_data('NASDAQ', 'NVDA', from_date, to_date)
 
-    for date, open_, high, low, close_, volume, adj_close in data:
+    for date, open_, high, low, close_, volume in data:
         assert isinstance(date, datetime)
         # assert from_date <= date <= to_date
         assert isinstance(open_, float)
@@ -160,16 +158,13 @@ def _test_yahoo_fetch_data():
         assert isinstance(low, float)
         assert isinstance(close_, float)
         assert isinstance(volume, int)
-        assert isinstance(adj_close, float)
 
 
-# FIXME: The Yahoo data provider seems broken. Needs to be fixed
-# but temporarily disabling for now.
-def _test_yahoo_fetch_data_with_invalid_code():
-    provider = Yahoo()
+def test_google_fetch_data_with_invalid_code():
+    provider = Google()
     from_date, to_date = parse_date('2014-01-01'), parse_date('2015-12-31')
     with pytest.raises(HTTPError):
-        data = provider.fetch_data('!@#$%', from_date, to_date)
+        data = provider.fetch_data('', '!@#$%', from_date, to_date)
         next(data)
 
 

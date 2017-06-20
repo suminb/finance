@@ -4,7 +4,7 @@ from datetime import datetime
 from typedecorator import typed
 
 from finance.models import Asset, AssetValue, Granularity
-from finance.providers import Yahoo
+from finance.providers import Google
 from finance.utils import DictReader
 
 
@@ -57,7 +57,7 @@ def import_8percent_data(parsed_data, account_checking, account_8p, asset_krw):
 
 @typed
 def import_stock_values(code: str, from_date: datetime, to_date: datetime):
-    provider = Yahoo()
+    provider = Google()
     asset = Asset.get_by_symbol(code)
     data = provider.fetch_data(code, from_date, to_date)
     for date, open_, high, low, close_, volume, adj_close in data:

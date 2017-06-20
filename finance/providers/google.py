@@ -15,10 +15,12 @@ def year_to_timestamp(year):
     return datetime.strptime(str(year), '%Y').timestamp()
 
 
-class Yahoo(AssetValueProvider):
+class Google(AssetValueProvider):
+    DATE_FORMAT = '%d-%b-%y'
+
     @property
     def request_url(self):
-        return 'https://query1.finance.yahoo.com/v7/finance/download/{0}'
+        return 'http://www.google.com/finance/historical'
 
     @property
     def request_headers(self):
@@ -28,7 +30,7 @@ class Yahoo(AssetValueProvider):
         }
 
     @typed
-    def request_params(self: object, code: str, start_year: int,
+    def request_params(self: object, market: str, code: str, start_year: int,
                        end_year: int) -> dict:
         """
         Example request params:
@@ -39,19 +41,16 @@ class Yahoo(AssetValueProvider):
         """
 
         return {
-            'period1': int(year_to_timestamp(start_year)),
-            'period2': int(year_to_timestamp(end_year + 1)),
-            'events': 'history',
-            'crumb':  self.retrieve_crumb(code),
+            'q': '{0}:{1}'.format(market, code),
+            'output': 'csv',
         }
 
     @typed
-    def fetch_data(self: object, code: str, from_date: datetime,
+    def fetch_data(self: object, market: str, code: str, from_date: datetime,
                    to_date: datetime):
-        params = self.request_params(code, from_date.year, to_date.year)
+        params = self.request_params(market, code, from_date.year, to_date.year)
         resp = requests.get(self.request_url.format(code),
                             headers=self.request_headers, params=params)
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36',
 
         if resp.status_code != 200:
             resp.raise_for_status()
@@ -59,16 +58,10 @@ class Yahoo(AssetValueProvider):
         stream = io.StringIO(resp.text)
 
         # Headers are in the following format.
-        # ['Date', 'Open', 'High', 'Low', 'Close', 'Volume', 'Adj Close']
+        # ['Date', 'Open', 'High', 'Low', 'Close', 'Volume']
         headers = next(stream)
 
         for row in csv.reader(stream, delimiter=','):
-            date, open_, high, low, close_, volume, adj_close = row
-            yield parse_date(date), float(open_), float(high), float(low), \
-                float(close_), int(volume), float(adj_close)
-
-    def retrieve_crumb(self, code):
-        url = 'https://finance.yahoo.com/quote/{0}/history?ltr=1'.format(code)
-        resp = requests.get(url, headers=self.request_headers)
-        s = re.search(r'"CrumbStore":{"crumb":"(\w+)"}', resp.text)
-        return s.group(1)
+            date, open_, high, low, close_, volume = row
+            yield parse_date(date, self.DATE_FORMAT), float(open_), \
+                float(high), float(low), float(close_), int(volume)
