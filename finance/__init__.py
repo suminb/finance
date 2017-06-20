@@ -28,7 +28,7 @@ class AdminModelView(ModelView):
 
 
 def create_app(name=__name__, config={},
-               static_folder='static', template_folder='templates'):
+               static_folder='assets', template_folder='templates'):
 
     app = Flask(name, static_folder=static_folder,
                 template_folder=template_folder)
