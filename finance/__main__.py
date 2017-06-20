@@ -274,13 +274,17 @@ def fetch_8percent(filename):
 
 
 @cli.command()
-@click.argument('stock_code')
-def fetch_stock_values(stock_code):
+@click.argument('market')  # e.g., NASDAQ, KRX
+@click.argument('stock_code')  # e.g., NVDA, 027410
+def fetch_stock_values(market, stock_code):
     """Fetches stock values from Google Finance."""
     provider = Google()
-    records = provider.fetch_data(stock_code, parse_date(-90), parse_date(0))
+    records = provider.fetch_data(
+        market, stock_code, parse_date(-90), parse_date(0))
+
     for date, open_, high, low, close_, volume in records:
-        formatted = [date.strftime(provider.DATE_FORMAT), open_, high, low,
+        # FIXME: This date format, %Y-%m%-%d, shall be a const
+        formatted = [date.strftime('%Y-%m-%d'), open_, high, low,
                      close_, volume]
         print(', '.join(map(str, formatted)))
 
