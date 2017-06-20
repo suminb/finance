@@ -16,7 +16,7 @@ from finance.importers import \
 from finance.models import (
     Account, Asset, AssetValue, DartReport, db, get_asset_by_fund_code,
     Granularity, Portfolio, Record, Transaction, User)
-from finance.providers import _8Percent, Dart, Kofia, Miraeasset, Yahoo
+from finance.providers import _8Percent, Dart, Google, Kofia, Miraeasset
 from finance.utils import (
     extract_numbers, get_dart_code, insert_asset, insert_record,
     insert_stock_record, parse_date, parse_stock_records, serialize_datetime)
@@ -274,14 +274,18 @@ def fetch_8percent(filename):
 
 
 @cli.command()
-@click.argument('stock_code')
-def fetch_stock_values(stock_code):
-    """Fetches stock values from Yahoo Finance."""
-    provider = Yahoo()
-    records = provider.fetch_data(stock_code, parse_date(-90), parse_date(0))
-    for date, open_, high, low, close_, volume, adj_close in records:
-        formatted = [date.strftime('%Y-%m-%d'), open_, high, low, close_,
-                     volume]
+@click.argument('market')  # e.g., NASDAQ, KRX
+@click.argument('stock_code')  # e.g., NVDA, 027410
+def fetch_stock_values(market, stock_code):
+    """Fetches stock values from Google Finance."""
+    provider = Google()
+    records = provider.fetch_data(
+        market, stock_code, parse_date(-90), parse_date(0))
+
+    for date, open_, high, low, close_, volume in records:
+        # FIXME: This date format, %Y-%m%-%d, shall be a const
+        formatted = [date.strftime('%Y-%m-%d'), open_, high, low,
+                     close_, volume]
         print(', '.join(map(str, formatted)))
 
 
