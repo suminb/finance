@@ -5,7 +5,7 @@ import pytest
 from typedecorator import setup_typecheck
 
 from finance import create_app
-from finance.models import Account, Asset, Portfolio, StockAsset
+from finance.models import Account, Asset, Portfolio, P2PBondAsset, StockAsset
 from finance.models import db as _db
 
 
@@ -96,9 +96,10 @@ def account_stock(request, db):
 
 @pytest.fixture(scope='module')
 def asset_hf1(request, db):
-    asset = Asset.create(
-        type='bond', name='포트폴리오 투자상품 1호')
+    asset = P2PBondAsset.create(
+        name='포트폴리오 투자상품 1호')
     request.addfinalizer(partial(teardown, db=db, record=asset))
+    assert asset.type == 'p2p_bond'
     return asset
 
 

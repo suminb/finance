@@ -176,6 +176,11 @@ asset_types = (
 class Asset(CRUDMixin, db.Model):
     """Represents an asset."""
 
+    __mapper_args__ = {
+        'polymorphic_identity': 'asset',
+        'polymorphic_on': 'type',
+    }
+
     type = db.Column(db.Enum(*asset_types, name='asset_type'))
     name = db.Column(db.String)
     code = db.Column(db.String)
@@ -206,30 +211,6 @@ class Asset(CRUDMixin, db.Model):
     def current_value(self):
         raise NotImplementedError
 
-    #
-    # P2P bonds only features
-    #
-    def is_delayed(self):
-        raise NotImplementedError
-
-    def is_defaulted(self):
-        raise NotImplementedError
-
-    def last_payment(self):
-        raise NotImplementedError
-
-    def principle(self):
-        return self.asset_values \
-            .order_by(AssetValue.evaluated_at).first().close
-
-    def returned_principle(self):
-        now = datetime.now()
-        return self.asset_values.filter(AssetValue.evaluated_at <= now) \
-            .order_by(AssetValue.evaluated_at.desc()).first().close
-    #
-    # End of P2P bonds only features
-    #
-
     @classmethod
     def get_by_symbol(cls, symbol):
         """Gets an asset by symbol (e.g., AMZN, NVDA)
@@ -256,7 +237,41 @@ class Asset(CRUDMixin, db.Model):
             return asset
 
 
+class P2PBondAsset(Asset):
+
+    __tablename__ = 'asset'
+
+    __mapper_args__ = {
+        'polymorphic_identity': 'p2p_bond',
+    }
+
+    def is_delayed(self):
+        raise NotImplementedError
+
+    def is_defaulted(self):
+        raise NotImplementedError
+
+    def last_payment(self):
+        raise NotImplementedError
+
+    def principle(self):
+        return self.asset_values \
+            .order_by(AssetValue.evaluated_at).first().close
+
+    def returned_principle(self):
+        now = datetime.now()
+        return self.asset_values.filter(AssetValue.evaluated_at <= now) \
+            .order_by(AssetValue.evaluated_at.desc()).first().close
+
+
 class StockAsset(Asset):
+
+    __tablename__ = 'asset'
+
+    __mapper_args__ = {
+        'polymorphic_identity': 'stock',
+    }
+
     bps = index_property('data', 'bps')
     eps = index_property('data', 'eps')
 
