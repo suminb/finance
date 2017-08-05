@@ -12,7 +12,7 @@ from finance.models import db as _db
 setup_typecheck()
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='module', autouse=True)
 def app(request):
     """Session-wide test `Flask` application."""
     settings_override = {
