@@ -87,7 +87,7 @@ class CRUDMixin(object):
         db.session.delete(self)
         return commit and db.session.commit()
 
-    def as_dict(self):
+    def __iter__(self):
         def iter():
             for column in self.__table__.columns:
                 yield column.name, str(getattr(self, column.name))
@@ -412,10 +412,10 @@ class Portfolio(CRUDMixin, db.Model):
         for date in date_range(date_from, date_to):
             yield date, self.net_worth(date)
 
-    def as_dict(self):
-        merged = super(Portfolio, self).as_dict()
+    def __iter__(self):
+        merged = super(Portfolio, self).__iter__()
         # NOTE: Is there any fancier way to do this?
-        merged['accounts'] = [a.as_dict() for a in self.accounts.all()]
+        merged['accounts'] = [dict(a) for a in self.accounts.all()]
         merged['net_worth'] = self.net_worth(datetime.utcnow())
 
         return merged
