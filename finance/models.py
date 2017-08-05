@@ -6,6 +6,7 @@ import operator
 from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy.ext.indexable import index_property
 import uuid64
 
 from finance.exceptions import (
@@ -253,6 +254,11 @@ class Asset(CRUDMixin, db.Model):
             raise AssetNotFoundException
         else:
             return asset
+
+
+class StockAsset(Asset):
+    bps = index_property('data', 'bps')
+    eps = index_property('data', 'eps')
 
 
 class Account(CRUDMixin, db.Model):

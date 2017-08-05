@@ -5,7 +5,7 @@ import pytest
 from typedecorator import setup_typecheck
 
 from finance import create_app
-from finance.models import Account, Asset, Portfolio
+from finance.models import Account, Asset, Portfolio, StockAsset
 from finance.models import db as _db
 
 
@@ -129,9 +129,10 @@ def asset_usd(request, db):
 
 @pytest.fixture(scope='module')
 def asset_stock_ncsoft(request, db):
-    asset = Asset.create(
+    asset = StockAsset.create(
         type='stock', name='NCsoft Corporation', code='036570.KS',
-        description='NCsoft Corporation')
+        description='NCsoft Corporation',
+        data={'bps': 88772, 'eps': 12416})
     request.addfinalizer(partial(teardown, db=db, record=asset))
     return asset
 
