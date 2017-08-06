@@ -282,6 +282,15 @@ class P2PBondAsset(Asset):
             .order_by(AssetValue.evaluated_at.desc()).first().close
 
 
+class SecurityAsset(Asset):
+
+    __tablename__ = 'asset'
+
+    __mapper_args__ = {
+        'polymorphic_identity': 'security',
+    }
+
+
 class StockAsset(Asset):
 
     __tablename__ = 'asset'
