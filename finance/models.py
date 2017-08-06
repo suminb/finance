@@ -237,6 +237,24 @@ class Asset(CRUDMixin, db.Model):
             return asset
 
 
+class CurrencyAsset(Asset):
+
+    __tablename__ = 'asset'
+
+    __mapper_args__ = {
+        'polymorphic_identity': 'currency',
+    }
+
+
+class FundAsset(Asset):
+
+    __tablename__ = 'asset'
+
+    __mapper_args__ = {
+        'polymorphic_identity': 'fund',
+    }
+
+
 class P2PBondAsset(Asset):
 
     __tablename__ = 'asset'
