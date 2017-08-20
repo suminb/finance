@@ -89,11 +89,8 @@ class CRUDMixin(object):
         return commit and db.session.commit()
 
     def __iter__(self):
-        def iter():
-            for column in self.__table__.columns:
-                yield column.name, str(getattr(self, column.name))
-
-        return {k: v for k, v in iter()}
+        for column in self.__table__.columns:
+            yield column.name, str(getattr(self, column.name))
 
 
 class User(CRUDMixin, UserMixin, db.Model):
