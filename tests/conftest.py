@@ -5,7 +5,9 @@ import pytest
 from typedecorator import setup_typecheck
 
 from finance import create_app
-from finance.models import Account, Asset, Portfolio
+from finance.models import (
+    Account, Asset, CurrencyAsset, FundAsset, Portfolio, P2PBondAsset,
+    StockAsset)
 from finance.models import db as _db
 
 
@@ -96,24 +98,25 @@ def account_stock(request, db):
 
 @pytest.fixture(scope='module')
 def asset_hf1(request, db):
-    asset = Asset.create(
-        type='bond', name='포트폴리오 투자상품 1호')
+    asset = P2PBondAsset.create(
+        name='포트폴리오 투자상품 1호')
     request.addfinalizer(partial(teardown, db=db, record=asset))
+    assert asset.type == 'p2p_bond'
     return asset
 
 
 @pytest.fixture(scope='module')
 def asset_krw(request, db):
-    asset = Asset.create(
-        type='currency', name='KRW', description='Korean Won')
+    asset = CurrencyAsset.create(
+        name='KRW', description='Korean Won')
     request.addfinalizer(partial(teardown, db=db, record=asset))
     return asset
 
 
 @pytest.fixture(scope='module')
 def asset_sp500(request, db):
-    asset = Asset.create(
-        type='security', name='KB Star S&P500', description='',
+    asset = FundAsset.create(
+        name='KB Star S&P500', description='',
         data={'code': 'KR5223941018'})
     request.addfinalizer(partial(teardown, db=db, record=asset))
     return asset
@@ -121,25 +124,26 @@ def asset_sp500(request, db):
 
 @pytest.fixture(scope='module')
 def asset_usd(request, db):
-    asset = Asset.create(
-        type='currency', name='USD', description='United States Dollar')
+    asset = CurrencyAsset.create(
+        name='USD', description='United States Dollar')
     request.addfinalizer(partial(teardown, db=db, record=asset))
     return asset
 
 
 @pytest.fixture(scope='module')
 def asset_stock_ncsoft(request, db):
-    asset = Asset.create(
-        type='stock', name='NCsoft Corporation', code='036570.KS',
-        description='NCsoft Corporation')
+    asset = StockAsset.create(
+        name='NCsoft Corporation', code='036570.KS',
+        description='NCsoft Corporation',
+        data={'bps': 88772, 'eps': 12416})
     request.addfinalizer(partial(teardown, db=db, record=asset))
     return asset
 
 
 @pytest.fixture(scope='module')
 def asset_stock_nvda(request, db):
-    asset = Asset.create(
-        type='stock', name='NVDA', code='NVDA', isin='US67066G1040',
+    asset = StockAsset.create(
+        name='NVDA', code='NVDA', isin='US67066G1040',
         description='NVIDIA Corporation')
     request.addfinalizer(partial(teardown, db=db, record=asset))
     return asset

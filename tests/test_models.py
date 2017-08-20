@@ -5,6 +5,11 @@ from finance.models import *  # noqa
 from finance.utils import parse_date
 
 
+def test_stock_asset(asset_stock_ncsoft):
+    assert asset_stock_ncsoft.bps
+    assert asset_stock_ncsoft.eps
+
+
 def test_get_asset_by_fund_code(asset_sp500):
     asset = get_asset_by_fund_code('KR5223941018')
     assert asset.name == 'KB Star S&P500'
