@@ -60,6 +60,7 @@ def insert_stock_assets():
         ('005380.KS', 'Hyundai Motor Company'),
         ('056080.KQ', 'Yujin Robot Co., Ltd.'),
         ('069500.KS', 'KODEX 200'),
+        ('009830.KS', '한화케미칼'),
     ]
 
     for code, description in rows:
