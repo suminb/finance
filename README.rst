@@ -66,6 +66,31 @@ Daily Net Asset Values
 Some Technical Details
 ----------------------
 
+Create Tables
+*************
+
+.. code::
+
+   finance create_all
+
+Insert Test Data
+****************
+
+.. code::
+
+   finance insert_test_data
+
+Import Stock Values
+*******************
+
+.. code::
+
+   finance fetch_stock_values KRX 009830 | finance import_stock_values 009830.KS
+
+WARNING: The ``fetch_stock_values`` command takes a market name and a code (in
+Google Finance style), whereas the ``import_stock_values`` uses Yahoo Finance
+style code. This inconsistency issue shall be addressed as soon as possible.
+
 PostgreSQL in Docker
 ********************
 
