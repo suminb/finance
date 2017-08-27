@@ -376,17 +376,18 @@ def import_fund(code, from_date, to_date):
 
 
 @cli.command()
+@click.argument('filename')
 @click.argument('code')
-@click.argument('from-date')
-@click.argument('to-date')
-def import_stock_values(code, from_date, to_date):
+def import_stock_values(filename, code):
     """Import stock price information."""
     app = create_app(__name__)
     with app.app_context():
         # NOTE: We assume all Asset records are already in the database, but
         # this is a temporary workaround. We should implement some mechanism to
         # automatically insert an Asset record when it is not found.
-        import_stock_values_(code, parse_date(from_date), parse_date(to_date))
+
+        with open(filename, 'r') as fin:
+            import_stock_values_(fin, code)
 
 
 @cli.command()
