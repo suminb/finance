@@ -75,6 +75,7 @@ def cli():
 
 @cli.command()
 def create_all():
+    """Creates necessary database tables."""
     app = create_app(__name__)
     with app.app_context():
         db.create_all()
@@ -82,6 +83,7 @@ def create_all():
 
 @cli.command()
 def drop_all():
+    """Drops all database tables."""
     app = create_app(__name__)
     with app.app_context():
         db.drop_all()
@@ -89,6 +91,7 @@ def drop_all():
 
 @cli.command()
 def insert_test_data():
+    """Inserts some sample data for testing."""
     app = create_app(__name__)
     with app.app_context():
         user = User.create(
@@ -129,6 +132,7 @@ def fetch_dart(entity_name):
     print(json.dumps([dict(r) for r in reports], default=serialize_datetime))
 
 
+# TODO: Load data from stdin
 @cli.command()
 @click.argument('fin', type=click.File('r'))
 def import_dart(fin):
@@ -237,6 +241,7 @@ def parse_miraeasset_foreign_data(filename):
     _parse_miraeasset_data(filename, provider.parse_foreign_transactions)
 
 
+# TODO: Load data from stdin
 @cli.command()
 @click.argument('filename')
 def parse_miraeasset_local_data(filename):
@@ -245,6 +250,7 @@ def parse_miraeasset_local_data(filename):
     _parse_miraeasset_data(filename, provider.parse_local_transactions)
 
 
+# TODO: Load data from stdin
 @cli.command()
 @click.argument('filename')
 def import_miraeasset_foreign_data(filename):
@@ -278,7 +284,7 @@ def fetch_8percent(filename):
 @click.argument('market')  # e.g., NASDAQ, KRX
 @click.argument('stock_code')  # e.g., NVDA, 027410
 def fetch_stock_values(market, stock_code):
-    """Fetches stock values from Google Finance."""
+    """Fetches daily stock values from Google Finance."""
     provider = Google()
     records = provider.fetch_data(
         market, stock_code, parse_date(-90), parse_date(0))
@@ -290,6 +296,7 @@ def fetch_stock_values(market, stock_code):
         print(', '.join(map(str, formatted)))
 
 
+# TODO: Load data from stdin
 @cli.command()
 @click.argument('filename')
 def import_8percent(filename):
@@ -339,6 +346,7 @@ def import_rf():
 
 
 # NOTE: This will probably be called by AWS Lambda
+# TODO: Load data from stdin
 @cli.command()
 @click.argument('code')
 @click.argument('from-date')
@@ -389,6 +397,7 @@ def import_stock_values(code):
         import_stock_values_(stdin, code)
 
 
+# TODO: Load data from stdin
 @cli.command()
 @click.argument('filename')
 def import_stock_records(filename):
