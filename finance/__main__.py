@@ -376,9 +376,8 @@ def import_fund(code, from_date, to_date):
 
 
 @cli.command()
-@click.argument('filename')
 @click.argument('code')
-def import_stock_values(filename, code):
+def import_stock_values(code):
     """Import stock price information."""
     app = create_app(__name__)
     with app.app_context():
@@ -386,8 +385,8 @@ def import_stock_values(filename, code):
         # this is a temporary workaround. We should implement some mechanism to
         # automatically insert an Asset record when it is not found.
 
-        with open(filename, 'r') as fin:
-            import_stock_values_(fin, code)
+        stdin = click.get_text_stream('stdin')
+        import_stock_values_(stdin, code)
 
 
 @cli.command()
