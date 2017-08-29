@@ -2,6 +2,7 @@ from click.testing import CliRunner
 
 from finance.__main__ import *  # noqa
 from finance.exceptions import AssetNotFoundException
+from finance.models import StockAsset
 
 
 def test_drop_all():
@@ -48,14 +49,32 @@ def test_import_non_existing_fund():
     assert isinstance(result.exception, AssetNotFoundException)
 
 
-# FIXME: The Yahoo data provider seems broken. Needs to be fixed
-# but temporarily disabling for now.
-def _test_import_stock_values():
+def test_import_stock_values():
+    code = '005380.KS'
+    StockAsset.create(code=code)
+
+    # TODO: Make `monkeypatch` fixture
+    db_url = os.environ['DB_URL']
+    os.environ['DB_URL'] = os.environ['TEST_DB_URL']
+
     runner = CliRunner()
-    result = runner.invoke(import_stock_values,
-                           ['005380.KS', '2000-01-01', '2016-07-03'],
-                           catch_exceptions=False)
+    result = runner.invoke(
+        import_stock_values,
+        [code],
+        input='2017-08-28, 31100.0, 31150.0, 30400.0, 31000.0, 856210',
+        catch_exceptions=False)
     assert result.exit_code == 0
+
+    asset = StockAsset.get_by_symbol(code)
+    asset_value = asset.asset_values[0]
+
+    assert asset_value.open == 31100
+    assert asset_value.high == 31150
+    assert asset_value.low == 30400
+    assert asset_value.close == 31000
+    assert asset_value.volume == 856210
+
+    os.environ['DB_URL'] = db_url
 
 
 def test_import_stock_records(asset_krw, account_stock, account_checking):
