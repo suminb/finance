@@ -1,3 +1,4 @@
+import csv
 from datetime import datetime, timedelta
 
 from flask import request
@@ -56,6 +57,13 @@ def get_dart_code(entity_name):
         if name == entity_name:
             return code
     raise ValueError('CRP code for {} is not found'.format(entity_name))
+
+
+def load_stock_codes(fin):
+    reader = csv.reader(fin, delimiter='\t', quotechar='"')
+    for code, name in reader:
+        if code != 'N/A':
+            yield code, name
 
 
 def parse_date(date, format='%Y-%m-%d'):

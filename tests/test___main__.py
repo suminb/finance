@@ -1,8 +1,11 @@
+import random
+
 from click.testing import CliRunner
 
 from finance.__main__ import *  # noqa
 from finance.exceptions import AssetNotFoundException
 from finance.models import StockAsset
+from finance.utils import load_stock_codes
 
 
 def test_drop_all():
@@ -49,8 +52,13 @@ def test_import_non_existing_fund():
     assert isinstance(result.exception, AssetNotFoundException)
 
 
+# NOTE: This test case may intermittently fail as some of the stock codes
+# is not available for download in Google Finance
 def test_import_stock_values():
-    code = '005380.KS'
+    with open('stock_codes.csv', 'r') as fin:
+        codes = list(load_stock_codes(fin))
+
+    code, name = random.choice(codes)
     StockAsset.create(code=code)
 
     # TODO: Make `monkeypatch` fixture
