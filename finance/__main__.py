@@ -281,13 +281,22 @@ def fetch_8percent(filename):
 
 
 @cli.command()
-@click.argument('market')  # e.g., NASDAQ, KRX
-@click.argument('stock_code')  # e.g., NVDA, 027410
-def fetch_stock_values(market, stock_code):
+@click.argument('stock_code')  # e.g., NVDA, 027410.KS
+def fetch_stock_values(stock_code):
     """Fetches daily stock values from Google Finance."""
+    if re.match(r'\d{6}\.K[SQ]', stock_code):
+        code, market = stock_code.split('.')
+        if market == 'KS':
+            market = 'KRX'
+        elif market == 'KQ':
+            market = 'KOSDAQ'
+        else:
+            raise ValueError('Unknown market: {0}'.format(market))
+
     provider = Google()
+    # FIXME: The date range currently has no effect. This should be fixed.
     records = provider.fetch_data(
-        market, stock_code, parse_date(-90), parse_date(0))
+        market, code, parse_date(-90), parse_date(0))
 
     for date, open_, high, low, close_, volume in records:
         # FIXME: This date format, %Y-%m%-%d, shall be a const

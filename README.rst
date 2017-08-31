@@ -85,11 +85,11 @@ Import Stock Values
 
 .. code::
 
-   finance fetch_stock_values KRX 009830 | finance import_stock_values 009830.KS
+   finance fetch_stock_values 009830.KS | finance import_stock_values 009830.KS
 
-WARNING: The ``fetch_stock_values`` command takes a market name and a code (in
-Google Finance style), whereas the ``import_stock_values`` uses Yahoo Finance
-style code. This inconsistency issue shall be addressed as soon as possible.
+The ``fetch_stock_values`` command strictly fetches data from Google Finance
+as CSV, and the ``import_stock_values`` imports the structured data into the
+database.
 
 PostgreSQL in Docker
 ********************
