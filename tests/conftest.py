@@ -14,44 +14,47 @@ from finance.models import db as _db
 setup_typecheck()
 
 
-@pytest.fixture(scope='module', autouse=True)
+@pytest.fixture(scope='module')
 def app(request):
     """Session-wide test `Flask` application."""
     settings_override = {
         'TESTING': True,
     }
-    if 'TEST_DB_URL' in os.environ:
-        settings_override['SQLALCHEMY_DATABASE_URI'] = \
-            os.environ.get('TEST_DB_URL')
+    settings_override['SQLALCHEMY_DATABASE_URI'] = os.environ['TEST_DB_URL']
     app = create_app(__name__, config=settings_override)
 
     # Establish an application context before running the tests.
-    ctx = app.app_context()
-    ctx.push()
+    # ctx = app.app_context()
+    # ctx.push()
 
-    def teardown():
-        ctx.pop()
+    # def teardown():
+    #     ctx.pop()
 
-    request.addfinalizer(teardown)
+    # request.addfinalizer(teardown)
     return app
 
 
 @pytest.fixture
 def testapp(app, db):
-    return app.test_client()
+    with app.app_context():
+        yield app.test_client()
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='module', autouse=True)
 def db(app, request):
     """Session-wide test database."""
     def teardown():
-        _db.drop_all()
-
-    _db.app = app
-    _db.create_all()
+        with app.app_context():
+            _db.session.close()
+            _db.drop_all()
 
     request.addfinalizer(teardown)
-    return _db
+
+    _db.app = app
+    with app.app_context():
+        _db.create_all()
+
+        yield _db
 
 
 @pytest.fixture(scope='function')

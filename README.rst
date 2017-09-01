@@ -66,6 +66,31 @@ Daily Net Asset Values
 Some Technical Details
 ----------------------
 
+Create Tables
+*************
+
+.. code::
+
+   finance create_all
+
+Insert Test Data
+****************
+
+.. code::
+
+   finance insert_test_data
+
+Import Stock Values
+*******************
+
+.. code::
+
+   finance fetch_stock_values 009830.KS | finance import_stock_values 009830.KS
+
+The ``fetch_stock_values`` command strictly fetches data from Google Finance
+as CSV, and the ``import_stock_values`` imports the structured data into the
+database.
+
 PostgreSQL in Docker
 ********************
 

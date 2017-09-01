@@ -60,6 +60,7 @@ def insert_stock_assets():
         ('005380.KS', 'Hyundai Motor Company'),
         ('056080.KQ', 'Yujin Robot Co., Ltd.'),
         ('069500.KS', 'KODEX 200'),
+        ('009830.KS', '한화케미칼'),
     ]
 
     for code, description in rows:
@@ -74,6 +75,7 @@ def cli():
 
 @cli.command()
 def create_all():
+    """Creates necessary database tables."""
     app = create_app(__name__)
     with app.app_context():
         db.create_all()
@@ -81,6 +83,7 @@ def create_all():
 
 @cli.command()
 def drop_all():
+    """Drops all database tables."""
     app = create_app(__name__)
     with app.app_context():
         db.drop_all()
@@ -88,6 +91,7 @@ def drop_all():
 
 @cli.command()
 def insert_test_data():
+    """Inserts some sample data for testing."""
     app = create_app(__name__)
     with app.app_context():
         user = User.create(
@@ -128,6 +132,7 @@ def fetch_dart(entity_name):
     print(json.dumps([dict(r) for r in reports], default=serialize_datetime))
 
 
+# TODO: Load data from stdin
 @cli.command()
 @click.argument('fin', type=click.File('r'))
 def import_dart(fin):
@@ -236,6 +241,7 @@ def parse_miraeasset_foreign_data(filename):
     _parse_miraeasset_data(filename, provider.parse_foreign_transactions)
 
 
+# TODO: Load data from stdin
 @cli.command()
 @click.argument('filename')
 def parse_miraeasset_local_data(filename):
@@ -244,6 +250,7 @@ def parse_miraeasset_local_data(filename):
     _parse_miraeasset_data(filename, provider.parse_local_transactions)
 
 
+# TODO: Load data from stdin
 @cli.command()
 @click.argument('filename')
 def import_miraeasset_foreign_data(filename):
@@ -274,13 +281,22 @@ def fetch_8percent(filename):
 
 
 @cli.command()
-@click.argument('market')  # e.g., NASDAQ, KRX
-@click.argument('stock_code')  # e.g., NVDA, 027410
-def fetch_stock_values(market, stock_code):
-    """Fetches stock values from Google Finance."""
+@click.argument('stock_code')  # e.g., NVDA, 027410.KS
+def fetch_stock_values(stock_code):
+    """Fetches daily stock values from Google Finance."""
+    if re.match(r'\d{6}\.K[SQ]', stock_code):
+        code, market = stock_code.split('.')
+        if market == 'KS':
+            market = 'KRX'
+        elif market == 'KQ':
+            market = 'KOSDAQ'
+        else:
+            raise ValueError('Unknown market: {0}'.format(market))
+
     provider = Google()
+    # FIXME: The date range currently has no effect. This should be fixed.
     records = provider.fetch_data(
-        market, stock_code, parse_date(-90), parse_date(0))
+        market, code, parse_date(-90), parse_date(0))
 
     for date, open_, high, low, close_, volume in records:
         # FIXME: This date format, %Y-%m%-%d, shall be a const
@@ -289,6 +305,7 @@ def fetch_stock_values(market, stock_code):
         print(', '.join(map(str, formatted)))
 
 
+# TODO: Load data from stdin
 @cli.command()
 @click.argument('filename')
 def import_8percent(filename):
@@ -338,6 +355,7 @@ def import_rf():
 
 
 # NOTE: This will probably be called by AWS Lambda
+# TODO: Load data from stdin
 @cli.command()
 @click.argument('code')
 @click.argument('from-date')
@@ -376,18 +394,19 @@ def import_fund(code, from_date, to_date):
 
 @cli.command()
 @click.argument('code')
-@click.argument('from-date')
-@click.argument('to-date')
-def import_stock_values(code, from_date, to_date):
+def import_stock_values(code):
     """Import stock price information."""
     app = create_app(__name__)
     with app.app_context():
         # NOTE: We assume all Asset records are already in the database, but
         # this is a temporary workaround. We should implement some mechanism to
         # automatically insert an Asset record when it is not found.
-        import_stock_values_(code, parse_date(from_date), parse_date(to_date))
+
+        stdin = click.get_text_stream('stdin')
+        import_stock_values_(stdin, code)
 
 
+# TODO: Load data from stdin
 @cli.command()
 @click.argument('filename')
 def import_stock_records(filename):

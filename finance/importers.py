@@ -1,9 +1,13 @@
 """A collection of data import functions."""
+import csv
 from datetime import datetime
+import io
 
+from sqlalchemy.exc import IntegrityError
 from typedecorator import typed
 
-from finance.models import Asset, AssetValue, Granularity
+from finance import log
+from finance.models import Asset, AssetValue, db, Granularity
 from finance.providers import Google
 from finance.utils import DictReader
 
@@ -55,13 +59,18 @@ def import_8percent_data(parsed_data, account_checking, account_8p, asset_krw):
             base_asset=asset_krw, granularity='1day', close=remaining_value)
 
 
+# NOTE: A verb 'import' means local structured data -> database
 @typed
-def import_stock_values(market: str, code: str,
-                        from_date: datetime, to_date: datetime):
-    provider = Google()
+def import_stock_values(fin: io.TextIOWrapper, code: str):
+    """Import stock values."""
     asset = Asset.get_by_symbol(code)
-    data = provider.fetch_data(market, code, from_date, to_date)
-    for date, open_, high, low, close_, volume, adj_close in data:
-        AssetValue.create(
-            evaluated_at=date, granularity=Granularity.day, asset=asset,
-            open=open_, high=high, low=low, close=close_, volume=volume)
+    reader = csv.reader(fin, delimiter=',', quotechar='"')
+    # for date, open_, high, low, close_, volume, adj_close in reader:
+    for date, open_, high, low, close_, volume in reader:
+        try:
+            AssetValue.create(
+                evaluated_at=date, granularity=Granularity.day, asset=asset,
+                open=open_, high=high, low=low, close=close_, volume=volume)
+        except IntegrityError:
+            log.warn('AssetValue for {0} on {1} already exist', code, date)
+            db.session.rollback()
