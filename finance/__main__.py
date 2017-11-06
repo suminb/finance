@@ -281,7 +281,7 @@ def fetch_8percent(filename):
 
 
 @cli.command()
-@click.argument('stock_code')  # e.g., NVDA, 027410.KS
+@click.argument('stock_code')  # e.g., NYSE:IBM, NASDAQ:NVDA, 027410.KS
 def fetch_stock_values(stock_code):
     """Fetches daily stock values from Google Finance."""
     if re.match(r'\d{6}\.K[SQ]', stock_code):
@@ -292,6 +292,9 @@ def fetch_stock_values(stock_code):
             market = 'KOSDAQ'
         else:
             raise ValueError('Unknown market: {0}'.format(market))
+    else:
+        # TODO: Could we get rid of the need for specifying markets?
+        market, code = stock_code.split(':')
 
     provider = Google()
     # FIXME: The date range currently has no effect. This should be fixed.
