@@ -48,3 +48,15 @@ resource "aws_lambda_function" "fetch_asset_values_lambda" {
 
   depends_on = ["null_resource.build_lambda"]
 }
+
+resource "aws_cloudwatch_event_target" "event_target_lambda" {
+  target_id = "${aws_lambda_function.fetch_asset_values_lambda.id}"
+  rule      = "${aws_cloudwatch_event_rule.event_rule.name}"
+  arn       = "${aws_lambda_function.fetch_asset_values_lambda.arn}"
+}
+
+resource "aws_cloudwatch_event_rule" "event_rule" {
+  name        = "event_rule"
+  description = "Periodic event"
+  schedule_expression = "cron(* * * * ? *)"
+}
