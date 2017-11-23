@@ -33,7 +33,8 @@ resource "null_resource" "build_lambda" {
     command = <<EOF
       pip install -r ../requirements.txt -t build
       cp main.py build/
-      zip -r fetch_asset_values.zip build
+      cd build
+      zip -r ../fetch_asset_values.zip .
     EOF
   }
 }
