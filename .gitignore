@@ -1,5 +1,6 @@
 provision.sh
 .cache
+.DS_Store
 frontend/src/assets
 sample-data/*
 *.pyc
