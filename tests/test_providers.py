@@ -145,6 +145,8 @@ def test_kofia_fetch_data():
         assert isinstance(quantity, float)
 
 
+# NOTE: See https://github.com/suminb/finance/issues/11
+@pytest.mark.skip
 def test_google_fetch_data():
     provider = Google()
     from_date, to_date = parse_date('2014-01-01'), parse_date('2015-12-31')
@@ -160,6 +162,7 @@ def test_google_fetch_data():
         assert isinstance(volume, int)
 
 
+@pytest.mark.skip
 def test_google_fetch_data_with_invalid_code():
     provider = Google()
     from_date, to_date = parse_date('2014-01-01'), parse_date('2015-12-31')
