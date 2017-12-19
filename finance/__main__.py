@@ -7,6 +7,7 @@ import sys
 import click
 from click.testing import CliRunner
 from logbook import Logger
+from pandas_datareader import data
 from sqlalchemy.exc import IntegrityError
 
 from finance import create_app
@@ -282,10 +283,22 @@ def fetch_8percent(filename):
 
 @cli.command()
 @click.argument('stock_code')  # e.g., NVDA, 027410.KS
-def fetch_stock_values(stock_code):
+@click.option('-s', '--start', 'start_date',
+              help='Start date (e.g., 2017-01-01)')
+@click.option('-e', '--end', 'end_date',
+              help='End date (e.g., 2017-12-31)')
+def fetch_stock_values(stock_code, start_date, end_date):
     """Fetches daily stock values from Yahoo Finance."""
-    from pandas_datareader import data
-    df = data.DataReader(stock_code, 'yahoo')
+
+    if start_date:
+        start_date = parse_date(start_date)
+    if end_date:
+        end_date = parse_date(end_date)
+
+    if start_date > end_date:
+        raise ValueError('start_date must be equal to or less than end_date')
+
+    df = data.DataReader(stock_code, 'yahoo', start_date, end_date)
     print(df.to_csv())
 
 
