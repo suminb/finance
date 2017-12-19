@@ -8,7 +8,6 @@ from typedecorator import typed
 
 from finance import log
 from finance.models import Asset, AssetValue, db, Granularity
-from finance.providers import Google
 from finance.utils import DictReader
 
 
