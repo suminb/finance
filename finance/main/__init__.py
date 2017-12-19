@@ -69,6 +69,9 @@ def list_entities(entity_type):
     entity_class = get_entity_class(entity_type)
     entities = entity_class.query.all()
 
+    import time
+    time.sleep(1)
+
     return jsonify(records=[dict(r) for r in entities])
 
 

@@ -7,6 +7,7 @@ import sys
 import click
 from click.testing import CliRunner
 from logbook import Logger
+from pandas_datareader import data
 from sqlalchemy.exc import IntegrityError
 
 from finance import create_app
@@ -16,7 +17,7 @@ from finance.importers import \
 from finance.models import (
     Account, Asset, AssetValue, DartReport, db, get_asset_by_fund_code,
     Granularity, Portfolio, Record, Transaction, User)
-from finance.providers import _8Percent, Dart, Google, Kofia, Miraeasset
+from finance.providers import _8Percent, Dart, Kofia, Miraeasset
 from finance.utils import (
     extract_numbers, get_dart_code, insert_asset, insert_record,
     insert_stock_record, parse_date, parse_stock_records, serialize_datetime)
@@ -281,31 +282,24 @@ def fetch_8percent(filename):
 
 
 @cli.command()
-@click.argument('stock_code')  # e.g., NYSE:IBM, NASDAQ:NVDA, 027410.KS
-def fetch_stock_values(stock_code):
-    """Fetches daily stock values from Google Finance."""
-    if re.match(r'\d{6}\.K[SQ]', stock_code):
-        code, market = stock_code.split('.')
-        if market == 'KS':
-            market = 'KRX'
-        elif market == 'KQ':
-            market = 'KOSDAQ'
-        else:
-            raise ValueError('Unknown market: {0}'.format(market))
-    else:
-        # TODO: Could we get rid of the need for specifying markets?
-        market, code = stock_code.split(':')
+@click.argument('stock_code')  # e.g., NVDA, 027410.KS
+@click.option('-s', '--start', 'start_date',
+              help='Start date (e.g., 2017-01-01)')
+@click.option('-e', '--end', 'end_date',
+              help='End date (e.g., 2017-12-31)')
+def fetch_stock_values(stock_code, start_date, end_date):
+    """Fetches daily stock values from Yahoo Finance."""
 
-    provider = Google()
-    # FIXME: The date range currently has no effect. This should be fixed.
-    records = provider.fetch_data(
-        market, code, parse_date(-90), parse_date(0))
+    if start_date:
+        start_date = parse_date(start_date)
+    if end_date:
+        end_date = parse_date(end_date)
 
-    for date, open_, high, low, close_, volume in records:
-        # FIXME: This date format, %Y-%m%-%d, shall be a const
-        formatted = [date.strftime('%Y-%m-%d'), open_, high, low,
-                     close_, volume]
-        print(', '.join(map(str, formatted)))
+    if start_date > end_date:
+        raise ValueError('start_date must be equal to or less than end_date')
+
+    df = data.DataReader(stock_code, 'yahoo', start_date, end_date)
+    print(df.to_csv())
 
 
 # TODO: Load data from stdin

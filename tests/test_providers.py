@@ -2,9 +2,8 @@ from datetime import datetime, timedelta
 import os
 
 import pytest
-from requests.exceptions import HTTPError
 
-from finance.providers import _8Percent, Dart, Google, Kofia, Miraeasset
+from finance.providers import _8Percent, Dart, Kofia, Miraeasset
 from finance.providers.dart import Report as DartReport
 from finance.utils import parse_date
 
@@ -143,32 +142,6 @@ def test_kofia_fetch_data():
         assert from_date <= date <= to_date
         assert isinstance(unit_price, float)
         assert isinstance(quantity, float)
-
-
-# NOTE: See https://github.com/suminb/finance/issues/11
-@pytest.mark.skip
-def test_google_fetch_data():
-    provider = Google()
-    from_date, to_date = parse_date('2014-01-01'), parse_date('2015-12-31')
-    data = provider.fetch_data('NASDAQ', 'NVDA', from_date, to_date)
-
-    for date, open_, high, low, close_, volume in data:
-        assert isinstance(date, datetime)
-        # assert from_date <= date <= to_date
-        assert isinstance(open_, float)
-        assert isinstance(high, float)
-        assert isinstance(low, float)
-        assert isinstance(close_, float)
-        assert isinstance(volume, int)
-
-
-@pytest.mark.skip
-def test_google_fetch_data_with_invalid_code():
-    provider = Google()
-    from_date, to_date = parse_date('2014-01-01'), parse_date('2015-12-31')
-    with pytest.raises(HTTPError):
-        data = provider.fetch_data('', '!@#$%', from_date, to_date)
-        next(data)
 
 
 def test_dart_fetch_data():
