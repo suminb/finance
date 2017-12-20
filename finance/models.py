@@ -154,6 +154,12 @@ class AssetValue(CRUDMixin, db.Model):
     close = db.Column(db.Numeric(precision=20, scale=4))
     volume = db.Column(db.Integer)
 
+    def __repr__(self):
+        return 'AssetValue(evaluated_at={0}, open={1}, high={2}, low={3}, ' \
+               'close={4}, volume={5})'.format(
+                self.evaluated_at, self.open, self.high, self.low, self.close,
+                self.volume)
+
 
 class AssetType(object):
     currency = 'currency'
