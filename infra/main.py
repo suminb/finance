@@ -16,9 +16,7 @@ log = Logger('finance')
 # TODO: Write logs to CloudWatch
 
 def handler(event, context):
-    # TODO: Take this value as a parameter
-    code = 'MSFT'
-    # code = '069500.KS'
+    code = event['code']
 
     app = create_app(__name__)
     with app.app_context():
@@ -29,7 +27,7 @@ def handler(event, context):
                      code)
             asset = Asset.create(name=code, code=code, type=AssetType.stock)
 
-        df = data.DataReader(code, 'yahoo', parse_date(-180), parse_date(-1))
+        df = data.DataReader(code, 'yahoo', parse_date(-30), parse_date(-1))
         for record in df.to_records():
             date, open_, high, low, close_, adj_close, volume = record
 
@@ -47,8 +45,7 @@ def handler(event, context):
                     evaluated_at=date, granularity=Granularity.day,
                     asset=asset, open=open_, high=high, low=low, close=close_,
                     volume=int(volume))
-                log.info('AssetValue record has been create: {0}', asset_value)
-                # TODO: Define AssetValue.__repr__()
+                log.info('Record has been create: {0}', asset_value)
             except IntegrityError:
                 log.warn('AssetValue for {0} on {1} already exist', code, date)
                 db.session.rollback()
@@ -60,4 +57,5 @@ def handler(event, context):
 
 
 if __name__ == '__main__':
-    handler(None, None)
+    event = {'code': 'ESRT'}
+    handler(event, None)
