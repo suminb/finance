@@ -1,9 +1,12 @@
 import random
+import os
 
 from click.testing import CliRunner
+import pytest
 
-from finance.__main__ import *  # noqa
-from finance.__main__ import fetch_stock_values
+from finance.__main__ import (
+    create_all, drop_all, fetch_stock_values, import_8percent, import_fund,
+    import_stock_records, import_stock_values, insert_test_data)
 from finance.exceptions import AssetNotFoundException
 from finance.models import StockAsset
 from finance.utils import load_stock_codes
@@ -34,6 +37,7 @@ def test_import_8percent(account_checking, account_8p, asset_krw):
     assert result.exit_code == 0
 
 
+@pytest.mark.skip
 def _test_import_sp500():
     runner = CliRunner()
     result = runner.invoke(import_sp500)
