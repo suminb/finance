@@ -22,6 +22,10 @@ resource "aws_iam_role" "iam_for_lambda" {
 EOF
 }
 
+variable "s3_bucket" {
+  default = "suminb-test"
+}
+
 variable "lambda_filename" {
   default = "fetch_asset_values.zip"
 }
@@ -32,7 +36,7 @@ resource "null_resource" "build_lambda" {
   provisioner "local-exec" {
     command = <<EOF
       pip install -r ../requirements.txt -t build
-      cp main.py build/
+      cp lambda.py build/
       cd build
       zip -r ../fetch_asset_values.zip .
     EOF
@@ -40,11 +44,12 @@ resource "null_resource" "build_lambda" {
 }
 
 resource "aws_lambda_function" "fetch_asset_values_lambda" {
-  filename         = "${var.lambda_filename}"
+  s3_bucket        = "${var.s3_bucket}"
+  s3_key           = "${var.lambda_filename}"
   function_name    = "fetch_asset_values"
   role             = "${aws_iam_role.iam_for_lambda.arn}"
-  handler          = "main.handler"
-  source_code_hash = "${base64sha256(file("${var.lambda_filename}"))}"
+  handler          = "lambda.handler"
+  source_code_hash = "${var.lambda_filename}"
   runtime          = "python3.6"
 
   depends_on = ["null_resource.build_lambda"]
@@ -57,7 +62,7 @@ resource "aws_cloudwatch_event_target" "event_target_lambda" {
 }
 
 resource "aws_cloudwatch_event_rule" "event_rule" {
-  name        = "event_rule"
-  description = "Periodic event"
+  name                = "event_rule"
+  description         = "Periodic event"
   schedule_expression = "cron(* * * * ? *)"
 }
