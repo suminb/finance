@@ -51,6 +51,7 @@ resource "aws_lambda_function" "fetch_asset_values_lambda" {
   handler          = "lambda.handler"
   source_code_hash = "${var.lambda_filename}"
   runtime          = "python3.6"
+  timeout          = 60
 
   depends_on = ["null_resource.build_lambda"]
 }
@@ -66,3 +67,6 @@ resource "aws_cloudwatch_event_rule" "event_rule" {
   description         = "Periodic event"
   schedule_expression = "cron(* * * * ? *)"
 }
+
+# NOTE: Could we launch a Lambda to install packages via pip and zip them up?
+
