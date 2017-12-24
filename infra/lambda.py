@@ -17,8 +17,11 @@ log = Logger('finance')
 
 def handler(event, context):
     code = event['code']
+    config = {
+        'SQLALCHEMY_DATABASE_URI': event['db_url'],
+    }
 
-    app = create_app(__name__)
+    app = create_app(__name__, config=config)
     with app.app_context():
         try:
             asset = Asset.get_by_symbol(code)
