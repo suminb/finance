@@ -8,3 +8,8 @@ from finance.providers.provider import AssetValueProvider, Provider, \
 
 __all__ = ['_8Percent', 'AssetValueProvider', 'Dart', 'Kofia', 'Miraeasset',
            'Provider', 'RecordProvider']
+
+
+# NOTE: Abstract classes such as Provider, AssetValueProvider, and
+# RecordProvider is defined under the `finance.providers.provider` module in
+# order to avoid circular imports.

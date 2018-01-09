@@ -3,8 +3,10 @@ import os
 
 import pytest
 
+from finance.models import Granularity
 from finance.providers import _8Percent, Dart, Kofia, Miraeasset
 from finance.providers.dart import Report as DartReport
+from finance.providers.yahoo import Yahoo
 from finance.utils import parse_date
 
 
@@ -179,3 +181,17 @@ def test_miraeasset_transactions(param):
             assert isinstance(record.seq, int)
             assert isinstance(record.quantity, int)
             assert record.currency in ['KRW', 'USD']
+
+
+def test_yahoo_provider():
+    provider = Yahoo()
+    symbol = 'MSFT'
+    evaluated_at = datetime.utcnow()
+    granularity = Granularity.min
+    flag = False
+    for asset_value in provider.asset_values(symbol, evaluated_at, granularity):
+        flag = True
+        assert len(asset_value) == 6
+        assert all([c is not None for c in asset_value])
+
+    assert flag
