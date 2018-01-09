@@ -8,6 +8,12 @@ from finance.providers import AssetValueProvider
 
 
 class Yahoo(AssetValueProvider):
+    """Parses Yahoo Finance chart data.
+
+    See some examples if necessary:
+    - sample-data/yahoo_finance_msft_1m.json
+    - sample-data/yahoo_finance_nvda_1d.json
+    """
 
     def __init__(self):
         pass
