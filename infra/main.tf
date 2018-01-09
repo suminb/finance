@@ -69,4 +69,4 @@ resource "aws_cloudwatch_event_rule" "event_rule" {
 }
 
 # NOTE: Could we launch a Lambda to install packages via pip and zip them up?
-
+# TODO: Make a process to package the code and upload to S3
