@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 import os
 
 import pytest
@@ -186,12 +186,14 @@ def test_miraeasset_transactions(param):
 def test_yahoo_provider():
     provider = Yahoo()
     symbol = 'MSFT'
-    evaluated_at = datetime.utcnow()
+    start_time = datetime.combine(parse_date(-7), time(0))
+    end_time = datetime.utcnow()
     granularity = Granularity.min
+    asset_values = \
+        provider.asset_values(symbol, start_time, end_time, granularity)
     flag = False
-    for asset_value in provider.asset_values(symbol, evaluated_at, granularity):
+    for asset_value in asset_values:
         flag = True
         assert len(asset_value) == 6
         assert all([c is not None for c in asset_value])
-
     assert flag

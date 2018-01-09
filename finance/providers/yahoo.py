@@ -19,33 +19,30 @@ class Yahoo(AssetValueProvider):
         """
         return 'https://query1.finance.yahoo.com/v8/finance/chart/{0}'
 
-    def asset_values(self, symbol, evaluated_at, granularity=Granularity.day):
+    def asset_values(self, symbol, start_time, end_time,
+                     granularity=Granularity.day):
         mappings = {
             Granularity.day: self.fetch_data_for_day,
             Granularity.min: self.fetch_data_for_minute,
         }
 
         try:
-            rows = mappings[granularity](symbol, evaluated_at)
+            rows = mappings[granularity](symbol, start_time, end_time)
         except KeyError:
             raise NotImplementedError
 
         return self.filter_empty_rows(rows)
 
-    def fetch_data_for_day(self, symbol, evaluated_at):
+    def fetch_data_for_day(self, symbol, start_time, end_time):
         raise NotImplementedError
 
-    def fetch_data_for_minute(self, symbol, evaluated_at):
+    def fetch_data_for_minute(self, symbol, start_time, end_time):
         url = self.get_url(symbol)
-
-        # FIXME: Temporary values
-        start_time = 1515510000
-        end_time = 1515518625
 
         params = {
             'symbol': symbol,
-            'period1': start_time,
-            'period2': end_time,
+            'period1': int(start_time.timestamp()),
+            'period2': int(end_time.timestamp()),
             'interval': '1m',
             'includePrePost': 'true',
             'events': 'div%7Csplit%7Cearn',
@@ -65,7 +62,7 @@ class Yahoo(AssetValueProvider):
         keys = ['open', 'high', 'low', 'close', 'volume']
         cols = [timestamps] + [quote[k] for k in keys]
 
-        # Transposition from column-based data to row-based data
+        # Transposition from column-wise data to row-wise data
         return zip(*cols)
 
     def filter_empty_rows(self, rows):
