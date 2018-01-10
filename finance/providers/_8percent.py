@@ -2,6 +2,7 @@ import json
 import os
 import pickle
 
+from bs4 import BeautifulSoup
 from logbook import Logger
 import requests
 
@@ -91,7 +92,6 @@ class _8Percent(Provider):
         return resp
 
     def parse_data(self, raw):
-        from bs4 import BeautifulSoup
         soup = BeautifulSoup(raw, 'html.parser')
 
         def extract_div_text(soup, id=None, class_=None):
@@ -128,6 +128,7 @@ class _8Percent(Provider):
                  duration, apy, amount)
 
         rows = soup.find_all('div', class_='Box_444')
+
         def gen_records(rows):
             for row in rows:
                 date = parse_date(extract_div_text(row, class_='Cell_445'),
