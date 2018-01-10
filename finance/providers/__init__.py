@@ -4,10 +4,11 @@ from finance.providers.kofia import Kofia
 from finance.providers.miraeasset import Miraeasset
 from finance.providers.provider import AssetValueProvider, Provider, \
     RecordProvider
+from finance.providers.yahoo import Yahoo
 
 
 __all__ = ['_8Percent', 'AssetValueProvider', 'Dart', 'Kofia', 'Miraeasset',
-           'Provider', 'RecordProvider']
+           'Provider', 'RecordProvider', 'Yahoo']
 
 
 # NOTE: Abstract classes such as Provider, AssetValueProvider, and
