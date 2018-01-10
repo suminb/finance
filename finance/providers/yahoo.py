@@ -30,9 +30,11 @@ class Yahoo(AssetValueProvider):
         }
 
         try:
-            rows = mappings[granularity](symbol, start_time, end_time)
+            fetcher = mappings[granularity]
         except KeyError:
             raise NotImplementedError
+        else:
+            rows = fetcher(symbol, start_time, end_time)
 
         return self.filter_empty_rows(rows)
 
