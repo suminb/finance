@@ -7,12 +7,7 @@ from finance.providers import AssetValueProvider
 
 
 class Yahoo(AssetValueProvider):
-    """Parses Yahoo Finance chart data.
-
-    See some examples if necessary:
-    - sample-data/yahoo_finance_msft_1m.json
-    - sample-data/yahoo_finance_nvda_1d.json
-    """
+    """Fetches and parses financial data from Yahoo Finance."""
 
     def __init__(self):
         pass
@@ -75,6 +70,12 @@ class Yahoo(AssetValueProvider):
         return rows
 
     def parse_chart_data(self, raw_json):
+        """Parses Yahoo Finance chart data.
+
+        See some examples if necessary:
+        - sample-data/yahoo_finance_msft_1m.json
+        - sample-data/yahoo_finance_nvda_1d.json
+        """
         parsed = json.loads(raw_json)
 
         timestamps = parsed['chart']['result'][0]['timestamp']
