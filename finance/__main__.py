@@ -7,7 +7,6 @@ import sys
 import click
 from click.testing import CliRunner
 from logbook import Logger
-from pandas_datareader import data
 from sqlalchemy.exc import IntegrityError
 
 from finance import create_app
