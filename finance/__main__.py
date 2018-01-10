@@ -17,7 +17,7 @@ from finance.importers import \
 from finance.models import (
     Account, Asset, AssetValue, DartReport, db, get_asset_by_fund_code,
     Granularity, Portfolio, Record, Transaction, User)
-from finance.providers import _8Percent, Dart, Kofia, Miraeasset
+from finance.providers import _8Percent, Dart, Kofia, Miraeasset, Yahoo
 from finance.utils import (
     extract_numbers, get_dart_code, insert_asset, insert_record,
     insert_stock_record, parse_date, parse_stock_records, serialize_datetime)
@@ -298,8 +298,14 @@ def fetch_stock_values(stock_code, start_date, end_date):
     if start_date > end_date:
         raise ValueError('start_date must be equal to or less than end_date')
 
-    df = data.DataReader(stock_code, 'yahoo', start_date, end_date)
-    print(df.to_csv())
+    provider = Yahoo()
+    rows = provider.asset_values(
+        stock_code, start_date, end_date, Granularity.day)
+
+    for row in rows:
+        # TODO: Write a function to handle this for generic cases
+        # TODO: Convert the timestamp to an ISO format
+        print(', '.join([str(c) for c in row]))
 
 
 # TODO: Load data from stdin

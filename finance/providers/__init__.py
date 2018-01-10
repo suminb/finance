@@ -2,7 +2,15 @@ from finance.providers._8percent import _8Percent
 from finance.providers.dart import Dart
 from finance.providers.kofia import Kofia
 from finance.providers.miraeasset import Miraeasset
-from finance.providers.provider import Provider
+from finance.providers.provider import AssetValueProvider, Provider, \
+    RecordProvider
+from finance.providers.yahoo import Yahoo
 
 
-__all__ = ['_8Percent', 'Dart', 'Kofia', 'Miraeasset', 'Provider']
+__all__ = ['_8Percent', 'AssetValueProvider', 'Dart', 'Kofia', 'Miraeasset',
+           'Provider', 'RecordProvider', 'Yahoo']
+
+
+# NOTE: Abstract classes such as Provider, AssetValueProvider, and
+# RecordProvider is defined under the `finance.providers.provider` module in
+# order to avoid circular imports.
