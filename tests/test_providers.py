@@ -197,3 +197,13 @@ def test_yahoo_provider(granularity):
         assert len(asset_value) == 6
         assert all([c is not None for c in asset_value])
     assert flag
+
+
+def test_yahoo_provider_with_invalid_symbol():
+    provider = Yahoo()
+    symbol = '(invalid)'
+    end_time = datetime.utcnow()
+    start_time = end_time - timedelta(days=1)
+
+    with pytest.raises(ValueError):
+        provider.asset_values(symbol, start_time, end_time, Granularity.day)

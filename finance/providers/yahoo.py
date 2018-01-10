@@ -80,8 +80,22 @@ class Yahoo(AssetValueProvider):
         See some examples if necessary:
         - sample-data/yahoo_finance_msft_1m.json
         - sample-data/yahoo_finance_nvda_1d.json
+
+        In case of error, the response will look something like the following:
+
+            {'chart': {
+                'result': None,
+                'error': {
+                    'code': 'Not Found',
+                    'description': 'No data found, symbol may be delisted'}
+                }
+            }
         """
         parsed = json.loads(raw_json)
+        error = parsed['chart']['error']
+
+        if error:
+            raise ValueError(error['description'])
 
         timestamps = parsed['chart']['result'][0]['timestamp']
         quote = parsed['chart']['result'][0]['indicators']['quote'][0]
