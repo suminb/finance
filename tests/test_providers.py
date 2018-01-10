@@ -183,12 +183,12 @@ def test_miraeasset_transactions(param):
             assert record.currency in ['KRW', 'USD']
 
 
-def test_yahoo_provider():
+@pytest.mark.parametrize('granularity', [Granularity.min, Granularity.day])
+def test_yahoo_provider(granularity):
     provider = Yahoo()
     symbol = 'MSFT'
     start_time = datetime.combine(parse_date(-7), time(0))
     end_time = datetime.utcnow()
-    granularity = Granularity.min
     asset_values = \
         provider.asset_values(symbol, start_time, end_time, granularity)
     flag = False

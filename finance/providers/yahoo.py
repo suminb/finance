@@ -1,6 +1,5 @@
 import json
 
-from bs4 import BeautifulSoup
 import requests
 
 from finance.models import Granularity
@@ -28,8 +27,8 @@ class Yahoo(AssetValueProvider):
     def asset_values(self, symbol, start_time, end_time,
                      granularity=Granularity.day):
         mappings = {
-            Granularity.day: self.fetch_data_for_day,
-            Granularity.min: self.fetch_data_for_minute,
+            Granularity.day: self.fetch_daily_data,
+            Granularity.min: self.fetch_data_by_minutes,
         }
 
         try:
@@ -39,10 +38,26 @@ class Yahoo(AssetValueProvider):
 
         return self.filter_empty_rows(rows)
 
-    def fetch_data_for_day(self, symbol, start_time, end_time):
-        raise NotImplementedError
+    # NOTE: 'Data by day' would keep the name consistent, but 'daily data'
+    # sounds more natural.
+    def fetch_daily_data(self, symbol, start_time, end_time):
+        url = self.get_url(symbol)
 
-    def fetch_data_for_minute(self, symbol, start_time, end_time):
+        params = {
+            'symbol': symbol,
+            'period1': int(start_time.timestamp()),
+            'period2': int(end_time.timestamp()),
+            'interval': '1d',
+            'includePrePost': 'true',
+            'events': 'div%7Csplit%7Cearn',
+            'corsDomain': 'finance.yahoo.com',
+        }
+        resp = requests.get(url, params=params)
+        rows = self.parse_chart_data(resp.text)
+
+        return rows
+
+    def fetch_data_by_minutes(self, symbol, start_time, end_time):
         url = self.get_url(symbol)
 
         params = {
