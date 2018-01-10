@@ -19,6 +19,9 @@ class Yahoo(AssetValueProvider):
         """
         return 'https://query1.finance.yahoo.com/v8/finance/chart/{0}'
 
+    def as_timestamp(self, datetime):
+        return int(datetime.timestamp())
+
     def asset_values(self, symbol, start_time, end_time,
                      granularity=Granularity.day):
         mappings = {
@@ -40,8 +43,8 @@ class Yahoo(AssetValueProvider):
 
         params = {
             'symbol': symbol,
-            'period1': int(start_time.timestamp()),
-            'period2': int(end_time.timestamp()),
+            'period1': self.as_timestamp(start_time),
+            'period2': self.as_timestamp(end_time),
             'interval': '1d',
             'includePrePost': 'true',
             'events': 'div%7Csplit%7Cearn',
@@ -57,8 +60,8 @@ class Yahoo(AssetValueProvider):
 
         params = {
             'symbol': symbol,
-            'period1': int(start_time.timestamp()),
-            'period2': int(end_time.timestamp()),
+            'period1': self.as_timestamp(start_time),
+            'period2': self.as_timestamp(end_time),
             'interval': '1m',
             'includePrePost': 'true',
             'events': 'div%7Csplit%7Cearn',
