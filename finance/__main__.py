@@ -305,7 +305,9 @@ def fetch_stock_values(stock_code, start_date, end_date):
     for row in rows:
         # TODO: Write a function to handle this for generic cases
         # TODO: Convert the timestamp to an ISO format
-        print(', '.join([str(c) for c in row]))
+        # NOTE: The last column is data source. Not sure if this is an elegant
+        # way to handle this.
+        print(', '.join([str(c) for c in row] + ['yahoo']))
 
 
 # TODO: Load data from stdin
