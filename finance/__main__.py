@@ -290,14 +290,9 @@ def fetch_8percent(filename):
 def fetch_stock_values(stock_code, start_date, end_date):
     """Fetches daily stock values from Yahoo Finance."""
 
-    if start_date:
-        start_date = parse_datetime(start_date)
-    else:
-        start_date = parse_datetime(-7 * 3600 * 24)
-    if end_date:
-        end_date = parse_datetime(end_date)
-    else:
-        end_date = parse_datetime(0)
+    start_date = parse_datetime(start_date if start_date is not None
+                                else -30 * 3600 * 24)
+    end_date = parse_datetime(end_date if end_date is not None else 0)
 
     if start_date > end_date:
         raise ValueError('start_date must be equal to or less than end_date')
