@@ -108,6 +108,15 @@ def test_parse_date():
     assert delta == timedelta(days=5)
 
 
+def test_parse_datetime():
+    dt = parse_datetime('2018-01-13 01:18:12')
+    assert dt.strftime('%Y-%m-%d %H:%M:%S') == '2018-01-13 01:18:12'
+
+    at = datetime.now()
+    delta = parse_datetime(3600, at) - parse_datetime(1200, at)
+    assert delta == timedelta(seconds=2400)
+
+
 def test_parse_decimal():
     assert parse_decimal('1.1') == 1.1
     assert parse_decimal(1) == 1.0

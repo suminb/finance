@@ -19,7 +19,8 @@ from finance.models import (
 from finance.providers import _8Percent, Dart, Kofia, Miraeasset, Yahoo
 from finance.utils import (
     extract_numbers, get_dart_code, insert_asset, insert_record,
-    insert_stock_record, parse_date, parse_stock_records, serialize_datetime)
+    insert_stock_record, parse_date, parse_datetime, parse_stock_records,
+    serialize_datetime)
 
 
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -290,9 +291,13 @@ def fetch_stock_values(stock_code, start_date, end_date):
     """Fetches daily stock values from Yahoo Finance."""
 
     if start_date:
-        start_date = parse_date(start_date)
+        start_date = parse_datetime(start_date)
+    else:
+        start_date = parse_datetime(-7 * 3600 * 24)
     if end_date:
-        end_date = parse_date(end_date)
+        end_date = parse_datetime(end_date)
+    else:
+        end_date = parse_datetime(0)
 
     if start_date > end_date:
         raise ValueError('start_date must be equal to or less than end_date')

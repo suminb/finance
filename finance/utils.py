@@ -67,7 +67,7 @@ def load_stock_codes(fin):
 
 
 def parse_date(date, format='%Y-%m-%d'):
-    """Make a datetime object from a string.
+    """Makes a date object from a string.
 
     :type date: str or int
     :rtype: datetime.date
@@ -76,6 +76,19 @@ def parse_date(date, format='%Y-%m-%d'):
         return datetime.now().date() + timedelta(days=date)
     else:
         return datetime.strptime(date, format)
+
+
+def parse_datetime(dt, at=datetime.now(), format='%Y-%m-%d %H:%M:%S'):
+    """Makes a datetime object from a string.
+
+    :param dt: Datetime
+    :param at: Time at which the relative time is evaluated
+    :param format: Datetime string format
+    """
+    if isinstance(dt, int):
+        return at + timedelta(seconds=dt)
+    else:
+        return datetime.strptime(dt, format)
 
 
 def parse_decimal(v, type=float):
