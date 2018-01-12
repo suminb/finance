@@ -1,5 +1,5 @@
 import csv
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 
 from flask import request
 from logbook import Logger
@@ -34,6 +34,16 @@ def date_range(start, end, step=1):
     delta = end - start
     for i in range(0, delta.days):
         yield start + timedelta(days=i)
+
+
+def date_to_datetime(date, end_of_day=False):
+    """Converts date to datetime.
+
+    :param end_of_day: Indicates whether we want the datetime of the end of the
+                       day.
+    """
+    return datetime.combine(
+        date, time(23, 59, 59) if end_of_day else time(0, 0, 0))
 
 
 def extract_numbers(value, type=str):

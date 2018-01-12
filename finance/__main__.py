@@ -18,9 +18,9 @@ from finance.models import (
     Granularity, Portfolio, Record, Transaction, User)
 from finance.providers import _8Percent, Dart, Kofia, Miraeasset, Yahoo
 from finance.utils import (
-    extract_numbers, get_dart_code, insert_asset, insert_record,
-    insert_stock_record, parse_date, parse_datetime, parse_stock_records,
-    serialize_datetime)
+    date_to_datetime, extract_numbers, get_dart_code, insert_asset,
+    insert_record, insert_stock_record, parse_date, parse_datetime,
+    parse_stock_records, serialize_datetime)
 
 
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -290,9 +290,10 @@ def fetch_8percent(filename):
 def fetch_stock_values(stock_code, start_date, end_date):
     """Fetches daily stock values from Yahoo Finance."""
 
-    start_date = parse_datetime(start_date if start_date is not None
-                                else -30 * 3600 * 24)
-    end_date = parse_datetime(end_date if end_date is not None else 0)
+    start_date = date_to_datetime(
+        parse_date(start_date if start_date is not None else -30 * 3600 * 24))
+    end_date = date_to_datetime(
+        parse_date(end_date if end_date is not None else 0))
 
     if start_date > end_date:
         raise ValueError('start_date must be equal to or less than end_date')
