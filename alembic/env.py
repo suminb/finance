@@ -16,9 +16,6 @@ config = context.config
 # This line sets up loggers basically.
 fileConfig(config.config_file_name)
 
-# Loads database URL from an environment variable
-config.set_main_option('sqlalchemy.url', os.environ['DB_URL'])
-
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
@@ -58,6 +55,12 @@ def run_migrations_online():
     and associate a connection with the context.
 
     """
+    # Loads database URL from an environment variable
+    if bool(config.get_main_option('pytest.istest')):
+        config.set_main_option('sqlalchemy.url', os.environ['TEST_DB_URL'])
+    else:
+        config.set_main_option('sqlalchemy.url', os.environ['DB_URL'])
+
     connectable = engine_from_config(
         config.get_section(config.config_ini_section),
         prefix='sqlalchemy.',
