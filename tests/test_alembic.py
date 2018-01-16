@@ -11,10 +11,17 @@ def config():
     # alembic/env:run_migration_online()
     config.set_main_option('pytest.istest', 'true')
 
-def test_headquarters_upgrade(config):
+    return config
+
+
+def test_upgrade(config, db):
+    # NOTE: At this point, all the tables should be populated by the `db`
+    # fixture. So we drop all tables first.
+    db.drop_all()
+    db.engine.execute('DROP TABLE IF EXISTS alembic_version')
+
     command.upgrade(config, 'head')
-
-
-def test_headquarters_downgrade(config):
     command.downgrade(config, 'base')
-    command.upgrade(config, 'head')
+
+    # Finally we need to drop `alembic_version`
+    db.engine.execute('DROP TABLE alembic_version')
