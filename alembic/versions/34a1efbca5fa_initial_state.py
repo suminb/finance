@@ -8,6 +8,8 @@ Create Date: 2018-01-13 01:18:55.838885
 from alembic import op
 import sqlalchemy as sa
 
+from finance.models import JsonType
+
 
 # revision identifiers, used by Alembic.
 revision = '34a1efbca5fa'
@@ -27,7 +29,7 @@ def upgrade():
         sa.Column('code', sa.String(), nullable=True),
         sa.Column('isin', sa.String(), nullable=True),
         sa.Column('description', sa.Text(), nullable=True),
-        sa.Column('data', sa.Variant(), nullable=True),
+        sa.Column('data', JsonType, nullable=True),
         sa.PrimaryKeyConstraint('id')
     )
     op.create_table(
@@ -57,7 +59,7 @@ def upgrade():
         sa.Column('given_name', sa.String(), nullable=True),
         sa.Column('family_name', sa.String(), nullable=True),
         sa.Column('email', sa.String(), nullable=True),
-        sa.Column('data', sa.Variant(), nullable=True),
+        sa.Column('data', JsonType, nullable=True),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('email')
     )
@@ -100,7 +102,7 @@ def upgrade():
         sa.Column('name', sa.String(), nullable=True),
         sa.Column('number', sa.String(), nullable=True),
         sa.Column('description', sa.Text(), nullable=True),
-        sa.Column('data', sa.Variant(), nullable=True),
+        sa.Column('data', JsonType, nullable=True),
         sa.ForeignKeyConstraint(['portfolio_id'], ['portfolio.id'], ),
         sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
         sa.PrimaryKeyConstraint('id')
