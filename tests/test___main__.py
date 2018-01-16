@@ -12,6 +12,11 @@ from finance.models import StockAsset
 from finance.utils import load_stock_codes
 
 
+@pytest.fixture(autouse=True)
+def monkeypatch_db_url(monkeypatch):
+    monkeypatch.setitem(os.environ, 'DB_URL', os.environ['TEST_DB_URL'])
+
+
 def test_drop_all():
     runner = CliRunner()
     result = runner.invoke(drop_all)
