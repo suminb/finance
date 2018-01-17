@@ -148,7 +148,7 @@ class AssetValue(CRUDMixin, db.Model):
     base_asset = db.relationship('Asset', uselist=False,
                                  foreign_keys=[base_asset_id])
     evaluated_at = db.Column(db.DateTime(timezone=False))
-    source = db.Column(db.Enum('yahoo', 'google', name='source'))
+    source = db.Column(db.Enum('yahoo', 'google', name='asset_value_source'))
     granularity = db.Column(db.Enum('1sec', '1min', '5min', '1hour', '1day',
                                     '1week', '1month', '1year',
                                     name='granularity'))
