@@ -34,6 +34,7 @@ def create_app(name=__name__, config={},
                 template_folder=template_folder)
     app.secret_key = os.environ.get('SECRET', 'secret')
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DB_URL']
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['DEBUG'] = bool(os.environ.get('DEBUG', False))
 
     app.config.update(config)
