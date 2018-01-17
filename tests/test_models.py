@@ -322,6 +322,26 @@ def test_granularity_enum():
         Granularity.nano_sec
 
 
+def test_valid_granularity():
+    values = (
+        Granularity.sec,
+        Granularity.min,
+        Granularity.five_min,
+        Granularity.hour,
+        Granularity.day,
+        Granularity.week,
+        Granularity.month,
+        Granularity.year,
+    )
+    for value in values:
+        assert Granularity.is_valid(value)
+
+
+def test_invalid_granularity():
+    assert not Granularity.is_valid(None)
+    assert not Granularity.is_valid('invalid')
+
+
 def test_transaction_state_enum():
     assert TransactionState.initiated
     assert TransactionState.closed

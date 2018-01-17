@@ -128,8 +128,11 @@ class Granularity(object):
     month = '1month'
     year = '1year'
 
-    def is_valid(self, value):
-        raise NotImplementedError
+    @classmethod
+    def is_valid(cls, value):
+        return value in (
+            cls.sec, cls.min, cls.five_min, cls.hour, cls.day, cls.week,
+            cls.month, cls.year)
 
 
 class AssetValue(CRUDMixin, db.Model):
