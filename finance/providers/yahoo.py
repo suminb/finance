@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 
 import requests
@@ -98,6 +99,7 @@ class Yahoo(AssetValueProvider):
             raise ValueError(error['description'])
 
         timestamps = parsed['chart']['result'][0]['timestamp']
+        timestamps = [datetime.fromtimestamp(int(t)) for t in timestamps]
         quote = parsed['chart']['result'][0]['indicators']['quote'][0]
 
         keys = ['open', 'high', 'low', 'close', 'volume']
