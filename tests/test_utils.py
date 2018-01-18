@@ -57,6 +57,15 @@ def test_date_range_exceptions(start, end):
         [x for x in date_range(start, end)]
 
 
+def test_date_to_datetime():
+    date = parse_date('2018-01-13')
+    dt_beginning = parse_datetime('2018-01-13 00:00:00')
+    dt_end = parse_datetime('2018-01-13 23:59:59')
+
+    assert date_to_datetime(date) == dt_beginning
+    assert date_to_datetime(date, True) == dt_end
+
+
 def test_extract_numbers():
     assert '160' == extract_numbers('160')
     assert '1694' == extract_numbers('1,694')
@@ -106,6 +115,15 @@ def test_parse_date():
 
     delta = parse_date(7) - parse_date(2)
     assert delta == timedelta(days=5)
+
+
+def test_parse_datetime():
+    dt = parse_datetime('2018-01-13 01:18:12')
+    assert dt.strftime('%Y-%m-%d %H:%M:%S') == '2018-01-13 01:18:12'
+
+    at = datetime.now()
+    delta = parse_datetime(3600, at) - parse_datetime(1200, at)
+    assert delta == timedelta(seconds=2400)
 
 
 def test_parse_decimal():

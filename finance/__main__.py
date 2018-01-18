@@ -18,8 +18,9 @@ from finance.models import (
     Granularity, Portfolio, Record, Transaction, User)
 from finance.providers import _8Percent, Dart, Kofia, Miraeasset, Yahoo
 from finance.utils import (
-    extract_numbers, get_dart_code, insert_asset, insert_record,
-    insert_stock_record, parse_date, parse_stock_records, serialize_datetime)
+    date_to_datetime, extract_numbers, get_dart_code, insert_asset,
+    insert_record, insert_stock_record, parse_date, parse_datetime,
+    parse_stock_records, serialize_datetime)
 
 
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -289,10 +290,10 @@ def fetch_8percent(filename):
 def fetch_stock_values(stock_code, start_date, end_date):
     """Fetches daily stock values from Yahoo Finance."""
 
-    if start_date:
-        start_date = parse_date(start_date)
-    if end_date:
-        end_date = parse_date(end_date)
+    start_date = date_to_datetime(
+        parse_date(start_date if start_date is not None else -30 * 3600 * 24))
+    end_date = date_to_datetime(
+        parse_date(end_date if end_date is not None else 0))
 
     if start_date > end_date:
         raise ValueError('start_date must be equal to or less than end_date')
@@ -304,7 +305,9 @@ def fetch_stock_values(stock_code, start_date, end_date):
     for row in rows:
         # TODO: Write a function to handle this for generic cases
         # TODO: Convert the timestamp to an ISO format
-        print(', '.join([str(c) for c in row]))
+        # NOTE: The last column is data source. Not sure if this is an elegant
+        # way to handle this.
+        print(', '.join([str(c) for c in row] + ['yahoo']))
 
 
 # TODO: Load data from stdin
@@ -387,7 +390,8 @@ def import_fund(code, from_date, to_date):
                 AssetValue.create(
                     asset=asset, base_asset=base_asset,
                     evaluated_at=date, close=unit_price,
-                    granularity=Granularity.day)
+                    granularity=Granularity.day,
+                    source='kofia')
             except IntegrityError:
                 log.warn('Identical record has been found for {}. Skipping.',
                          date)

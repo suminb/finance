@@ -129,11 +129,12 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_table('record')
-    op.drop_table('account')
-    op.drop_table('portfolio')
-    op.drop_table('asset_value')
-    op.drop_table('user')
-    op.drop_table('transaction')
-    op.drop_table('dart_report')
-    op.drop_table('asset')
+    table_names = ('record', 'account', 'portfolio', 'asset_value', 'user',
+                   'transaction', 'dart_report', 'asset')
+    for table_name in table_names:
+        op.drop_table(table_name)
+
+    type_names = ('account_type', 'asset_type', 'granularity', 'record_type',
+                  'transaction_state')
+    for type_name in type_names:
+        op.execute('DROP TYPE {0}'.format(type_name))

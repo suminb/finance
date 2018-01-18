@@ -1,5 +1,5 @@
 import csv
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 
 from flask import request
 from logbook import Logger
@@ -36,6 +36,16 @@ def date_range(start, end, step=1):
         yield start + timedelta(days=i)
 
 
+def date_to_datetime(date, end_of_day=False):
+    """Converts date to datetime.
+
+    :param end_of_day: Indicates whether we want the datetime of the end of the
+                       day.
+    """
+    return datetime.combine(
+        date, time(23, 59, 59) if end_of_day else time(0, 0, 0))
+
+
 def extract_numbers(value, type=str):
     """Extracts numbers only from a string."""
     def extract(vs):
@@ -67,7 +77,7 @@ def load_stock_codes(fin):
 
 
 def parse_date(date, format='%Y-%m-%d'):
-    """Make a datetime object from a string.
+    """Makes a date object from a string.
 
     :type date: str or int
     :rtype: datetime.date
@@ -76,6 +86,19 @@ def parse_date(date, format='%Y-%m-%d'):
         return datetime.now().date() + timedelta(days=date)
     else:
         return datetime.strptime(date, format)
+
+
+def parse_datetime(dt, at=datetime.now(), format='%Y-%m-%d %H:%M:%S'):
+    """Makes a datetime object from a string.
+
+    :param dt: Datetime
+    :param at: Time at which the relative time is evaluated
+    :param format: Datetime string format
+    """
+    if isinstance(dt, int):
+        return at + timedelta(seconds=dt)
+    else:
+        return datetime.strptime(dt, format)
 
 
 def parse_decimal(v, type=float):
