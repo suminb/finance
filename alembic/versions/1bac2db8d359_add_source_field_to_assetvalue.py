@@ -19,7 +19,7 @@ depends_on = None
 
 def upgrade():
     # If we don't do this, Alembic won't create the type automatically
-    enum_type = ENUM('yahoo', 'google', name='asset_value_source')
+    enum_type = ENUM('yahoo', 'google', 'kofia', name='asset_value_source')
     enum_type.create(op.get_bind())
 
     op.add_column(
