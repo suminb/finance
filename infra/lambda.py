@@ -1,14 +1,13 @@
-import math
 import os
 
 from logbook import Logger
-from pandas_datareader import data
 from sqlalchemy.exc import IntegrityError
 
 from finance import create_app
 from finance.exceptions import AssetNotFoundException
 from finance.models import Asset, AssetType, AssetValue, db, Granularity
-from finance.utils import parse_date
+from finance.providers import Yahoo
+from finance.utils import date_to_datetime, parse_date
 
 
 log = Logger('finance')
@@ -36,24 +35,19 @@ def fetch_asset_values(code):
                  code)
         asset = Asset.create(name=code, code=code, type=AssetType.stock)
 
-    df = data.DataReader(code, 'yahoo', parse_date(-30), parse_date(-1))
-    for record in df.to_records():
-        date, open_, high, low, close_, adj_close, volume = record
+    start_date = date_to_datetime(parse_date(-7))
+    end_date = date_to_datetime(parse_date(0))
 
-        if any([math.isnan(x) for x in
-                [open_, high, low, close_, adj_close, volume]]):
-            log.warn('Some value is NaN. Skipping this record.')
-            continue
+    provider = Yahoo()
+    rows = provider.asset_values(
+        code, start_date, end_date, Granularity.min)
 
+    for date, open_, high, low, close_, volume in rows:
         try:
-            # NOTE: Without casting `volume` into an integer type, it will
-            # produce an error of
-            # `psycopg2.ProgrammingError: can't adapt type 'numpy.int64'`
-            # Need to figure out why.
             asset_value = AssetValue.create(
-                evaluated_at=date, granularity=Granularity.day,
+                evaluated_at=date, granularity=Granularity.min,
                 asset=asset, open=open_, high=high, low=low, close=close_,
-                volume=int(volume))
+                volume=int(volume), source='yahoo')
             log.info('Record has been create: {0}', asset_value)
         except IntegrityError:
             log.warn('AssetValue for {0} on {1} already exist', code, date)
