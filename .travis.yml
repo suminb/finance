@@ -18,6 +18,10 @@ env:
 
 jobs:
   include:
+    - stage: type checking
+      script:
+        - pip install mypy
+        - mypy --ignore-missing-imports finance
     - stage: build
       install:
         - pip install -r requirements.txt
