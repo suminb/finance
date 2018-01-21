@@ -4,7 +4,7 @@ import json
 import requests
 
 from finance.models import Granularity
-from finance.providers import AssetValueProvider
+from finance.providers.provider import AssetValueProvider
 
 
 class Yahoo(AssetValueProvider):

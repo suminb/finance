@@ -14,6 +14,8 @@ from finance.exceptions import (
     InvalidTargetAssetException)
 from finance.utils import date_range
 
+from typing import Any
+
 
 db = SQLAlchemy()
 JsonType = db.String().with_variant(JSON(), 'postgresql')
@@ -41,7 +43,7 @@ class CRUDMixin(object):
     """Copied from https://realpython.com/blog/python/python-web-applications-with-flask-part-ii/
     """  # noqa
 
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {'extend_existing': True}  # type: Any
 
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=False,
                    default=uuid64.issue())
@@ -93,7 +95,7 @@ class CRUDMixin(object):
             yield column.name, str(getattr(self, column.name))
 
 
-class User(CRUDMixin, UserMixin, db.Model):
+class User(CRUDMixin, UserMixin, db.Model):  # type: ignore
 
     given_name = db.Column(db.String)
     family_name = db.Column(db.String)
@@ -135,13 +137,13 @@ class Granularity(object):
             cls.month, cls.year)
 
 
-class AssetValue(CRUDMixin, db.Model):
+class AssetValue(CRUDMixin, db.Model):  # type: ignore
     """Represents a unit price of an asset at a particular point of time. The
     granularity of the 'particular point of time' may range from one second
     to a year. See `Granularity` for more details."""
 
     __table_args__ = (db.UniqueConstraint(
-        'asset_id', 'evaluated_at', 'granularity'), {})
+        'asset_id', 'evaluated_at', 'granularity'), {})  # type: Any
 
     asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
     base_asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
@@ -181,7 +183,7 @@ asset_types = (
     AssetType.security, AssetType.fund, AssetType.commodity)
 
 
-class Asset(CRUDMixin, db.Model):
+class Asset(CRUDMixin, db.Model):  # type: ignore
     """Represents an asset."""
 
     __mapper_args__ = {
@@ -329,7 +331,7 @@ class StockAsset(Asset):
     eps = index_property('data', 'eps')
 
 
-class Account(CRUDMixin, db.Model):
+class Account(CRUDMixin, db.Model):  # type: ignore
     """Represents an account. An account may contain multiple records based
     on different assets. For example, a single bank account may have a balance
     in different foreign currencies."""
@@ -433,7 +435,7 @@ class Account(CRUDMixin, db.Model):
         return net_asset_value
 
 
-class Portfolio(CRUDMixin, db.Model):
+class Portfolio(CRUDMixin, db.Model):  # type: ignore
     """A collection of accounts (= a collection of assets)."""
     __table_args__ = (
         db.ForeignKeyConstraint(['base_asset_id'], ['asset.id']),
@@ -507,7 +509,7 @@ transaction_states = (
     TransactionState.pending, TransactionState.invalid)
 
 
-class Transaction(CRUDMixin, db.Model):
+class Transaction(CRUDMixin, db.Model):  # type: ignore
     """A transaction consists of multiple records."""
     initiated_at = db.Column(db.DateTime(timezone=False))
     closed_at = db.Column(db.DateTime(timezone=False))
@@ -555,12 +557,12 @@ record_types = (RecordType.deposit, RecordType.withdraw,
                 RecordType.balance_adjustment)
 
 
-class Record(CRUDMixin, db.Model):
+class Record(CRUDMixin, db.Model):  # type: ignore
     """A financial transaction consists of one or more records."""
 
     # NOTE: Is this okay to do this?
     __table_args__ = (db.UniqueConstraint(
-        'account_id', 'asset_id', 'created_at', 'quantity'), {})
+        'account_id', 'asset_id', 'created_at', 'quantity'), {})  # type: Any
 
     account_id = db.Column(db.BigInteger, db.ForeignKey('account.id'))
     asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
@@ -582,7 +584,7 @@ class Record(CRUDMixin, db.Model):
         super(self.__class__, self).__init__(*args, **kwargs)
 
 
-class DartReport(CRUDMixin, db.Model):
+class DartReport(CRUDMixin, db.Model):  # type: ignore
     """NOTE: We need a more generic name for this..."""
 
     registered_at = db.Column(db.DateTime(timezone=False))

@@ -2,7 +2,7 @@ sudo: false
 
 language: python
 python:
-  - "3.5"
+  - "3.6"
 
 addons:
   postgresql: "9.4"
@@ -16,17 +16,21 @@ env:
     - TEST_DB_URL="postgres:///finance"
     - PYTHONPATH=.
 
-install:
-  - pip install -r requirements.txt
-  - pip install -r tests/requirements.txt
-  - pip install -e .
-
-before_script:
-  - psql -c 'CREATE DATABASE finance;' -U postgres
-  - finance create_all
-
-script:
-  - py.test -v tests --cov finance --cov-report term-missing
-
-after_success:
-  - coveralls
+jobs:
+  include:
+    - stage: type checking
+      script:
+        - pip install mypy
+        - mypy --ignore-missing-imports finance
+    - stage: build
+      install:
+        - pip install -r requirements.txt
+        - pip install -r tests/requirements.txt
+        - pip install -e .
+      before_script:
+        - psql -c 'CREATE DATABASE finance;' -U postgres
+        - finance create_all
+      script:
+        - py.test -v tests --cov finance --cov-report term-missing
+      after_success:
+        - coveralls
