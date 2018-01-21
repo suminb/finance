@@ -16,17 +16,17 @@ env:
     - TEST_DB_URL="postgres:///finance"
     - PYTHONPATH=.
 
-install:
-  - pip install -r requirements.txt
-  - pip install -r tests/requirements.txt
-  - pip install -e .
-
-before_script:
-  - psql -c 'CREATE DATABASE finance;' -U postgres
-  - finance create_all
-
-script:
-  - py.test -v tests --cov finance --cov-report term-missing
-
-after_success:
-  - coveralls
+jobs:
+  include:
+    - stage: build
+      install:
+        - pip install -r requirements.txt
+        - pip install -r tests/requirements.txt
+        - pip install -e .
+      before_script:
+        - psql -c 'CREATE DATABASE finance;' -U postgres
+        - finance create_all
+      script:
+        - py.test -v tests --cov finance --cov-report term-missing
+      after_success:
+        - coveralls
