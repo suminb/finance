@@ -1,11 +1,6 @@
 from datetime import datetime, timedelta
 import json
-try:
-    # Python 3
-    from urllib.parse import quote_plus
-except:
-    # Python 2
-    from urllib import quote_plus
+from urllib.parse import quote_plus
 
 import requests
 
