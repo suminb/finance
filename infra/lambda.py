@@ -1,7 +1,7 @@
 import os
 
 from logbook import Logger
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
 from finance import create_app
 from finance.exceptions import AssetNotFoundException
@@ -35,30 +35,39 @@ def fetch_asset_values(code):
                  code)
         asset = Asset.create(name=code, code=code, type=AssetType.stock)
 
-    start_date = date_to_datetime(parse_date(-7))
-    end_date = date_to_datetime(parse_date(0))
+    start_date = date_to_datetime(parse_date(-3))
+    end_date = date_to_datetime(parse_date(-2))
 
     provider = Yahoo()
     rows = provider.asset_values(
         code, start_date, end_date, Granularity.min)
 
     for date, open_, high, low, close_, volume in rows:
-        insert_asset_value(asset, date, open_, high, low, close_, volume)
+        insert_asset_value(
+            asset, date, Granularity.min, open_, high, low, close_, volume)
 
-    log.info('Asset values for {0} have been imported', code)
-
-
-def insert_asset_value(asset, date, open_, high, low, close_, volume):
     try:
+        db.session.commit()
+    except (IntegrityError, InvalidRequestError):
+        log.exception('Something went wrong')
+        db.session.rollback()
+    else:
+        log.info('Asset values for {0} have been imported', code)
+
+
+def insert_asset_value(asset, date, granularity, open_, high, low, close_,
+                       volume):
+    # FIXME: This kind of approach may not be save in multithreading
+    # environments
+    if AssetValue.exists(
+            asset_id=asset.id, evaluated_at=date, granularity=granularity):
+        log.warn('AssetValue for {0} on {1} already exist', asset.code, date)
+    else:
         asset_value = AssetValue.create(
             evaluated_at=date, granularity=Granularity.min,
             asset=asset, open=open_, high=high, low=low, close=close_,
-            volume=int(volume), source='yahoo')
+            volume=int(volume), source='yahoo', commit=False)
         log.info('Record has been create: {0}', asset_value)
-    except IntegrityError:
-        log.warn('AssetValue for {0} on {1} already exist', asset.code, date)
-        db.session.rollback()
-
 
 # TODO: Have a list of stock symbols to be fetched
 
