@@ -35,8 +35,8 @@ def fetch_asset_values(code):
                  code)
         asset = Asset.create(name=code, code=code, type=AssetType.stock)
 
-    start_date = date_to_datetime(parse_date(-3))
-    end_date = date_to_datetime(parse_date(-2))
+    start_date = date_to_datetime(parse_date(-5))
+    end_date = date_to_datetime(parse_date(0))
 
     provider = Yahoo()
     rows = provider.asset_values(
