@@ -43,17 +43,21 @@ def fetch_asset_values(code):
         code, start_date, end_date, Granularity.min)
 
     for date, open_, high, low, close_, volume in rows:
-        try:
-            asset_value = AssetValue.create(
-                evaluated_at=date, granularity=Granularity.min,
-                asset=asset, open=open_, high=high, low=low, close=close_,
-                volume=int(volume), source='yahoo')
-            log.info('Record has been create: {0}', asset_value)
-        except IntegrityError:
-            log.warn('AssetValue for {0} on {1} already exist', code, date)
-            db.session.rollback()
+        insert_asset_value(asset, date, open_, high, low, close_, volume)
 
     log.info('Asset values for {0} have been imported', code)
+
+
+def insert_asset_value(asset, date, open_, high, low, close_, volume):
+    try:
+        asset_value = AssetValue.create(
+            evaluated_at=date, granularity=Granularity.min,
+            asset=asset, open=open_, high=high, low=low, close=close_,
+            volume=int(volume), source='yahoo')
+        log.info('Record has been create: {0}', asset_value)
+    except IntegrityError:
+        log.warn('AssetValue for {0} on {1} already exist', asset.code, date)
+        db.session.rollback()
 
 
 # TODO: Have a list of stock symbols to be fetched
