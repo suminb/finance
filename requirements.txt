@@ -15,3 +15,4 @@ xmltodict>=0.10.1
 beautifulsoup4>=4.4.1
 typedecorator>=0.0.4
 alembic>=0.9.7
+boto3>=1.5.26

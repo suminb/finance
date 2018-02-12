@@ -4,6 +4,7 @@ import os
 import re
 import sys
 
+import boto3
 import click
 from click.testing import CliRunner
 from logbook import Logger
@@ -21,6 +22,10 @@ from finance.utils import (
     date_to_datetime, extract_numbers, get_dart_code, insert_asset,
     insert_record, insert_stock_record, parse_date, parse_datetime,
     parse_stock_records, serialize_datetime)
+
+from typing import TYPE_CHECKING  # noqa
+if TYPE_CHECKING:
+    from datetime import datetime  # noqa
 
 
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -430,6 +435,37 @@ def import_stock_records(filename):
         with open(filename) as fin:
             for parsed in parse_stock_records(fin):
                 insert_stock_record(parsed, account_stock, account_bank)
+
+
+# TODO: Move this elsewhere
+def make_request_import_stock_values_message(code, start_time, end_time):
+    # type: (str, datetime, datetime) -> dict
+    return {
+        'version': 0,
+        'code': code,
+        'start_time': int(start_time.timestamp()),
+        'end_time': int(end_time.timestamp()),
+    }
+
+
+@cli.command()
+@click.argument('code')
+def request_import_stock_values(code):
+    """Enqueue a request to import stock values."""
+    region = os.environ['SQS_REGION']
+    url = os.environ['REQUEST_IMPORT_STOCK_VALUES_QUEUE_URL']
+    start_time = date_to_datetime(parse_date(-3))
+    end_time = date_to_datetime(parse_date(0))
+    message = make_request_import_stock_values_message(
+        code, start_time, end_time)
+    client = boto3.client('sqs', region_name=region)
+    resp = client.send_message(**{
+        'QueueUrl': url,
+        'MessageBody': json.dumps(message),
+    })
+
+    if resp['ResponseMetadata']['HTTPStatusCode'] != 200:
+        log.error('Something went wrong: {0}', resp)
 
 
 if __name__ == '__main__':
