@@ -69,6 +69,13 @@ resource "aws_cloudwatch_event_rule" "event_rule" {
   schedule_expression = "cron(0 * * * ? *)"
 }
 
+resource "aws_sqs_queue" "request_import_stock_values" {
+  name                      = "finance-request-import-stock-values"
+  delay_seconds             = 0
+  max_message_size          = 262144
+  message_retention_seconds = 345600
+}
+
 # NOTE: Could we launch a Lambda to install packages via pip and zip them up?
 # TODO: Make a process to package the code and upload to S3
 
