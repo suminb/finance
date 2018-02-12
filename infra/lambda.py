@@ -59,7 +59,7 @@ def fetch_asset_values(code, start_time, end_time):
 
 def insert_asset_value(asset, date, granularity, open_, high, low, close_,
                        volume):
-    # FIXME: This kind of approach may not be save in multithreading
+    # FIXME: This kind of approach may not be safe in multithreading
     # environments
     if AssetValue.exists(
             asset_id=asset.id, evaluated_at=date, granularity=granularity):
