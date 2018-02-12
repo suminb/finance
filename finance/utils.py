@@ -76,6 +76,16 @@ def load_stock_codes(fin):
             yield code, name
 
 
+def make_request_import_stock_values_message(code, start_time, end_time):
+    # type: (str, datetime, datetime) -> dict
+    return {
+        'version': 0,
+        'code': code,
+        'start_time': int(start_time.timestamp()),
+        'end_time': int(end_time.timestamp()),
+    }
+
+
 def parse_date(date, format='%Y-%m-%d'):
     """Makes a date object from a string.
 
