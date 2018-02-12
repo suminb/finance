@@ -21,7 +21,7 @@ log = Logger('finance')
 
 
 def request_import_stock_values_handler(event, context):
-    codes = ['AMD', 'AMZN', 'BRK.A', 'BRK.B', 'ESRT', 'NVDA', 'SBUX', 'SPY']
+    codes = ['AMD', 'AMZN', 'BRK-A', 'BRK-B', 'ESRT', 'NVDA', 'SBUX', 'SPY']
     start_time = date_to_datetime(parse_date(-3))
     end_time = date_to_datetime(parse_date(0))
 
