@@ -60,13 +60,15 @@ resource "aws_cloudwatch_event_target" "event_target_lambda" {
   target_id = "${aws_lambda_function.fetch_asset_values_lambda.id}"
   rule      = "${aws_cloudwatch_event_rule.event_rule.name}"
   arn       = "${aws_lambda_function.fetch_asset_values_lambda.arn}"
+  input     = "{}"
 }
 
 resource "aws_cloudwatch_event_rule" "event_rule" {
   name                = "event_rule"
   description         = "Periodic event"
-  schedule_expression = "cron(* * * * ? *)"
+  schedule_expression = "cron(0 * * * ? *)"
 }
 
 # NOTE: Could we launch a Lambda to install packages via pip and zip them up?
 # TODO: Make a process to package the code and upload to S3
+
