@@ -6,7 +6,6 @@ import os
 import boto3
 from flask import request
 from logbook import Logger
-from typedecorator import typed
 
 # NOTE: finance.models should not be imported here in order to avoid circular
 # depencencies
@@ -223,7 +222,6 @@ def request_import_stock_values(code, start_time, end_time):
         log.error('Something went wrong: {0}', resp)
 
 
-@typed
 def insert_stock_record(data: dict, stock_account: object,
                         bank_account: object):
     """
@@ -246,7 +244,6 @@ def insert_stock_record(data: dict, stock_account: object,
         return None
 
 
-@typed
 def insert_stock_trading_record(data: dict, stock_account: object):
     """Inserts a stock trading (i.e., buying or selling stocks) records."""
     from finance.models import Asset, Record
@@ -275,7 +272,6 @@ def insert_stock_trading_record(data: dict, stock_account: object):
     )
 
 
-@typed
 def insert_stock_transfer_record(data: dict, bank_account: object):
     """Inserts a transfer record between a bank account and a stock account.
     """
