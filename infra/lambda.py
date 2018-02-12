@@ -18,7 +18,7 @@ log = Logger('finance')
 
 # TODO: Write logs to CloudWatch
 
-def handler(event, context):
+def fetch_asset_values_handler(event, context):
     config = {
         'SQLALCHEMY_DATABASE_URI': os.environ['DB_URL']
     }
@@ -87,4 +87,4 @@ def poll_import_stock_values_requests():
 
 
 if __name__ == '__main__':
-    handler({}, None)
+    fetch_asset_values_handler({}, None)

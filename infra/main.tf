@@ -53,7 +53,7 @@ resource "aws_lambda_function" "fetch_asset_values_lambda" {
   s3_key           = "${var.lambda_filename}"
   function_name    = "fetch_asset_values"
   role             = "${data.aws_iam_role.iam_for_lambda.arn}"
-  handler          = "lambda.handler"
+  handler          = "lambda.fetch_asset_values_handler"
   source_code_hash = "${var.lambda_filename}"
   runtime          = "python3.6"
   timeout          = 180
