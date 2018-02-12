@@ -1,6 +1,9 @@
 import csv
 from datetime import datetime, time, timedelta
+import json
+import os
 
+import boto3
 from flask import request
 from logbook import Logger
 from typedecorator import typed
@@ -201,6 +204,23 @@ def parse_stock_records(stream):
             'channel': channel,
             'final_amount': parse_int(final_amount),
         }
+
+
+def request_import_stock_values(code, start_time, end_time):
+    message = make_request_import_stock_values_message(
+        code, start_time, end_time)
+
+    region = os.environ['SQS_REGION']
+    url = os.environ['REQUEST_IMPORT_STOCK_VALUES_QUEUE_URL']
+
+    client = boto3.client('sqs', region_name=region)
+    resp = client.send_message(**{
+        'QueueUrl': url,
+        'MessageBody': json.dumps(message),
+    })
+
+    if resp['ResponseMetadata']['HTTPStatusCode'] != 200:
+        log.error('Something went wrong: {0}', resp)
 
 
 @typed

@@ -22,6 +22,7 @@ from finance.utils import (
     date_to_datetime, extract_numbers, get_dart_code, insert_asset,
     insert_record, insert_stock_record,
     make_request_import_stock_values_message, parse_date, parse_stock_records,
+    request_import_stock_values as request_import_stock_values_,
     serialize_datetime)
 
 
@@ -438,20 +439,10 @@ def import_stock_records(filename):
 @click.argument('code')
 def request_import_stock_values(code):
     """Enqueue a request to import stock values."""
-    region = os.environ['SQS_REGION']
-    url = os.environ['REQUEST_IMPORT_STOCK_VALUES_QUEUE_URL']
     start_time = date_to_datetime(parse_date(-3))
     end_time = date_to_datetime(parse_date(0))
-    message = make_request_import_stock_values_message(
-        code, start_time, end_time)
-    client = boto3.client('sqs', region_name=region)
-    resp = client.send_message(**{
-        'QueueUrl': url,
-        'MessageBody': json.dumps(message),
-    })
 
-    if resp['ResponseMetadata']['HTTPStatusCode'] != 200:
-        log.error('Something went wrong: {0}', resp)
+    request_import_stock_values_(code, start_time, end_time)
 
 
 if __name__ == '__main__':

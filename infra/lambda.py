@@ -10,13 +10,24 @@ from finance import create_app
 from finance.exceptions import AssetNotFoundException
 from finance.models import Asset, AssetType, AssetValue, db, Granularity
 from finance.providers import Yahoo
-from finance.utils import date_to_datetime, parse_date
+from finance.utils import (
+    date_to_datetime, parse_date, request_import_stock_values)
 
 
 log = Logger('finance')
 
 
 # TODO: Write logs to CloudWatch
+
+
+def request_import_stock_values_handler(event, context):
+    codes = ['AMD', 'AMZN', 'BRK.A', 'BRK.B', 'ESRT', 'NVDA', 'SBUX', 'SPY']
+    start_time = date_to_datetime(parse_date(-3))
+    end_time = date_to_datetime(parse_date(0))
+
+    for code in codes:
+        request_import_stock_values(code, start_time, end_time)
+
 
 def fetch_asset_values_handler(event, context):
     config = {
@@ -87,4 +98,5 @@ def poll_import_stock_values_requests():
 
 
 if __name__ == '__main__':
-    fetch_asset_values_handler({}, None)
+    # fetch_asset_values_handler({}, None)
+    request_import_stock_values_handler({}, None)
