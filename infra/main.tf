@@ -51,7 +51,7 @@ resource "aws_lambda_function" "fetch_asset_values_lambda" {
   handler          = "lambda.handler"
   source_code_hash = "${var.lambda_filename}"
   runtime          = "python3.6"
-  timeout          = 60
+  timeout          = 180
 
   depends_on = ["null_resource.build_lambda"]
 }
