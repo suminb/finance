@@ -11,7 +11,8 @@ from finance.exceptions import AssetNotFoundException
 from finance.models import Asset, AssetType, AssetValue, db, Granularity
 from finance.providers import Yahoo
 from finance.utils import (
-    date_to_datetime, parse_date, request_import_stock_values)
+    date_to_datetime, parse_date, poll_import_stock_values_requests,
+    request_import_stock_values)
 
 
 log = Logger('finance')
@@ -83,20 +84,9 @@ def insert_asset_value(asset, date, granularity, open_, high, low, close_,
         log.info('Record has been create: {0}', asset_value)
 
 
-def poll_import_stock_values_requests():
-    region = os.environ['SQS_REGION']
-    url = os.environ['REQUEST_IMPORT_STOCK_VALUES_QUEUE_URL']
-    client = boto3.client('sqs', region_name=region)
-    resp = client.receive_message(**{'QueueUrl': url})
-    messages = resp['Messages'] if 'Messages' in resp else []
-
-    for message in messages:
-        yield json.loads(message['Body'])
-
-
 # TODO: Have a list of stock symbols to be fetched
 
 
 if __name__ == '__main__':
-    # fetch_asset_values_handler({}, None)
-    request_import_stock_values_handler({}, None)
+    fetch_asset_values_handler({}, None)
+    # request_import_stock_values_handler({}, None)
