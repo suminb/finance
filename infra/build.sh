@@ -4,7 +4,7 @@ set -e
 
 # NOTE: Ideally, we would like to perform the following task in Terraform
 
-S3_BUCKET="suminb-test"
+S3_BUCKET="finance.brogrammer.xyz"
 ARTIFACT="fetch_asset_values.zip"
 
 # pip install -r ../requirements.txt -t build
