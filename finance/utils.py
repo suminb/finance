@@ -205,12 +205,10 @@ def parse_stock_records(stream):
         }
 
 
-def poll_import_stock_values_requests():
-    region = os.environ['SQS_REGION']
-    url = os.environ['REQUEST_IMPORT_STOCK_VALUES_QUEUE_URL']
-    client = boto3.client('sqs', region_name=region)
+def poll_import_stock_values_requests(sqs_region, queue_url):
+    client = boto3.client('sqs', region_name=sqs_region)
     resp = client.receive_message(**{
-        'QueueUrl': url, 'VisibilityTimeout': 180})
+        'QueueUrl': queue_url, 'VisibilityTimeout': 180})
     messages = resp['Messages'] if 'Messages' in resp else []
 
     for message in messages:

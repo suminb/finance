@@ -34,10 +34,13 @@ def fetch_asset_values_handler(event, context):
     config = {
         'SQLALCHEMY_DATABASE_URI': os.environ['DB_URL']
     }
+    sqs_region = os.environ['SQS_REGION']
+    queue_url = os.environ['REQUEST_IMPORT_STOCK_VALUES_QUEUE_URL']
 
     app = create_app(__name__, config=config)
     with app.app_context():
-        for request in poll_import_stock_values_requests():
+        requests = poll_import_stock_values_requests(sqs_region, queue_url)
+        for request in requests:
             code = request['code']
             start_time = datetime.fromtimestamp(request['start_time'])
             end_time = datetime.fromtimestamp(request['end_time'])
