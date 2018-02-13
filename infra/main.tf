@@ -105,7 +105,7 @@ resource "aws_lambda_permission" "allow_cloudwatch_for_fetch_asset_values" {
   action         = "lambda:InvokeFunction"
   function_name  = "${aws_lambda_function.fetch_asset_values.id}"
   principal      = "events.amazonaws.com"
-  source_arn     = "${aws_cloudwatch_event_rule.event_rule_daily.arn}"
+  source_arn     = "${aws_cloudwatch_event_rule.event_rule_hourly.arn}"
 }
 
 resource "aws_cloudwatch_event_target" "event_target_request_import_stock_values" {
