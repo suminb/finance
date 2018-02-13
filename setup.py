@@ -14,7 +14,10 @@ def readme():
 
 setup(
     name='finance',
-    py_modules=['finance', 'finance.__main__', 'finance.models'],
+    py_modules=[
+        'finance', 'finance.__main__', 'finance.models', 'finance.importers',
+        'finance.utils', 'finance.exceptions', 'finance.providers.google',
+    ],
     version=finance.__version__,
     description='Personal Finance Project',
     long_description=readme(),

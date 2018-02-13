@@ -1,9 +1,11 @@
 import csv
 from datetime import datetime, time, timedelta
+import json
+import os
 
+import boto3
 from flask import request
 from logbook import Logger
-from typedecorator import typed
 
 # NOTE: finance.models should not be imported here in order to avoid circular
 # depencencies
@@ -74,6 +76,16 @@ def load_stock_codes(fin):
     for code, name in reader:
         if code != 'N/A':
             yield code, name
+
+
+def make_request_import_stock_values_message(code, start_time, end_time):
+    # type: (str, datetime, datetime) -> dict
+    return {
+        'version': 0,
+        'code': code,
+        'start_time': int(start_time.timestamp()),
+        'end_time': int(end_time.timestamp()),
+    }
 
 
 def parse_date(date, format='%Y-%m-%d'):
@@ -193,7 +205,36 @@ def parse_stock_records(stream):
         }
 
 
-@typed
+def poll_import_stock_values_requests(sqs_region, queue_url):
+    client = boto3.client('sqs', region_name=sqs_region)
+    resp = client.receive_message(**{
+        'QueueUrl': queue_url, 'VisibilityTimeout': 180})
+    messages = resp['Messages'] if 'Messages' in resp else []
+
+    for message in messages:
+        yield json.loads(message['Body'])
+        client.delete_message(**{
+            'QueueUrl': queue_url, 'ReceiptHandle': message['ReceiptHandle']})
+
+
+def request_import_stock_values(
+    code, start_time, end_time,
+    sqs_region=os.environ['SQS_REGION'],
+    queue_url=os.environ['REQUEST_IMPORT_STOCK_VALUES_QUEUE_URL']
+):
+    message = make_request_import_stock_values_message(
+        code, start_time, end_time)
+
+    client = boto3.client('sqs', region_name=sqs_region)
+    resp = client.send_message(**{
+        'QueueUrl': queue_url,
+        'MessageBody': json.dumps(message),
+    })
+
+    if resp['ResponseMetadata']['HTTPStatusCode'] != 200:
+        log.error('Something went wrong: {0}', resp)
+
+
 def insert_stock_record(data: dict, stock_account: object,
                         bank_account: object):
     """
@@ -216,7 +257,6 @@ def insert_stock_record(data: dict, stock_account: object,
         return None
 
 
-@typed
 def insert_stock_trading_record(data: dict, stock_account: object):
     """Inserts a stock trading (i.e., buying or selling stocks) records."""
     from finance.models import Asset, Record
@@ -245,7 +285,6 @@ def insert_stock_trading_record(data: dict, stock_account: object):
     )
 
 
-@typed
 def insert_stock_transfer_record(data: dict, bank_account: object):
     """Inserts a transfer record between a bank account and a stock account.
     """

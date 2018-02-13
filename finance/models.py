@@ -155,6 +155,7 @@ class AssetValue(CRUDMixin, db.Model):  # type: ignore
     granularity = db.Column(db.Enum(
         '1sec', '1min', '5min', '1hour', '1day', '1week', '1month', '1year',
         name='granularity'))
+    # NOTE: Should we also store `fetched_at`?
     open = db.Column(db.Numeric(precision=20, scale=4))
     high = db.Column(db.Numeric(precision=20, scale=4))
     low = db.Column(db.Numeric(precision=20, scale=4))

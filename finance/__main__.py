@@ -4,6 +4,7 @@ import os
 import re
 import sys
 
+import boto3
 import click
 from click.testing import CliRunner
 from logbook import Logger
@@ -19,8 +20,10 @@ from finance.models import (
 from finance.providers import _8Percent, Dart, Kofia, Miraeasset, Yahoo
 from finance.utils import (
     date_to_datetime, extract_numbers, get_dart_code, insert_asset,
-    insert_record, insert_stock_record, parse_date, parse_datetime,
-    parse_stock_records, serialize_datetime)
+    insert_record, insert_stock_record,
+    make_request_import_stock_values_message, parse_date, parse_stock_records,
+    request_import_stock_values as request_import_stock_values_,
+    serialize_datetime)
 
 
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -430,6 +433,16 @@ def import_stock_records(filename):
         with open(filename) as fin:
             for parsed in parse_stock_records(fin):
                 insert_stock_record(parsed, account_stock, account_bank)
+
+
+@cli.command()
+@click.argument('code')
+def request_import_stock_values(code):
+    """Enqueue a request to import stock values."""
+    start_time = date_to_datetime(parse_date(-3))
+    end_time = date_to_datetime(parse_date(0))
+
+    request_import_stock_values_(code, start_time, end_time)
 
 
 if __name__ == '__main__':

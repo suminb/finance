@@ -187,7 +187,7 @@ def test_miraeasset_transactions(param):
 def test_yahoo_provider(granularity):
     provider = Yahoo()
     symbol = 'MSFT'
-    start_time = datetime.combine(parse_date(-7), time(0))
+    start_time = datetime.combine(parse_date(-5), time(0))
     end_time = datetime.utcnow()
     asset_values = \
         provider.asset_values(symbol, start_time, end_time, granularity)
