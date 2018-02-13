@@ -36,7 +36,7 @@ variable "lambda_filename" {
 }
 
 # NOTE: I would like to execute the following commands before creating the
-# `fetch_asset_values_lambda` resource, but I haven't figured out how to do so.
+# `fetch_asset_values` resource, but I haven't figured out how to do so.
 resource "null_resource" "build_lambda" {
   provisioner "local-exec" {
     command = <<EOF
@@ -48,10 +48,10 @@ resource "null_resource" "build_lambda" {
   }
 }
 
-resource "aws_lambda_function" "request_stock_values_lambda" {
+resource "aws_lambda_function" "request_import_stock_values" {
   s3_bucket        = "${var.s3_bucket}"
   s3_key           = "${var.lambda_filename}"
-  function_name    = "request_stock_values"
+  function_name    = "request_import_stock_values"
   role             = "${data.aws_iam_role.iam_for_lambda.arn}"
   handler          = "lambda.request_import_stock_values_handler"
   source_code_hash = "${var.lambda_filename}"
@@ -68,7 +68,7 @@ resource "aws_lambda_function" "request_stock_values_lambda" {
   }
 }
 
-resource "aws_lambda_function" "fetch_asset_values_lambda" {
+resource "aws_lambda_function" "fetch_asset_values" {
   s3_bucket        = "${var.s3_bucket}"
   s3_key           = "${var.lambda_filename}"
   function_name    = "fetch_asset_values"
@@ -88,16 +88,34 @@ resource "aws_lambda_function" "fetch_asset_values_lambda" {
   }
 }
 
-resource "aws_cloudwatch_event_target" "event_target_request_stock_values" {
-  target_id = "${aws_lambda_function.request_stock_values_lambda.id}"
+# NOTE: Without this permission, we would have to set up CloudWatch as an event
+# source for Lambda
+resource "aws_lambda_permission" "allow_cloudwatch_for_request_import_stock_values" {
+  statement_id   = "AllowExecutionFromCloudWatch"
+  action         = "lambda:InvokeFunction"
+  function_name  = "${aws_lambda_function.request_import_stock_values.id}"
+  principal      = "events.amazonaws.com"
+  source_arn     = "${aws_cloudwatch_event_rule.event_rule_daily.arn}"
+}
+
+resource "aws_lambda_permission" "allow_cloudwatch_for_fetch_asset_values" {
+  statement_id   = "AllowExecutionFromCloudWatch"
+  action         = "lambda:InvokeFunction"
+  function_name  = "${aws_lambda_function.fetch_asset_values.id}"
+  principal      = "events.amazonaws.com"
+  source_arn     = "${aws_cloudwatch_event_rule.event_rule_daily.arn}"
+}
+
+resource "aws_cloudwatch_event_target" "event_target_request_import_stock_values" {
+  target_id = "${aws_lambda_function.request_import_stock_values.id}"
   rule      = "${aws_cloudwatch_event_rule.event_rule_daily.name}"
-  arn       = "${aws_lambda_function.request_stock_values_lambda.arn}"
+  arn       = "${aws_lambda_function.request_import_stock_values.arn}"
 }
 
 resource "aws_cloudwatch_event_target" "event_target_fetch_asset_values" {
-  target_id = "${aws_lambda_function.fetch_asset_values_lambda.id}"
+  target_id = "${aws_lambda_function.fetch_asset_values.id}"
   rule      = "${aws_cloudwatch_event_rule.event_rule_hourly.name}"
-  arn       = "${aws_lambda_function.fetch_asset_values_lambda.arn}"
+  arn       = "${aws_lambda_function.fetch_asset_values.arn}"
 }
 
 resource "aws_cloudwatch_event_rule" "event_rule_daily" {
