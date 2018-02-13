@@ -53,7 +53,7 @@ resource "aws_lambda_function" "request_stock_values_lambda" {
   s3_key           = "${var.lambda_filename}"
   function_name    = "request_stock_values"
   role             = "${data.aws_iam_role.iam_for_lambda.arn}"
-  handler          = "lambda.request_stock_values_handler"
+  handler          = "lambda.request_import_stock_values_handler"
   source_code_hash = "${var.lambda_filename}"
   runtime          = "python3.6"
   timeout          = 180
