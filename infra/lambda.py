@@ -27,6 +27,8 @@ def request_import_stock_values_handler(event, context):
     for code in codes:
         request_import_stock_values(code, start_time, end_time)
 
+    log.info('Requested to import stock values: {0}', ', '.join(codes))
+
 
 def fetch_asset_values_handler(event, context):
     config = {
@@ -86,5 +88,5 @@ def insert_asset_value(asset, date, granularity, open_, high, low, close_,
 
 
 if __name__ == '__main__':
-    fetch_asset_values_handler({}, None)
-    # request_import_stock_values_handler({}, None)
+    request_import_stock_values_handler({}, None)
+    # fetch_asset_values_handler({}, None)
