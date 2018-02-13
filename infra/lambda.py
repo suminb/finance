@@ -1,8 +1,6 @@
 from datetime import datetime
-import json
 import os
 
-import boto3
 from logbook import Logger
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
