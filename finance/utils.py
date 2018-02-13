@@ -217,16 +217,17 @@ def poll_import_stock_values_requests(sqs_region, queue_url):
             'QueueUrl': url, 'ReceiptHandle': message['ReceiptHandle']})
 
 
-def request_import_stock_values(code, start_time, end_time):
+def request_import_stock_values(
+    code, start_time, end_time,
+    sqs_region=os.environ['SQS_REGION'],
+    queue_url=os.environ['REQUEST_IMPORT_STOCK_VALUES_QUEUE_URL']
+):
     message = make_request_import_stock_values_message(
         code, start_time, end_time)
 
-    region = os.environ['SQS_REGION']
-    url = os.environ['REQUEST_IMPORT_STOCK_VALUES_QUEUE_URL']
-
-    client = boto3.client('sqs', region_name=region)
+    client = boto3.client('sqs', region_name=sqs_region)
     resp = client.send_message(**{
-        'QueueUrl': url,
+        'QueueUrl': queue_url,
         'MessageBody': json.dumps(message),
     })
 
