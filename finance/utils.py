@@ -214,7 +214,7 @@ def poll_import_stock_values_requests(sqs_region, queue_url):
     for message in messages:
         yield json.loads(message['Body'])
         client.delete_message(**{
-            'QueueUrl': url, 'ReceiptHandle': message['ReceiptHandle']})
+            'QueueUrl': queue_url, 'ReceiptHandle': message['ReceiptHandle']})
 
 
 def request_import_stock_values(
