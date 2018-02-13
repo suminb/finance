@@ -105,7 +105,7 @@ resource "aws_lambda_permission" "allow_cloudwatch_for_fetch_asset_values" {
   action         = "lambda:InvokeFunction"
   function_name  = "${aws_lambda_function.fetch_asset_values.id}"
   principal      = "events.amazonaws.com"
-  source_arn     = "${aws_cloudwatch_event_rule.event_rule_hourly.arn}"
+  source_arn     = "${aws_cloudwatch_event_rule.event_rule_every_minute.arn}"
 }
 
 resource "aws_cloudwatch_event_target" "event_target_request_import_stock_values" {
@@ -116,7 +116,7 @@ resource "aws_cloudwatch_event_target" "event_target_request_import_stock_values
 
 resource "aws_cloudwatch_event_target" "event_target_fetch_asset_values" {
   target_id = "${aws_lambda_function.fetch_asset_values.id}"
-  rule      = "${aws_cloudwatch_event_rule.event_rule_hourly.name}"
+  rule      = "${aws_cloudwatch_event_rule.event_rule_every_minute.name}"
   arn       = "${aws_lambda_function.fetch_asset_values.arn}"
 }
 
@@ -126,10 +126,10 @@ resource "aws_cloudwatch_event_rule" "event_rule_daily" {
   schedule_expression = "cron(0 0 * * ? *)"
 }
 
-resource "aws_cloudwatch_event_rule" "event_rule_hourly" {
-  name                = "event_rule_hourly"
+resource "aws_cloudwatch_event_rule" "event_rule_every_minute" {
+  name                = "event_rule_every_minute"
   description         = "Periodic event"
-  schedule_expression = "cron(0 * * * ? *)"
+  schedule_expression = "cron(* * * * ? *)"
 }
 
 resource "aws_sqs_queue" "request_import_stock_values" {
