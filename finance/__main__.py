@@ -4,7 +4,6 @@ import os
 import re
 import sys
 
-import boto3
 import click
 from click.testing import CliRunner
 from logbook import Logger

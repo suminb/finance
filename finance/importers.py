@@ -1,6 +1,5 @@
 """A collection of data import functions."""
 import csv
-from datetime import datetime
 import io
 
 from sqlalchemy.exc import IntegrityError
