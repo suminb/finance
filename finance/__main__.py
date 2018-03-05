@@ -294,34 +294,6 @@ def fetch_stock_values(stock_code, start_date, end_date):
         print(', '.join([dt] + [str(c) for c in row[1:]] + ['yahoo']))
 
 
-@cli.command()
-def import_hf():
-    app = create_app(__name__)
-    app.app_context().push()
-
-    account = Account.get(id=1001)
-    asset = Asset.query.filter_by(name='KRW').first()
-
-    with open('sample-data/hf.txt') as fin:
-        for line in fin:
-            if line.strip():
-                insert_record(line, account, asset, None)
-
-
-@cli.command()
-def import_rf():
-    app = create_app(__name__)
-    app.app_context().push()
-
-    account = Account.get(id=1001)
-    asset = Asset.query.filter_by(name='KRW').first()
-
-    with open('sample-data/rf.txt') as fin:
-        for line in fin:
-            if line.strip():
-                insert_record(line, account, asset, None)
-
-
 # NOTE: This will probably be called by AWS Lambda
 # TODO: Load data from stdin
 @cli.command()
