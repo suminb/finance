@@ -11,12 +11,11 @@ from sqlalchemy.exc import IntegrityError
 
 from finance import create_app
 from finance.importers import \
-    import_8percent_data, \
     import_stock_values as import_stock_values_  # Avoid name clashes
 from finance.models import (
     Account, Asset, AssetValue, DartReport, db, get_asset_by_fund_code,
     Granularity, Portfolio, Record, Transaction, User)
-from finance.providers import _8Percent, Dart, Kofia, Miraeasset, Yahoo
+from finance.providers import Dart, Kofia, Miraeasset, Yahoo
 from finance.utils import (
     date_to_datetime, extract_numbers, get_dart_code, insert_asset,
     insert_record, insert_stock_record,
@@ -263,27 +262,6 @@ def import_miraeasset_foreign_data(filename):
 
 
 @cli.command()
-@click.argument('filename')
-def fetch_8percent(filename):
-    """
-    :param filename: A file containing bond IDs
-    """
-    with open(filename) as fin:
-        raw = fin.read()
-    bond_ids = [int(x) for x in
-                re.findall(r'/my/repayment_detail/(\d+)', raw)]
-    provider = _8Percent()
-    provider.login()
-    for bond_id in bond_ids:
-        log.info('Fetching bond ID = {}', bond_id)
-        target_path = os.path.join(BASE_PATH, 'sample-data',
-                                   '8percent-{}.html'.format(bond_id))
-        resp = provider.fetch_data(bond_id)
-        with open(target_path, 'w') as fout:
-            fout.write(resp.text)
-
-
-@cli.command()
 @click.argument('stock_code')  # e.g., NVDA, 027410.KS
 @click.option('-s', '--start', 'start_date',
               help='Start date (e.g., 2017-01-01)')
@@ -314,27 +292,6 @@ def fetch_stock_values(stock_code, start_date, end_date):
         dt = row[0].isoformat()
 
         print(', '.join([dt] + [str(c) for c in row[1:]] + ['yahoo']))
-
-
-# TODO: Load data from stdin
-@cli.command()
-@click.argument('filename')
-def import_8percent(filename):
-    """Imports a single file."""
-    app = create_app(__name__)
-    provider = _8Percent()
-    with app.app_context():
-        with open(filename) as fin:
-            raw = fin.read()
-        account_8p = Account.query.filter(Account.name == '8퍼센트').first()
-        account_checking = Account.query.filter(
-            Account.name == '신한은행 입출금').first()
-        asset_krw = Asset.query.filter(Asset.name == 'KRW').first()
-
-        parsed_data = provider.parse_data(raw)
-        import_8percent_data(
-            parsed_data, account_checking=account_checking,
-            account_8p=account_8p, asset_krw=asset_krw)
 
 
 @cli.command()

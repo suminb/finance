@@ -5,7 +5,7 @@ from click.testing import CliRunner
 import pytest
 
 from finance.__main__ import (
-    create_all, drop_all, fetch_stock_values, import_8percent, import_fund,
+    create_all, drop_all, fetch_stock_values, import_fund,
     import_stock_records, import_stock_values, insert_test_data)
 from finance.exceptions import AssetNotFoundException
 from finance.models import StockAsset
@@ -32,13 +32,6 @@ def test_create_all():
 def test_insert_test_data_all():
     runner = CliRunner()
     result = runner.invoke(insert_test_data)
-    assert result.exit_code == 0
-
-
-def test_import_8percent(account_checking, account_8p, asset_krw):
-    runner = CliRunner()
-    result = runner.invoke(import_8percent, ['tests/data/8percent-829.html'],
-                           catch_exceptions=False)
     assert result.exit_code == 0
 
 
