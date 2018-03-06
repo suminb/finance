@@ -2,16 +2,12 @@ from functools import partial
 import os
 
 import pytest
-from typedecorator import setup_typecheck
 
 from finance import create_app
 from finance.models import (
     Account, Asset, CurrencyAsset, FundAsset, Portfolio, P2PBondAsset,
     StockAsset)
 from finance.models import db as _db
-
-
-setup_typecheck()
 
 
 @pytest.fixture(scope='module')

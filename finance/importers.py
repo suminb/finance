@@ -3,7 +3,6 @@ import csv
 import io
 
 from sqlalchemy.exc import IntegrityError
-from typedecorator import typed
 
 from finance import log
 from finance.models import Asset, AssetValue, db, Granularity
@@ -11,7 +10,6 @@ from finance.utils import DictReader
 
 
 # NOTE: A verb 'import' means local structured data -> database
-@typed
 def import_stock_values(fin: io.TextIOWrapper, code: str):
     """Import stock values."""
     asset = Asset.get_by_symbol(code)
