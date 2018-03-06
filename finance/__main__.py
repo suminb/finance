@@ -255,8 +255,14 @@ def parse_miraeasset_local_data(filename):
 @click.argument('filename')
 def import_miraeasset_foreign_data(filename):
     """Imports a CSV file exported in 해외거래내역 (9465)."""
-    provider = Miraeasset()  # noqa
-    # _import_miraeasset_data(filename, provider.parse_foreign_transactions)
+    from finance.importers import import_miraeasset_foreign_records
+
+    app = create_app(__name__)
+    with app.app_context():
+        # FIXME: Get an account object
+        account = None
+        with open(filename) as fin:
+            import_miraeasset_foreign_records(fin, account)
 
 
 @cli.command()
