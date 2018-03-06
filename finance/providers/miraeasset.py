@@ -67,7 +67,7 @@ class Record(object):
     category = String()
     amount = Float()  # FIXME: Use decimal type
     currency = String()
-    #!: ISIN (International Securities Identification Numbers)
+    #: ISIN (International Securities Identification Numbers)
     code = String()
     name = String()
     unit_price = Float()  # FIXME: Use decimal type

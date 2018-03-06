@@ -140,7 +140,8 @@ class Granularity(object):
 class AssetValue(CRUDMixin, db.Model):  # type: ignore
     """Represents a unit price of an asset at a particular point of time. The
     granularity of the 'particular point of time' may range from one second
-    to a year. See `Granularity` for more details."""
+    to a year. See `Granularity` for more details.
+    """
 
     __table_args__ = (db.UniqueConstraint(
         'asset_id', 'evaluated_at', 'granularity'), {})  # type: Any

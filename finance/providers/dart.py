@@ -123,6 +123,6 @@ class Report(object):
 
     def __iter__(self):
         attrs = ['id', 'registered_at', 'title', 'entity_id', 'entity',
-                'reporter', 'content']
+                 'reporter', 'content']
         for attr in attrs:
             yield attr, getattr(self, attr)

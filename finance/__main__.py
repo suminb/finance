@@ -1,7 +1,6 @@
 import csv
 import json
 import os
-import re
 import sys
 
 import click
@@ -18,8 +17,7 @@ from finance.models import (
 from finance.providers import Dart, Kofia, Miraeasset, Yahoo
 from finance.utils import (
     date_to_datetime, extract_numbers, get_dart_code, insert_asset,
-    insert_record, insert_stock_record,
-    make_request_import_stock_values_message, parse_date, parse_stock_records,
+    insert_stock_record, parse_date, parse_stock_records,
     request_import_stock_values as request_import_stock_values_,
     serialize_datetime)
 
@@ -257,8 +255,8 @@ def parse_miraeasset_local_data(filename):
 @click.argument('filename')
 def import_miraeasset_foreign_data(filename):
     """Imports a CSV file exported in 해외거래내역 (9465)."""
-    provider = Miraeasset()
-    _import_miraeasset_data(filename, provider.parse_foreign_transactions)
+    provider = Miraeasset()  # noqa
+    # _import_miraeasset_data(filename, provider.parse_foreign_transactions)
 
 
 @cli.command()

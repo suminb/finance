@@ -2,7 +2,6 @@ from flask import Blueprint, jsonify, render_template, request
 from logbook import Logger
 
 from finance.models import Account, Asset, DartReport, Portfolio
-from finance.utils import date_range
 
 main_module = Blueprint('main', __name__, template_folder='templates')
 log = Logger()

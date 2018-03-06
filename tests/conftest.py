@@ -5,8 +5,7 @@ import pytest
 
 from finance import create_app
 from finance.models import (
-    Account, Asset, CurrencyAsset, FundAsset, Portfolio, P2PBondAsset,
-    StockAsset)
+    Account, CurrencyAsset, FundAsset, Portfolio, P2PBondAsset, StockAsset)
 from finance.models import db as _db
 
 
