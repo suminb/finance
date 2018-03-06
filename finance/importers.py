@@ -5,9 +5,10 @@ import io
 from sqlalchemy.exc import IntegrityError
 
 from finance import log
-from finance.models import Account, Asset, AssetValue, db, Granularity
+from finance.models import (
+    Account, Asset, AssetValue, db, Granularity, Record, RecordType,
+    Transaction)
 from finance.providers import Miraeasset
-from finance.utils import DictReader
 
 
 # NOTE: A verb 'import' means local structured data -> database
@@ -25,14 +26,13 @@ def import_stock_values(fin: io.TextIOWrapper, code: str):
             log.warn('AssetValue for {0} on {1} already exist', code, date)
             db.session.rollback()
 
+
 def import_miraeasset_foreign_records(
     fin: io.TextIOWrapper,
     account: Account,
 ):
     provider = Miraeasset()
-
-    # FIXME: Get an asset object
-    asset_usd = None
+    asset_usd = Asset.get_by_symbol('USD')
 
     for r in provider.parse_foreign_transactions(fin):
         if r.category == '해외주매수':
@@ -62,10 +62,3 @@ def import_miraeasset_foreign_records(
             pass
         elif r.category == '해외주배당금':
             pass
-    # account_id = db.Column(db.BigInteger, db.ForeignKey('account.id'))
-    # asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
-    # transaction_id = db.Column(db.BigInteger, db.ForeignKey('transaction.id'))
-    # type = db.Column(db.Enum(*record_types, name='record_type'))
-    # created_at = db.Column(db.DateTime(timezone=False))
-    # category = db.Column(db.String)
-    # quantity = db.Column(db.Numeric(precision=20, scale=4))
