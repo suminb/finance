@@ -1,3 +1,7 @@
+class AccountNotFoundException(Exception):
+    pass
+
+
 class AssetNotFoundException(Exception):
     pass
 
