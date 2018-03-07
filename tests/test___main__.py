@@ -108,7 +108,7 @@ def test_import_stock_records(asset_krw, account_stock, account_checking):
     assert result.exit_code == 0
 
 
-def test_import_miraeasset_foreign_data(asset_usd, account_stock):
+def test_import_miraeasset_foreign_data(asset_usd, account_stock, stock_assets):
     runner = CliRunner()
     result = runner.invoke(
         import_miraeasset_foreign_data,

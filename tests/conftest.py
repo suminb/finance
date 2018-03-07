@@ -54,8 +54,8 @@ def db(app, request):
         yield _db
 
 
-@pytest.fixture(scope='module', autouse=True)
-def stock_assets(db):
+@pytest.fixture(scope='module')
+def stock_assets():
     with open('tests/data/stocks.csv') as fin:
         reader = csv.reader(fin, delimiter=',')
         for row in reader:
