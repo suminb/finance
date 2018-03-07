@@ -333,6 +333,19 @@ class StockAsset(Asset):
     eps = index_property('data', 'eps')
 
 
+class AccountType(object):
+    checking = 'checking'
+    savings = 'savings'
+    investment = 'investment'
+    credit_card = 'credit card'
+    virtual = 'virtual'
+
+
+account_types = (
+    AccountType.checking, AccountType.savings, AccountType.investment,
+    AccountType.credit_card, AccountType.virtual)
+
+
 class Account(CRUDMixin, db.Model):  # type: ignore
     """Represents an account. An account may contain multiple records based
     on different assets. For example, a single bank account may have a balance
@@ -343,8 +356,7 @@ class Account(CRUDMixin, db.Model):  # type: ignore
 
     user_id = db.Column(db.BigInteger, db.ForeignKey('user.id'))
     portfolio_id = db.Column(db.BigInteger, db.ForeignKey('portfolio.id'))
-    type = db.Column(db.Enum('checking', 'savings', 'investment',
-                             'credit_card', 'virtual', name='account_type'))
+    type = db.Column(db.Enum(*account_types, name='account_type'))
     name = db.Column(db.String)
     institution = db.Column(db.String)  # Could be a routing number (US)
     number = db.Column(db.String)  # Account number
