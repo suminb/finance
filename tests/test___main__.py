@@ -1,12 +1,14 @@
-import random
 import os
+import random
 
-from click.testing import CliRunner
 import pytest
+from click.testing import CliRunner
 
-from finance.__main__ import (
-    create_all, drop_all, fetch_stock_values, import_fund,
-    import_stock_records, import_stock_values, insert_test_data)
+from finance.__main__ import (create_all, drop_all, fetch_stock_values,
+                              import_fund, import_miraeasset_foreign_data,
+                              import_sp500_records, import_stock_records,
+                              import_stock_values, insert_stock_assets,
+                              insert_test_data)
 from finance.exceptions import AssetNotFoundException
 from finance.models import StockAsset
 from finance.utils import load_stock_codes
@@ -36,9 +38,9 @@ def test_insert_test_data_all():
 
 
 @pytest.mark.skip
-def _test_import_sp500():
+def _test_import_sp500_records():
     runner = CliRunner()
-    result = runner.invoke(import_sp500)
+    result = runner.invoke(import_sp500_records)
     assert result.exit_code == 0
 
 
@@ -96,7 +98,6 @@ def test_import_stock_values():
 
 
 def test_import_stock_records(asset_krw, account_stock, account_checking):
-    from finance.__main__ import insert_stock_assets
     for _ in insert_stock_assets():
         pass
 
