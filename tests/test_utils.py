@@ -1,13 +1,15 @@
-from datetime import timedelta
 import os
 import re
 import types
+from datetime import datetime, timedelta
 
 import pytest
 
 from finance.models import Asset
-from finance.utils import *  # noqa
-
+from finance.utils import (date_range, date_to_datetime, extract_numbers,
+                           insert_stock_record, parse_date, parse_datetime,
+                           parse_decimal, parse_stock_code,
+                           parse_stock_records)
 
 BASE_PATH = os.path.abspath(os.path.dirname(__file__))
 PROJECT_PATH = os.path.abspath(os.path.join(BASE_PATH, '..'))
