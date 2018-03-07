@@ -1,12 +1,13 @@
-from functools import partial
+import csv
 import os
+from functools import partial
 
 import pytest
 
 from finance import create_app
-from finance.models import (
-    Account, CurrencyAsset, FundAsset, Portfolio, P2PBondAsset, StockAsset)
 from finance.models import db as _db
+from finance.models import (Account, Asset, AssetType, CurrencyAsset,
+                            FundAsset, P2PBondAsset, Portfolio, StockAsset)
 
 
 @pytest.fixture(scope='module')
@@ -50,6 +51,18 @@ def db(app, request):
         _db.create_all()
 
         yield _db
+
+
+@pytest.fixture(scope='module', autouse=True)
+def stock_assets(db):
+    with open('tests/data/stocks.csv') as fin:
+        reader = csv.reader(fin, delimiter=',')
+        for row in reader:
+            isin, code, name = row
+            if isin.startswith('#'):
+                continue
+            Asset.create(
+                type=AssetType.stock, isin=isin, code=code, name=name)
 
 
 @pytest.fixture(scope='function')
