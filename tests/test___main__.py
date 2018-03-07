@@ -102,8 +102,9 @@ def test_import_stock_records(asset_krw, account_stock, account_checking):
         pass
 
     runner = CliRunner()
-    result = runner.invoke(import_stock_records, ['tests/data/stocks.csv'],
-                           catch_exceptions=False)
+    result = runner.invoke(
+        import_stock_records, ['tests/data/shinhan_stock_records.csv'],
+        catch_exceptions=False)
     assert result.exit_code == 0
 
 
