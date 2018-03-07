@@ -107,6 +107,15 @@ def test_import_stock_records(asset_krw, account_stock, account_checking):
     assert result.exit_code == 0
 
 
+def test_import_miraeasset_foreign_data(asset_usd, account_stock):
+    runner = CliRunner()
+    result = runner.invoke(
+        import_miraeasset_foreign_data,
+        ['tests/data/miraeasset_foreign.csv'],
+        catch_exceptions=False)
+    assert result.exit_code == 0
+
+
 def teardown_module(module):
     runner = CliRunner()
     runner.invoke(drop_all)

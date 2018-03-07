@@ -6,8 +6,9 @@ import pytest
 
 from finance import create_app
 from finance.models import db as _db
-from finance.models import (Account, Asset, AssetType, CurrencyAsset,
-                            FundAsset, P2PBondAsset, Portfolio, StockAsset)
+from finance.models import (Account, AccountType, Asset, AssetType,
+                            CurrencyAsset, FundAsset, P2PBondAsset, Portfolio,
+                            StockAsset)
 
 
 @pytest.fixture(scope='module')
@@ -102,7 +103,9 @@ def account_sp500(request, db):
 
 @pytest.fixture(scope='function')
 def account_stock(request, db):
-    account = Account.create(type='investment', name='신한 주식')
+    account = Account.create(
+        type=AccountType.investment, institution='Miraeasset',
+        number='ACCOUNT1', name='미래에셋대우 1')
     request.addfinalizer(partial(teardown, db=db, record=account))
     return account
 
@@ -136,7 +139,7 @@ def asset_sp500(request, db):
 @pytest.fixture(scope='module')
 def asset_usd(request, db):
     asset = CurrencyAsset.create(
-        name='USD', description='United States Dollar')
+        name='USD', code='USD', description='United States Dollar')
     request.addfinalizer(partial(teardown, db=db, record=asset))
     return asset
 

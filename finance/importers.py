@@ -1,13 +1,13 @@
 """A collection of data import functions."""
 import csv
 import io
+from datetime import timedelta
 
 from sqlalchemy.exc import IntegrityError
 
 from finance import log
-from finance.models import (
-    Account, Asset, AssetValue, db, Granularity, Record, RecordType,
-    Transaction)
+from finance.models import (Account, Asset, AssetValue, Granularity, Record,
+                            RecordType, Transaction, db)
 from finance.providers import Miraeasset
 
 
@@ -45,7 +45,7 @@ def import_miraeasset_foreign_records(
                     asset_id=asset_usd.id,
                     transaction=t,
                     type=RecordType.withdraw,
-                    created_at=r.created_at,
+                    created_at=r.created_at + timedelta(seconds=r.seq),
                     category='',
                     quantity=r.amount,
                 )
@@ -54,7 +54,7 @@ def import_miraeasset_foreign_records(
                     asset_id=asset.id,
                     transaction=t,
                     type=RecordType.deposit,
-                    created_at=r.created_at,
+                    created_at=r.created_at + timedelta(seconds=r.seq),
                     category='',
                     quantity=r.quantity,
                 )

@@ -259,8 +259,9 @@ def import_miraeasset_foreign_data(filename):
 
     app = create_app(__name__)
     with app.app_context():
-        # FIXME: Get an account object
-        account = None
+        # FIXME: This is a temporary workaround
+        account = Account.get_by_number('Miraeasset', 'ACCOUNT1')
+
         with open(filename) as fin:
             import_miraeasset_foreign_records(fin, account)
 
