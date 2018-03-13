@@ -156,7 +156,7 @@ def stock_asset_ncsoft(request, db):
 
 
 @pytest.fixture(scope='module')
-def stock_asset_spy(request, db):
+def stock_asset_spy(request, db, asset_usd):
     asset = StockAsset.create(
         name='SPY', code='SPY', isin='US78462F1030',
         description='SPDR S&P 500 ETF Trust Fund')
@@ -164,13 +164,13 @@ def stock_asset_spy(request, db):
 
     with open('tests/sample/SPY.csv') as fin:
         # TODO: Teardown?
-        import_stock_values(fin, 'SPY')
+        import_stock_values(fin, 'SPY', base_asset=asset_usd)
 
     return asset
 
 
 @pytest.fixture(scope='module')
-def stock_asset_amd(request, db):
+def stock_asset_amd(request, db, asset_usd):
     asset = StockAsset.create(
         name='AMD', code='AMD', isin='US0079031078',
         description='Advanced Micro Devices, Inc')
@@ -178,13 +178,13 @@ def stock_asset_amd(request, db):
 
     with open('tests/sample/AMD.csv') as fin:
         # TODO: Teardown?
-        import_stock_values(fin, 'AMD')
+        import_stock_values(fin, 'AMD', base_asset=asset_usd)
 
     return asset
 
 
 @pytest.fixture(scope='module')
-def stock_asset_nvda(request, db):
+def stock_asset_nvda(request, db, asset_usd):
     asset = StockAsset.create(
         name='NVDA', code='NVDA', isin='US67066G1040',
         description='NVIDIA Corporation')
@@ -192,13 +192,13 @@ def stock_asset_nvda(request, db):
 
     with open('tests/sample/NVDA.csv') as fin:
         # TODO: Teardown?
-        import_stock_values(fin, 'NVDA')
+        import_stock_values(fin, 'NVDA', base_asset=asset_usd)
 
     return asset
 
 
 @pytest.fixture(scope='module')
-def stock_asset_amzn(request, db):
+def stock_asset_amzn(request, db, asset_usd):
     asset = StockAsset.create(
         name='AMZN', code='AMZN', isin='US0231351067',
         description='Amazon')
@@ -206,13 +206,13 @@ def stock_asset_amzn(request, db):
 
     with open('tests/sample/AMZN.csv') as fin:
         # TODO: Teardown?
-        import_stock_values(fin, 'AMZN')
+        import_stock_values(fin, 'AMZN', base_asset=asset_usd)
 
     return asset
 
 
 @pytest.fixture(scope='module')
-def stock_asset_sbux(request, db):
+def stock_asset_sbux(request, db, asset_usd):
     asset = StockAsset.create(
         name='SBUX', code='SBUX', isin='US8552441094',
         description='Starbucks')
@@ -220,7 +220,7 @@ def stock_asset_sbux(request, db):
 
     with open('tests/sample/SBUX.csv') as fin:
         # TODO: Teardown?
-        import_stock_values(fin, 'SBUX')
+        import_stock_values(fin, 'SBUX', base_asset=asset_usd)
 
     return asset
 
