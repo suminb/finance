@@ -145,7 +145,7 @@ def asset_usd(request, db):
 
 
 @pytest.fixture(scope='module')
-def asset_stock_ncsoft(request, db):
+def stock_asset_ncsoft(request, db):
     asset = StockAsset.create(
         name='NCsoft Corporation', code='036570.KS',
         description='NCsoft Corporation',
@@ -155,11 +155,72 @@ def asset_stock_ncsoft(request, db):
 
 
 @pytest.fixture(scope='module')
-def asset_stock_nvda(request, db):
+def stock_asset_spy(request, db):
+    asset = StockAsset.create(
+        name='SPY', code='SPY', isin='US78462F1030',
+        description='SPDR S&P 500 ETF Trust Fund')
+    request.addfinalizer(partial(teardown, db=db, record=asset))
+
+    with open('tests/sample/SPY.csv') as fin:
+        # TODO: Teardown?
+        import_stock_values(fin, 'SPY')
+
+    return asset
+
+
+@pytest.fixture(scope='module')
+def stock_asset_amd(request, db):
+    asset = StockAsset.create(
+        name='AMD', code='AMD', isin='US0079031078',
+        description='Advanced Micro Devices, Inc')
+    request.addfinalizer(partial(teardown, db=db, record=asset))
+
+    with open('tests/sample/AMD.csv') as fin:
+        # TODO: Teardown?
+        import_stock_values(fin, 'AMD')
+
+    return asset
+
+
+@pytest.fixture(scope='module')
+def stock_asset_nvda(request, db):
     asset = StockAsset.create(
         name='NVDA', code='NVDA', isin='US67066G1040',
         description='NVIDIA Corporation')
     request.addfinalizer(partial(teardown, db=db, record=asset))
+
+    with open('tests/sample/NVDA.csv') as fin:
+        # TODO: Teardown?
+        import_stock_values(fin, 'NVDA')
+
+    return asset
+
+
+@pytest.fixture(scope='module')
+def stock_asset_amzn(request, db):
+    asset = StockAsset.create(
+        name='AMZN', code='AMZN', isin='US0231351067',
+        description='Amazon')
+    request.addfinalizer(partial(teardown, db=db, record=asset))
+
+    with open('tests/sample/AMZN.csv') as fin:
+        # TODO: Teardown?
+        import_stock_values(fin, 'AMZN')
+
+    return asset
+
+
+@pytest.fixture(scope='module')
+def stock_asset_sbux(request, db):
+    asset = StockAsset.create(
+        name='SBUX', code='SBUX', isin='US8552441094',
+        description='Starbucks')
+    request.addfinalizer(partial(teardown, db=db, record=asset))
+
+    with open('tests/sample/SBUX.csv') as fin:
+        # TODO: Teardown?
+        import_stock_values(fin, 'SBUX')
+
     return asset
 
 
