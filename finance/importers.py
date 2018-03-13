@@ -15,15 +15,14 @@ from finance.providers import Miraeasset
 def import_stock_values(fin: io.TextIOWrapper, code: str, base_asset=None):
     """Import stock values."""
     asset = Asset.get_by_symbol(code)
-    reader = csv.reader(fin, delimiter=',', quotechar='"')
-    # for date, open_, high, low, close_, volume, adj_close in reader:
-    for date, open_, high, low, close_, volume in reader:
+    reader = csv.reader(
+        fin, delimiter=',', quotechar='"', skipinitialspace=True)
+    for date, open_, high, low, close_, volume, source in reader:
         try:
             AssetValue.create(
                 evaluated_at=date, granularity=Granularity.day, asset=asset,
                 base_asset=base_asset, open=open_, high=high, low=low,
-                close=close_, volume=volume,
-                source=source)
+                close=close_, volume=volume, source=source)
         except IntegrityError:
             log.warn('AssetValue for {0} on {1} already exist', code, date)
             db.session.rollback()
