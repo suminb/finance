@@ -39,6 +39,7 @@ def import_miraeasset_foreign_records(
             # FIXME: Make this work
             asset = Asset.get_by_isin(r.code)
 
+            # TODO: Code refactoring required
             with Transaction.create() as t:
                 Record.create(
                     account_id=account.id,
@@ -59,6 +60,32 @@ def import_miraeasset_foreign_records(
                     quantity=r.quantity,
                 )
         elif r.category == '해외주매도':
-            pass
+            with Transaction.create() as t:
+                Record.create(
+                    account_id=account.id,
+                    asset_id=asset_usd.id,
+                    transaction=t,
+                    type=RecordType.deposit,
+                    created_at=r.created_at + timedelta(seconds=r.seq),
+                    category='',
+                    quantity=r.amount,
+                )
+                Record.create(
+                    account_id=account.id,
+                    asset_id=asset.id,
+                    transaction=t,
+                    type=RecordType.withdraw,
+                    created_at=r.created_at + timedelta(seconds=r.seq),
+                    category='',
+                    quantity=r.quantity,
+                )
         elif r.category == '해외주배당금':
-            pass
+            Record.create(
+                account_id=account.id,
+                asset_id=asset_usd.id,
+                transaction=t,
+                type=RecordType.deposit,
+                created_at=r.created_at + timedelta(seconds=r.seq),
+                category='',
+                quantity=r.amount,
+            )
