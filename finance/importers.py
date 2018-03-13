@@ -12,7 +12,7 @@ from finance.providers import Miraeasset
 
 
 # NOTE: A verb 'import' means local structured data -> database
-def import_stock_values(fin: io.TextIOWrapper, code: str):
+def import_stock_values(fin: io.TextIOWrapper, code: str, base_asset=None):
     """Import stock values."""
     asset = Asset.get_by_symbol(code)
     reader = csv.reader(fin, delimiter=',', quotechar='"')
@@ -21,7 +21,9 @@ def import_stock_values(fin: io.TextIOWrapper, code: str):
         try:
             AssetValue.create(
                 evaluated_at=date, granularity=Granularity.day, asset=asset,
-                open=open_, high=high, low=low, close=close_, volume=volume)
+                base_asset=base_asset, open=open_, high=high, low=low,
+                close=close_, volume=volume,
+                source=source)
         except IntegrityError:
             log.warn('AssetValue for {0} on {1} already exist', code, date)
             db.session.rollback()
