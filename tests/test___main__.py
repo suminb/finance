@@ -81,7 +81,7 @@ def test_import_stock_values():
     result = runner.invoke(
         import_stock_values,
         [code],
-        input='2017-08-28, 31100.0, 31150.0, 30400.0, 31000.0, 856210',
+        input='2017-08-28, 31100.0, 31150.0, 30400.0, 31000.0, 856210, test',
         catch_exceptions=False)
     assert result.exit_code == 0
 
