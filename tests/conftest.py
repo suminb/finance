@@ -162,7 +162,7 @@ def stock_asset_spy(request, db, asset_usd):
         description='SPDR S&P 500 ETF Trust Fund')
     request.addfinalizer(partial(teardown, db=db, record=asset))
 
-    with open('tests/sample/SPY.csv') as fin:
+    with open('tests/samples/SPY.csv') as fin:
         # TODO: Teardown?
         import_stock_values(fin, 'SPY', base_asset=asset_usd)
 
@@ -176,7 +176,7 @@ def stock_asset_amd(request, db, asset_usd):
         description='Advanced Micro Devices, Inc')
     request.addfinalizer(partial(teardown, db=db, record=asset))
 
-    with open('tests/sample/AMD.csv') as fin:
+    with open('tests/samples/AMD.csv') as fin:
         # TODO: Teardown?
         import_stock_values(fin, 'AMD', base_asset=asset_usd)
 
@@ -190,7 +190,7 @@ def stock_asset_nvda(request, db, asset_usd):
         description='NVIDIA Corporation')
     request.addfinalizer(partial(teardown, db=db, record=asset))
 
-    with open('tests/sample/NVDA.csv') as fin:
+    with open('tests/samples/NVDA.csv') as fin:
         # TODO: Teardown?
         import_stock_values(fin, 'NVDA', base_asset=asset_usd)
 
@@ -204,7 +204,7 @@ def stock_asset_amzn(request, db, asset_usd):
         description='Amazon')
     request.addfinalizer(partial(teardown, db=db, record=asset))
 
-    with open('tests/sample/AMZN.csv') as fin:
+    with open('tests/samples/AMZN.csv') as fin:
         # TODO: Teardown?
         import_stock_values(fin, 'AMZN', base_asset=asset_usd)
 
@@ -218,7 +218,7 @@ def stock_asset_sbux(request, db, asset_usd):
         description='Starbucks')
     request.addfinalizer(partial(teardown, db=db, record=asset))
 
-    with open('tests/sample/SBUX.csv') as fin:
+    with open('tests/samples/SBUX.csv') as fin:
         # TODO: Teardown?
         import_stock_values(fin, 'SBUX', base_asset=asset_usd)
 
