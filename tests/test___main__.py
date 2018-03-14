@@ -103,7 +103,7 @@ def test_import_stock_records(asset_krw, account_stock, account_checking):
 
     runner = CliRunner()
     result = runner.invoke(
-        import_stock_records, ['tests/data/shinhan_stock_records.csv'],
+        import_stock_records, ['tests/samples/shinhan_stock_records.csv'],
         catch_exceptions=False)
     assert result.exit_code == 0
 
@@ -115,7 +115,7 @@ def test_import_miraeasset_foreign_data(
     runner = CliRunner()
     result = runner.invoke(
         import_miraeasset_foreign_data,
-        ['tests/data/miraeasset_foreign.csv'],
+        ['tests/samples/miraeasset_foreign.csv'],
         catch_exceptions=False)
     assert result.exit_code == 0
 

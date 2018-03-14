@@ -57,7 +57,7 @@ def db(app, request):
 
 @pytest.fixture(scope='module')
 def stock_assets():
-    with open('tests/data/stocks.csv') as fin:
+    with open('tests/samples/stocks.csv') as fin:
         reader = csv.reader(fin, delimiter=',')
         for row in reader:
             isin, code, name = row

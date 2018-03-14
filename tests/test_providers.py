@@ -81,7 +81,7 @@ def test_dart_fetch_data_with_invalid_code():
 def test_miraeasset_transactions(param):
     provider = Miraeasset()
     filename = os.path.join(
-        BASE_PATH, 'data', 'miraeasset_{}.csv'.format(param))
+        BASE_PATH, 'samples', 'miraeasset_{}.csv'.format(param))
     with open(filename) as fin:
         if param == 'local':
             records = provider.parse_local_transactions(fin)
