@@ -49,7 +49,7 @@ def import_miraeasset_foreign_records(
                     type=RecordType.withdraw,
                     created_at=r.created_at + timedelta(seconds=r.seq),
                     category='',
-                    quantity=r.amount,
+                    quantity=-r.amount,
                 )
                 Record.create(
                     account_id=account.id,
