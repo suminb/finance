@@ -51,12 +51,12 @@ class Miraeasset(Provider):
             yield record
 
     def is_local_transaction(self, category):
-        return category in ['주식매수', '주식매도', '은행이체입금',
+        return category in ['주식매수', '주식매도', '은행이체입금', '예이용료',
                             '은행이체출금', '배당금입금']
 
     def is_foreign_transaction(self, category):
         return category in ['해외주매수', '해외주매도', '외화인지세',
-                            '예이용료', '해외주배당금', '환전매수', '환전매도']
+                            '해외주배당금', '환전매수', '환전매도']
 
 
 class Record(object):
