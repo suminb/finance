@@ -253,14 +253,17 @@ def parse_miraeasset_local_data(filename):
 # TODO: Load data from stdin
 @cli.command()
 @click.argument('filename')
-def import_miraeasset_foreign_data(filename):
+@click.argument('account_institution')
+@click.argument('account_number')
+def import_miraeasset_foreign_data(
+    filename, account_institution, account_number
+):
     """Imports a CSV file exported in 해외거래내역 (9465)."""
     from finance.importers import import_miraeasset_foreign_records
 
     app = create_app(__name__)
     with app.app_context():
-        # FIXME: This is a temporary workaround
-        account = Account.get_by_number('Miraeasset', 'ACCOUNT1')
+        account = Account.get_by_number(account_institution, account_number)
 
         with open(filename) as fin:
             import_miraeasset_foreign_records(fin, account)
