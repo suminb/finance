@@ -28,6 +28,17 @@ def import_stock_values(fin: io.TextIOWrapper, code: str, base_asset=None):
             db.session.rollback()
 
 
+def synthesize_datetime(datetime, seq):
+    """The original CSV file does not include time information (it only
+    includes date) and there is a high probability of having multiple records
+    on a single day.  However, we have a unique constraint on (account_id,
+    asset_id, created_at, quantity) fields on the Record model. In order to
+    circumvent potential clashes, we are adding up some seconds (with the
+    sequence value) on the original timestamp.
+    """
+    return datetime + timedelta(seconds=seq)
+
+
 def import_miraeasset_foreign_records(
     fin: io.TextIOWrapper,
     account: Account,
@@ -49,7 +60,7 @@ def import_miraeasset_foreign_records(
                     asset_id=asset_usd.id,
                     transaction=t,
                     type=RecordType.withdraw,
-                    created_at=r.created_at + timedelta(seconds=r.seq),
+                    created_at=synthesize_datetime(r.created_at, r.seq),
                     category='',
                     quantity=-r.amount,
                 )
@@ -58,7 +69,7 @@ def import_miraeasset_foreign_records(
                     asset_id=asset.id,
                     transaction=t,
                     type=RecordType.deposit,
-                    created_at=r.created_at + timedelta(seconds=r.seq),
+                    created_at=synthesize_datetime(r.created_at, r.seq),
                     category='',
                     quantity=r.quantity,
                 )
@@ -69,7 +80,7 @@ def import_miraeasset_foreign_records(
                     asset_id=asset_usd.id,
                     transaction=t,
                     type=RecordType.deposit,
-                    created_at=r.created_at + timedelta(seconds=r.seq),
+                    created_at=synthesize_datetime(r.created_at, r.seq),
                     category='',
                     quantity=r.amount,
                 )
@@ -78,7 +89,7 @@ def import_miraeasset_foreign_records(
                     asset_id=asset.id,
                     transaction=t,
                     type=RecordType.withdraw,
-                    created_at=r.created_at + timedelta(seconds=r.seq),
+                    created_at=synthesize_datetime(r.created_at, r.seq),
                     category='',
                     quantity=-r.quantity,
                 )
@@ -87,7 +98,7 @@ def import_miraeasset_foreign_records(
                 account_id=account.id,
                 asset_id=asset_usd.id,
                 type=RecordType.deposit,
-                created_at=r.created_at + timedelta(seconds=r.seq),
+                created_at=synthesize_datetime(r.created_at, r.seq),
                 category='',
                 quantity=r.amount,
             )
@@ -100,7 +111,7 @@ def import_miraeasset_foreign_records(
                     asset_id=asset_usd.id,
                     transaction=t,
                     type=RecordType.deposit,
-                    created_at=r.created_at + timedelta(seconds=r.seq),
+                    created_at=synthesize_datetime(r.created_at, r.seq),
                     category='',
                     quantity=r.amount,
                 )
@@ -109,7 +120,7 @@ def import_miraeasset_foreign_records(
                     asset_id=asset_krw.id,
                     transaction=t,
                     type=RecordType.withdraw,
-                    created_at=r.created_at + timedelta(seconds=r.seq),
+                    created_at=synthesize_datetime(r.created_at, r.seq),
                     category='',
                     quantity=-local_amount,
                 )
