@@ -1,5 +1,5 @@
 from finance.providers.provider import Provider
-from finance.providers.record import DateTime, Float, Integer, List, String
+from finance.providers.record import DateTime, Decimal, Integer, List, String
 
 DATE_INPUT_FORMAT = '%Y/%m/%d'
 DATE_OUTPUT_FORMAT = '%Y-%m-%d'
@@ -64,15 +64,15 @@ class Record(object):
     created_at = DateTime(date_format=DATE_INPUT_FORMAT)
     seq = Integer()
     category = String()
-    amount = Float()  # FIXME: Use decimal type
+    amount = Decimal()
     currency = String()
     #: ISIN (International Securities Identification Numbers)
     code = String()
     name = String()
-    unit_price = Float()  # FIXME: Use decimal type
+    unit_price = Decimal()
     quantity = Integer()
-    fees = Float()  # FIXME: Use decimal type
-    tax = Float()  # FIXME: Use decimal type
+    fees = Decimal()
+    tax = Decimal()
     raw_columns = List()
 
     def __init__(self, created_at, seq, category, amount, currency, code,
