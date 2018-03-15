@@ -90,3 +90,14 @@ def import_miraeasset_foreign_records(
                 category='',
                 quantity=r.amount,
             )
+        elif r.category == '외화인지세':
+            Record.create(
+                account_id=account.id,
+                asset_id=asset_usd.id,
+                transaction=t,
+                type=RecordType.withdraw,
+                created_at=r.created_at + timedelta(seconds=r.seq),
+                category='',
+                quantity=-r.amount,
+            )
+            pass
