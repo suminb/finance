@@ -109,8 +109,8 @@ def test_import_stock_records(asset_krw, account_stock, account_checking):
 
 
 def test_import_miraeasset_foreign_data(
-    asset_usd, account_stock, stock_assets, stock_asset_spy, stock_asset_amzn,
-    stock_asset_nvda, stock_asset_amd, stock_asset_sbux
+    asset_usd, asset_krw, account_stock, stock_assets, stock_asset_spy,
+    stock_asset_amzn, stock_asset_nvda, stock_asset_amd, stock_asset_sbux
 ):
     runner = CliRunner()
     result = runner.invoke(

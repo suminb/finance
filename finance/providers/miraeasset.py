@@ -1,6 +1,5 @@
 from finance.providers.provider import Provider
-from finance.providers.record import DateTime, Float, Integer, String
-
+from finance.providers.record import DateTime, Float, Integer, List, String
 
 DATE_INPUT_FORMAT = '%Y/%m/%d'
 DATE_OUTPUT_FORMAT = '%Y-%m-%d'
@@ -28,7 +27,7 @@ class Miraeasset(Provider):
 
             record = Record(
                 cols[0], cols[1], cols[3], cols[4], 'KRW', '', cols[5],
-                cols[7], cols[6], cols[9], cols[16])
+                cols[7], cols[6], cols[9], cols[16], cols)
             yield record
 
     def parse_foreign_transactions(self, fin):
@@ -47,7 +46,7 @@ class Miraeasset(Provider):
                 continue
 
             record = Record(
-                *[cols[i] for i in [0, 1, 3, 5, 4, 7, 8, 10, 9, 13, 14]])
+                *[cols[i] for i in [0, 1, 3, 5, 4, 7, 8, 10, 9, 13, 14]], cols)
             yield record
 
     def is_local_transaction(self, category):
@@ -74,9 +73,10 @@ class Record(object):
     quantity = Integer()
     fees = Float()  # FIXME: Use decimal type
     tax = Float()  # FIXME: Use decimal type
+    raw_columns = List()
 
     def __init__(self, created_at, seq, category, amount, currency, code,
-                 name, unit_price, quantity, fees, tax):
+                 name, unit_price, quantity, fees, tax, raw_columns):
         self.created_at = created_at
         self.seq = seq
         self.category = category
@@ -88,6 +88,7 @@ class Record(object):
         self.quantity = quantity
         self.fees = fees
         self.tax = tax
+        self.raw_columns = raw_columns
 
     def __repr__(self):
         return 'miraeasset.Record({}, {}, {}, {} ({}), {}, {})'.format(
@@ -100,7 +101,8 @@ class Record(object):
             dict(record)
         """
         attrs = ['created_at', 'seq', 'category', 'amount', 'currency',
-                 'code', 'name', 'unit_price', 'quantity', 'fees', 'tax']
+                 'code', 'name', 'unit_price', 'quantity', 'fees', 'tax',
+                 'raw_columns']
         for attr in attrs:
             yield attr, getattr(self, attr)
 

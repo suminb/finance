@@ -42,3 +42,10 @@ class String(AbstractField):
 
     def __set__(self, instance, value):
         self._values[instance] = value.strip()
+
+
+class List(AbstractField):
+
+    def __set__(self, instance, value):
+        assert isinstance(value, list)
+        self._values[instance] = value

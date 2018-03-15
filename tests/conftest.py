@@ -123,7 +123,7 @@ def asset_hf1(request, db):
 @pytest.fixture(scope='module')
 def asset_krw(request, db):
     asset = CurrencyAsset.create(
-        name='KRW', description='Korean Won')
+        name='KRW', code='KRW', description='Korean Won')
     request.addfinalizer(partial(teardown, db=db, record=asset))
     return asset
 

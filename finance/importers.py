@@ -34,10 +34,12 @@ def import_miraeasset_foreign_records(
 ):
     provider = Miraeasset()
     asset_usd = Asset.get_by_symbol('USD')
+    asset_krw = Asset.get_by_symbol('KRW')
 
     for r in provider.parse_foreign_transactions(fin):
+        assert r.currency != 'KRW'
+
         if r.category == '해외주매수':
-            # FIXME: Make this work
             asset = Asset.get_by_isin(r.code)
 
             # TODO: Code refactoring required
@@ -84,17 +86,37 @@ def import_miraeasset_foreign_records(
             Record.create(
                 account_id=account.id,
                 asset_id=asset_usd.id,
-                transaction=t,
                 type=RecordType.deposit,
                 created_at=r.created_at + timedelta(seconds=r.seq),
                 category='',
                 quantity=r.amount,
             )
+        elif r.category == '환전매수':
+            # FIXME: Asset may not be USD
+            local_amount = int(r.raw_columns[6])  # amount in KRW
+            with Transaction.create() as t:
+                Record.create(
+                    account_id=account.id,
+                    asset_id=asset_usd.id,
+                    transaction=t,
+                    type=RecordType.deposit,
+                    created_at=r.created_at + timedelta(seconds=r.seq),
+                    category='',
+                    quantity=r.amount,
+                )
+                Record.create(
+                    account_id=account.id,
+                    asset_id=asset_krw.id,
+                    transaction=t,
+                    type=RecordType.withdraw,
+                    created_at=r.created_at + timedelta(seconds=r.seq),
+                    category='',
+                    quantity=-local_amount,
+                )
         elif r.category == '외화인지세':
             Record.create(
                 account_id=account.id,
                 asset_id=asset_usd.id,
-                transaction=t,
                 type=RecordType.withdraw,
                 created_at=r.created_at + timedelta(seconds=r.seq),
                 category='',
