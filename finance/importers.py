@@ -80,7 +80,7 @@ def import_miraeasset_foreign_records(
                     type=RecordType.withdraw,
                     created_at=r.created_at + timedelta(seconds=r.seq),
                     category='',
-                    quantity=r.quantity,
+                    quantity=-r.quantity,
                 )
         elif r.category == '해외주배당금':
             Record.create(
