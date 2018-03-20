@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 
 from finance import log
 from finance.models import (Account, Asset, AssetValue, Granularity, Record,
-                            RecordType, Transaction, db)
+                            Transaction, db)
 from finance.providers import Miraeasset
 
 
@@ -39,6 +39,38 @@ def synthesize_datetime(datetime, seq):
     return datetime + timedelta(seconds=seq)
 
 
+def make_single_record_transaction(created_at, account, asset, quantity):
+    """Creates a single record transaction (e.g., a deposit)"""
+    return Record.create(
+        account_id=account.id,
+        asset_id=asset.id,
+        created_at=created_at,
+        quantity=quantity,
+    )
+
+
+def make_double_record_transaction(
+    created_at, account, asset_from, quantity_from, asset_to, quantity_to
+):
+    """Creates a double record transaction (e.g., a buy order of stocks)"""
+    with Transaction.create() as t:
+        record1 = Record.create(
+            transaction=t,
+            account_id=account.id,
+            asset_id=asset_from.id,
+            created_at=created_at,
+            quantity=quantity_from,
+        )
+        record2 = Record.create(
+            transaction=t,
+            account_id=account.id,
+            asset_id=asset_to.id,
+            created_at=created_at,
+            quantity=quantity_to,
+        )
+    return (record1, record2)
+
+
 def import_miraeasset_foreign_records(
     fin: io.TextIOWrapper,
     account: Account,
@@ -51,86 +83,36 @@ def import_miraeasset_foreign_records(
         assert r.currency != 'KRW'
 
         if r.category == '해외주매수':
-            asset = Asset.get_by_isin(r.code)
-
-            # TODO: Code refactoring required
-            with Transaction.create() as t:
-                Record.create(
-                    account_id=account.id,
-                    asset_id=asset_usd.id,
-                    transaction=t,
-                    type=RecordType.withdraw,
-                    created_at=synthesize_datetime(r.created_at, r.seq),
-                    category='',
-                    quantity=-r.amount,
-                )
-                Record.create(
-                    account_id=account.id,
-                    asset_id=asset.id,
-                    transaction=t,
-                    type=RecordType.deposit,
-                    created_at=synthesize_datetime(r.created_at, r.seq),
-                    category='',
-                    quantity=r.quantity,
-                )
+            asset_stock = Asset.get_by_isin(r.code)
+            make_double_record_transaction(
+                synthesize_datetime(r.created_at, r.seq),
+                account,
+                asset_usd, -r.amount,
+                asset_stock, r.quantity)
         elif r.category == '해외주매도':
-            with Transaction.create() as t:
-                Record.create(
-                    account_id=account.id,
-                    asset_id=asset_usd.id,
-                    transaction=t,
-                    type=RecordType.deposit,
-                    created_at=synthesize_datetime(r.created_at, r.seq),
-                    category='',
-                    quantity=r.amount,
-                )
-                Record.create(
-                    account_id=account.id,
-                    asset_id=asset.id,
-                    transaction=t,
-                    type=RecordType.withdraw,
-                    created_at=synthesize_datetime(r.created_at, r.seq),
-                    category='',
-                    quantity=-r.quantity,
-                )
+            asset_stock = Asset.get_by_isin(r.code)
+            make_double_record_transaction(
+                synthesize_datetime(r.created_at, r.seq),
+                account,
+                asset_stock, -r.quantity,
+                asset_usd, r.amount)
         elif r.category == '해외주배당금':
-            Record.create(
-                account_id=account.id,
-                asset_id=asset_usd.id,
-                type=RecordType.deposit,
-                created_at=synthesize_datetime(r.created_at, r.seq),
-                category='',
-                quantity=r.amount,
-            )
+            make_single_record_transaction(
+                synthesize_datetime(r.created_at, r.seq),
+                account, asset_usd, r.amount)
         elif r.category == '환전매수':
-            # FIXME: Asset may not be USD
             local_amount = int(r.raw_columns[6])  # amount in KRW
-            with Transaction.create() as t:
-                Record.create(
-                    account_id=account.id,
-                    asset_id=asset_usd.id,
-                    transaction=t,
-                    type=RecordType.deposit,
-                    created_at=synthesize_datetime(r.created_at, r.seq),
-                    category='',
-                    quantity=r.amount,
-                )
-                Record.create(
-                    account_id=account.id,
-                    asset_id=asset_krw.id,
-                    transaction=t,
-                    type=RecordType.withdraw,
-                    created_at=synthesize_datetime(r.created_at, r.seq),
-                    category='',
-                    quantity=-local_amount,
-                )
+            # FIXME: Asset may not be USD
+            make_double_record_transaction(
+                synthesize_datetime(r.created_at, r.seq),
+                account,
+                asset_krw, -local_amount,
+                asset_usd, r.amount)
+        elif r.category == '환전매도':
+            raise NotImplementedError
         elif r.category == '외화인지세':
-            Record.create(
-                account_id=account.id,
-                asset_id=asset_usd.id,
-                type=RecordType.withdraw,
-                created_at=r.created_at + timedelta(seconds=r.seq),
-                category='',
-                quantity=-r.amount,
-            )
-            pass
+            make_single_record_transaction(
+                synthesize_datetime(r.created_at, r.seq),
+                account, asset_usd, -r.amount)
+        else:
+            raise ValueError('Unknown record category: {0}'.format(r.category))
