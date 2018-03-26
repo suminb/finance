@@ -102,12 +102,13 @@ def import_miraeasset_foreign_records(
                 account, asset_usd, r.amount)
         elif r.category == '환전매수':
             local_amount = int(r.raw_columns[6])  # amount in KRW
-            # FIXME: Asset may not be USD
+            # FIXME: Handle a case where asset cannot be found
+            target_asset = Asset.get_by_symbol(r.currency)
             make_double_record_transaction(
                 synthesize_datetime(r.created_at, r.seq),
                 account,
                 asset_krw, -local_amount,
-                asset_usd, r.amount)
+                target_asset, r.amount)
         elif r.category == '환전매도':
             raise NotImplementedError
         elif r.category == '외화인지세':
