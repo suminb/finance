@@ -76,18 +76,19 @@ def import_miraeasset_foreign_records(
     account: Account,
 ):
     provider = Miraeasset()
-    asset_usd = Asset.get_by_symbol('USD')
     asset_krw = Asset.get_by_symbol('KRW')
 
     for r in provider.parse_foreign_transactions(fin):
         assert r.currency != 'KRW'
+        # FIXME: Handle a case where asset cannot be found
+        target_asset = Asset.get_by_symbol(r.currency)
 
         if r.category == '해외주매수':
             asset_stock = Asset.get_by_isin(r.code)
             make_double_record_transaction(
                 synthesize_datetime(r.created_at, r.seq),
                 account,
-                asset_usd, -r.amount,
+                target_asset, -r.amount,
                 asset_stock, r.quantity)
         elif r.category == '해외주매도':
             asset_stock = Asset.get_by_isin(r.code)
@@ -95,15 +96,13 @@ def import_miraeasset_foreign_records(
                 synthesize_datetime(r.created_at, r.seq),
                 account,
                 asset_stock, -r.quantity,
-                asset_usd, r.amount)
+                target_asset, r.amount)
         elif r.category == '해외주배당금':
             make_single_record_transaction(
                 synthesize_datetime(r.created_at, r.seq),
-                account, asset_usd, r.amount)
+                account, target_asset, r.amount)
         elif r.category == '환전매수':
             local_amount = int(r.raw_columns[6])  # amount in KRW
-            # FIXME: Handle a case where asset cannot be found
-            target_asset = Asset.get_by_symbol(r.currency)
             make_double_record_transaction(
                 synthesize_datetime(r.created_at, r.seq),
                 account,
@@ -114,6 +113,6 @@ def import_miraeasset_foreign_records(
         elif r.category == '외화인지세':
             make_single_record_transaction(
                 synthesize_datetime(r.created_at, r.seq),
-                account, asset_usd, -r.amount)
+                account, target_asset, -r.amount)
         else:
             raise ValueError('Unknown record category: {0}'.format(r.category))
