@@ -7,6 +7,7 @@ import uuid64
 from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from sqlalchemy.ext.indexable import index_property
 
 from finance.exceptions import (AccountNotFoundException,
@@ -14,7 +15,6 @@ from finance.exceptions import (AccountNotFoundException,
                                 AssetValueUnavailableException,
                                 InvalidTargetAssetException)
 from finance.utils import date_range
-
 from typing import Any  # noqa
 
 db = SQLAlchemy()
@@ -49,7 +49,7 @@ class CRUDMixin(object):
                    default=uuid64.issue())
 
     @classmethod
-    def create(cls, commit=True, **kwargs):
+    def create(cls, commit=True, ignore_if_exists=False, **kwargs):
         if 'id' not in kwargs:
             kwargs.update(dict(id=uuid64.issue()))
         instance = cls(**kwargs)
@@ -58,7 +58,14 @@ class CRUDMixin(object):
                 and getattr(instance, 'timestamp') is None:
             instance.timestamp = datetime.utcnow()
 
-        return instance.save(commit=commit)
+        try:
+            return instance.save(commit=commit)
+        except (IntegrityError, InvalidRequestError):
+            if ignore_if_exists:
+                db.session.rollback()
+                return False
+            else:
+                raise
 
     @classmethod
     def get(cls, id):

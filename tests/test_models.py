@@ -1,11 +1,23 @@
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from finance.exceptions import (AssetNotFoundException,
                                 AssetValueUnavailableException)
-from finance.models import (Asset, AssetValue, Granularity, Portfolio, Record,
-                            RecordType, Transaction, TransactionState, db,
-                            get_asset_by_fund_code)
+from finance.models import (Account, Asset, AssetValue, Granularity, Portfolio,
+                            Record, RecordType, Transaction, TransactionState,
+                            db, get_asset_by_fund_code)
 from finance.utils import parse_date
+
+
+def test_create_model():
+    Account.create(institution='Chase', number='1234')
+
+    # IntegrityError is raised due to the unique constraint
+    with pytest.raises(IntegrityError):
+        Account.create(institution='Chase', number='1234')
+
+    assert not Account.create(institution='Chase', number='1234',
+                              ignore_if_exists=True)
 
 
 def test_stock_asset(stock_asset_ncsoft):
