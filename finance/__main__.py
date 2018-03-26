@@ -12,7 +12,7 @@ from finance import create_app
 from finance.importers import \
     import_stock_values as import_stock_values_  # Avoid name clashes
 from finance.models import (
-    Account, AccountType, Asset, AssetValue, DartReport, db,
+    Account, AccountType, Asset, AssetType, AssetValue, DartReport, db,
     get_asset_by_fund_code, Granularity, Portfolio, Record, Transaction, User)
 from finance.providers import Dart, Kofia, Miraeasset, Yahoo
 from finance.utils import (
@@ -68,27 +68,37 @@ def drop_all():
         db.drop_all()
 
 
+def create_account(type_: AccountType, institution: str, number: str, user):
+    return Account.create(
+        type=type_, name='Test account', institution=institution,
+        number=number, user=user, ignore_if_exists=True)
+
+
+def create_asset(type_: AssetType, code: str, description: str):
+    return Asset.create(
+        type=type_, code=code, description=description, ignore_if_exists=True)
+
+
 @cli.command()
 def insert_test_data():
     """Inserts some sample data for testing."""
     app = create_app(__name__)
     with app.app_context():
         user = User.create(
-            family_name='Byeon', given_name='Sumin', email='suminb@gmail.com')
+            family_name='Byeon', given_name='Sumin', email='suminb@gmail.com',
+            ignore_if_exists=True)
 
-        account_checking = Account.create(
-            type=AccountType.checking, name='신한은행 입출금',
-            institution='Shinhan', number='checking', user=user)
-        account_stock = Account.create(
-            type=AccountType.investment, name='미래에셋',
-            institution='Mirae Asset', number='stock', user=user)
+        account_checking = create_account(
+            AccountType.checking, 'Shinhan', 'checking', user)
+        account_stock = create_account(
+            AccountType.investment, 'Mirae Asset', 'stock', user)
+
+        asset_krw = create_asset(AssetType.currency, 'KRW', 'Korean Won')
+        create_asset(AssetType.currency, 'USD', 'United States Dollar')
 
         for _ in insert_stock_assets():
             pass
 
-        asset_krw = insert_asset('currency, KRW, Korean Won')
-        insert_asset('currency, USD, United States Dollar')
-        insert_asset('commodity, Gold, Gold')
         insert_asset('security, KB S&P500,', data={'code': 'KR5223941018'})
         insert_asset('security, 이스트스프링차이나펀드,',
                      data={'code': 'KR5229221225'})
