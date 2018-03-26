@@ -63,7 +63,7 @@ class CRUDMixin(object):
         except (IntegrityError, InvalidRequestError):
             if ignore_if_exists:
                 db.session.rollback()
-                return False
+                return cls.find(**kwargs)
             else:
                 raise
 
@@ -78,8 +78,12 @@ class CRUDMixin(object):
         return cls.query.get_or_404(id)
 
     @classmethod
+    def find(cls, **kwargs):
+        return cls.query.filter_by(**kwargs).first()
+
+    @classmethod
     def exists(cls, **kwargs):
-        row = cls.query.filter_by(**kwargs).first()
+        row = cls.find(**kwargs)
         return row is not None
 
     def update(self, commit=True, **kwargs):
