@@ -31,6 +31,7 @@ def test_create_all():
     assert result.exit_code == 0
 
 
+@pytest.mark.skip
 def test_insert_test_data_all():
     runner = CliRunner()
     result = runner.invoke(insert_test_data)
