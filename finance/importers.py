@@ -18,7 +18,7 @@ def import_stock_values(fin: io.TextIOWrapper, code: str, base_asset=None):
         fin, delimiter=',', quotechar='"', skipinitialspace=True)
     for date, open_, high, low, close_, volume, source in reader:
         try:
-            AssetValue.create(
+            yield AssetValue.create(
                 evaluated_at=date, granularity=Granularity.day, asset=asset,
                 base_asset=base_asset, open=open_, high=high, low=low,
                 close=close_, volume=volume, source=source)

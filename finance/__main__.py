@@ -336,7 +336,8 @@ def import_stock_values(code):
         # automatically insert an Asset record when it is not found.
 
         stdin = click.get_text_stream('stdin')
-        import_stock_values_(stdin, code)
+        for _ in import_stock_values_(stdin, code):
+            pass
 
 
 # TODO: Load data from stdin

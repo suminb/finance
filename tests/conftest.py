@@ -163,8 +163,8 @@ def stock_asset_spy(request, db, asset_usd):
     request.addfinalizer(partial(teardown, db=db, record=asset))
 
     with open('tests/samples/SPY.csv') as fin:
-        # TODO: Teardown?
-        import_stock_values(fin, 'SPY', base_asset=asset_usd)
+        for av in import_stock_values(fin, 'SPY', base_asset=asset_usd):
+            request.addfinalizer(partial(teardown, db=db, record=av))
 
     return asset
 
@@ -177,8 +177,8 @@ def stock_asset_amd(request, db, asset_usd):
     request.addfinalizer(partial(teardown, db=db, record=asset))
 
     with open('tests/samples/AMD.csv') as fin:
-        # TODO: Teardown?
-        import_stock_values(fin, 'AMD', base_asset=asset_usd)
+        for av in import_stock_values(fin, 'AMD', base_asset=asset_usd):
+            request.addfinalizer(partial(teardown, db=db, record=av))
 
     return asset
 
@@ -191,8 +191,8 @@ def stock_asset_nvda(request, db, asset_usd):
     request.addfinalizer(partial(teardown, db=db, record=asset))
 
     with open('tests/samples/NVDA.csv') as fin:
-        # TODO: Teardown?
-        import_stock_values(fin, 'NVDA', base_asset=asset_usd)
+        for av in import_stock_values(fin, 'NVDA', base_asset=asset_usd):
+            request.addfinalizer(partial(teardown, db=db, record=av))
 
     return asset
 
@@ -205,8 +205,8 @@ def stock_asset_amzn(request, db, asset_usd):
     request.addfinalizer(partial(teardown, db=db, record=asset))
 
     with open('tests/samples/AMZN.csv') as fin:
-        # TODO: Teardown?
-        import_stock_values(fin, 'AMZN', base_asset=asset_usd)
+        for av in import_stock_values(fin, 'AMZN', base_asset=asset_usd):
+            request.addfinalizer(partial(teardown, db=db, record=av))
 
     return asset
 
@@ -219,8 +219,8 @@ def stock_asset_sbux(request, db, asset_usd):
     request.addfinalizer(partial(teardown, db=db, record=asset))
 
     with open('tests/samples/SBUX.csv') as fin:
-        # TODO: Teardown?
-        import_stock_values(fin, 'SBUX', base_asset=asset_usd)
+        for av in import_stock_values(fin, 'SBUX', base_asset=asset_usd):
+            request.addfinalizer(partial(teardown, db=db, record=av))
 
     return asset
 
