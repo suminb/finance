@@ -8,9 +8,9 @@ from finance.models import (Asset, AssetValue, Granularity, Portfolio, Record,
 from finance.utils import parse_date
 
 
-def test_stock_asset(asset_stock_ncsoft):
-    assert asset_stock_ncsoft.bps
-    assert asset_stock_ncsoft.eps
+def test_stock_asset(stock_asset_ncsoft):
+    assert stock_asset_ncsoft.bps
+    assert stock_asset_ncsoft.eps
 
 
 def test_get_asset_by_fund_code(asset_sp500):
@@ -23,7 +23,7 @@ def test_get_asset_by_fund_code_non_existing(asset_sp500):
         get_asset_by_fund_code('non-exisiting')
 
 
-def test_get_asset_by_symbol(asset_stock_ncsoft):
+def test_get_asset_by_symbol(stock_asset_ncsoft):
     asset = Asset.get_by_symbol('036570.KS')
     assert asset.description == 'NCsoft Corporation'
 
@@ -33,12 +33,12 @@ def test_get_asset_by_symbol_non_existing(asset_sp500):
         Asset.get_by_symbol('non-exisiting')
 
 
-def test_get_asset_by_isin(asset_stock_nvda):
+def test_get_asset_by_isin(stock_asset_nvda):
     asset = Asset.get_by_isin('US67066G1040')
     assert asset.code == 'NVDA'
 
 
-def test_get_asset_by_isin_non_existing(asset_stock_nvda):
+def test_get_asset_by_isin_non_existing(stock_asset_nvda):
     with pytest.raises(AssetNotFoundException):
         Asset.get_by_isin('non-exisiting')
 

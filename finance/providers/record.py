@@ -1,3 +1,5 @@
+import decimal
+
 from finance.utils import parse_date
 
 
@@ -26,6 +28,12 @@ class DateTime(AbstractField):
         self._values[instance] = parse_date(value, self.date_format)
 
 
+class Decimal(AbstractField):
+
+    def __set__(self, instance, value):
+        self._values[instance] = decimal.Decimal(value)
+
+
 class Float(AbstractField):
 
     def __set__(self, instance, value):
@@ -42,3 +50,10 @@ class String(AbstractField):
 
     def __set__(self, instance, value):
         self._values[instance] = value.strip()
+
+
+class List(AbstractField):
+
+    def __set__(self, instance, value):
+        assert isinstance(value, list)
+        self._values[instance] = value

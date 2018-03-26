@@ -1,12 +1,15 @@
-from functools import partial
+import csv
 import os
+from functools import partial
 
 import pytest
 
 from finance import create_app
-from finance.models import (
-    Account, CurrencyAsset, FundAsset, Portfolio, P2PBondAsset, StockAsset)
+from finance.importers import import_stock_values
 from finance.models import db as _db
+from finance.models import (Account, AccountType, Asset, AssetType,
+                            CurrencyAsset, FundAsset, P2PBondAsset, Portfolio,
+                            StockAsset)
 
 
 @pytest.fixture(scope='module')
@@ -52,6 +55,18 @@ def db(app, request):
         yield _db
 
 
+@pytest.fixture(scope='module')
+def stock_assets():
+    with open('tests/samples/stocks.csv') as fin:
+        reader = csv.reader(fin, delimiter=',')
+        for row in reader:
+            isin, code, name = row
+            if isin.startswith('#'):
+                continue
+            Asset.create(
+                type=AssetType.stock, isin=isin, code=code, name=name)
+
+
 @pytest.fixture(scope='function')
 def account_checking(request, db):
     account = Account.create(type='checking', name='신한은행 입출금')
@@ -89,7 +104,9 @@ def account_sp500(request, db):
 
 @pytest.fixture(scope='function')
 def account_stock(request, db):
-    account = Account.create(type='investment', name='신한 주식')
+    account = Account.create(
+        type=AccountType.investment, institution='Miraeasset',
+        number='ACCOUNT1', name='미래에셋대우 1')
     request.addfinalizer(partial(teardown, db=db, record=account))
     return account
 
@@ -106,7 +123,7 @@ def asset_hf1(request, db):
 @pytest.fixture(scope='module')
 def asset_krw(request, db):
     asset = CurrencyAsset.create(
-        name='KRW', description='Korean Won')
+        name='KRW', code='KRW', description='Korean Won')
     request.addfinalizer(partial(teardown, db=db, record=asset))
     return asset
 
@@ -123,13 +140,13 @@ def asset_sp500(request, db):
 @pytest.fixture(scope='module')
 def asset_usd(request, db):
     asset = CurrencyAsset.create(
-        name='USD', description='United States Dollar')
+        name='USD', code='USD', description='United States Dollar')
     request.addfinalizer(partial(teardown, db=db, record=asset))
     return asset
 
 
 @pytest.fixture(scope='module')
-def asset_stock_ncsoft(request, db):
+def stock_asset_ncsoft(request, db):
     asset = StockAsset.create(
         name='NCsoft Corporation', code='036570.KS',
         description='NCsoft Corporation',
@@ -139,11 +156,72 @@ def asset_stock_ncsoft(request, db):
 
 
 @pytest.fixture(scope='module')
-def asset_stock_nvda(request, db):
+def stock_asset_spy(request, db, asset_usd):
+    asset = StockAsset.create(
+        name='SPY', code='SPY', isin='US78462F1030',
+        description='SPDR S&P 500 ETF Trust Fund')
+    request.addfinalizer(partial(teardown, db=db, record=asset))
+
+    with open('tests/samples/SPY.csv') as fin:
+        # TODO: Teardown?
+        import_stock_values(fin, 'SPY', base_asset=asset_usd)
+
+    return asset
+
+
+@pytest.fixture(scope='module')
+def stock_asset_amd(request, db, asset_usd):
+    asset = StockAsset.create(
+        name='AMD', code='AMD', isin='US0079031078',
+        description='Advanced Micro Devices, Inc')
+    request.addfinalizer(partial(teardown, db=db, record=asset))
+
+    with open('tests/samples/AMD.csv') as fin:
+        # TODO: Teardown?
+        import_stock_values(fin, 'AMD', base_asset=asset_usd)
+
+    return asset
+
+
+@pytest.fixture(scope='module')
+def stock_asset_nvda(request, db, asset_usd):
     asset = StockAsset.create(
         name='NVDA', code='NVDA', isin='US67066G1040',
         description='NVIDIA Corporation')
     request.addfinalizer(partial(teardown, db=db, record=asset))
+
+    with open('tests/samples/NVDA.csv') as fin:
+        # TODO: Teardown?
+        import_stock_values(fin, 'NVDA', base_asset=asset_usd)
+
+    return asset
+
+
+@pytest.fixture(scope='module')
+def stock_asset_amzn(request, db, asset_usd):
+    asset = StockAsset.create(
+        name='AMZN', code='AMZN', isin='US0231351067',
+        description='Amazon')
+    request.addfinalizer(partial(teardown, db=db, record=asset))
+
+    with open('tests/samples/AMZN.csv') as fin:
+        # TODO: Teardown?
+        import_stock_values(fin, 'AMZN', base_asset=asset_usd)
+
+    return asset
+
+
+@pytest.fixture(scope='module')
+def stock_asset_sbux(request, db, asset_usd):
+    asset = StockAsset.create(
+        name='SBUX', code='SBUX', isin='US8552441094',
+        description='Starbucks')
+    request.addfinalizer(partial(teardown, db=db, record=asset))
+
+    with open('tests/samples/SBUX.csv') as fin:
+        # TODO: Teardown?
+        import_stock_values(fin, 'SBUX', base_asset=asset_usd)
+
     return asset
 
 

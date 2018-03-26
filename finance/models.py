@@ -1,21 +1,21 @@
 import collections
-from datetime import datetime
 import functools
 import operator
+from datetime import datetime
 
+import uuid64
 from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.ext.indexable import index_property
-import uuid64
 
-from finance.exceptions import (
-    AssetNotFoundException, AssetValueUnavailableException,
-    InvalidTargetAssetException)
+from finance.exceptions import (AccountNotFoundException,
+                                AssetNotFoundException,
+                                AssetValueUnavailableException,
+                                InvalidTargetAssetException)
 from finance.utils import date_range
 
-from typing import Any
-
+from typing import Any  # noqa
 
 db = SQLAlchemy()
 JsonType = db.String().with_variant(JSON(), 'postgresql')
@@ -152,7 +152,7 @@ class AssetValue(CRUDMixin, db.Model):  # type: ignore
         'Asset', uselist=False, foreign_keys=[base_asset_id])
     evaluated_at = db.Column(db.DateTime(timezone=False))
     source = db.Column(db.Enum(
-        'yahoo', 'google', 'kofia', name='asset_value_source'))
+        'yahoo', 'google', 'kofia', 'test', name='asset_value_source'))
     granularity = db.Column(db.Enum(
         '1sec', '1min', '5min', '1hour', '1day', '1week', '1month', '1year',
         name='granularity'))
@@ -333,16 +333,32 @@ class StockAsset(Asset):
     eps = index_property('data', 'eps')
 
 
+class AccountType(object):
+    checking = 'checking'
+    savings = 'savings'
+    investment = 'investment'
+    credit_card = 'credit card'
+    virtual = 'virtual'
+
+
+account_types = (
+    AccountType.checking, AccountType.savings, AccountType.investment,
+    AccountType.credit_card, AccountType.virtual)
+
+
 class Account(CRUDMixin, db.Model):  # type: ignore
     """Represents an account. An account may contain multiple records based
     on different assets. For example, a single bank account may have a balance
     in different foreign currencies."""
 
+    __table_args__ = (db.UniqueConstraint(
+        'institution', 'number'), {})  # type: Any
+
     user_id = db.Column(db.BigInteger, db.ForeignKey('user.id'))
     portfolio_id = db.Column(db.BigInteger, db.ForeignKey('portfolio.id'))
-    type = db.Column(db.Enum('checking', 'savings', 'investment',
-                             'credit_card', 'virtual', name='account_type'))
+    type = db.Column(db.Enum(*account_types, name='account_type'))
     name = db.Column(db.String)
+    institution = db.Column(db.String)  # Could be a routing number (US)
     number = db.Column(db.String)  # Account number
     description = db.Column(db.Text)
 
@@ -357,6 +373,18 @@ class Account(CRUDMixin, db.Model):  # type: ignore
 
     def __repr__(self):
         return 'Account <{} ({})>'.format(self.name, self.type)
+
+    @classmethod
+    def get_by_number(cls, institution: str, number: str):
+        account = cls.query \
+            .filter(cls.institution == institution) \
+            .filter(cls.number == number) \
+            .first()
+
+        if account is None:
+            raise AccountNotFoundException
+        else:
+            return account
 
     def assets(self):
         """Returns all assets under this account."""

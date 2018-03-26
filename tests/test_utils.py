@@ -143,7 +143,7 @@ def test_parse_stock_code(code, result):
 
 
 def test_parse_stock_records():
-    sample_file = 'tests/data/stocks.csv'
+    sample_file = 'tests/samples/shinhan_stock_records.csv'
     flag = True
     expected_keys = ('date', 'sequence', 'category1', 'category2', 'code',
                      'name', 'quantity', 'unit_price', 'subtotal', 'interest',

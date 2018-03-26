@@ -1,17 +1,37 @@
-from datetime import datetime, time, timedelta
+import decimal
 import os
+from datetime import datetime, time, timedelta
 
 import pytest
 
 from finance.models import Granularity
 from finance.providers import Dart, Kofia, Miraeasset
 from finance.providers.dart import Report as DartReport
+from finance.providers.record import Decimal, Float
 from finance.providers.yahoo import Yahoo
 from finance.utils import parse_date
 
-
 BASE_PATH = os.path.abspath(os.path.dirname(__file__))
 PROJECT_PATH = os.path.abspath(os.path.join(BASE_PATH, '..'))
+
+
+def test_decimal_records():
+    class Record(object):
+        decimal_field = Decimal()
+        float_field = Float()
+
+        def __init__(self, decimal_field, float_field):
+            self.decimal_field = decimal_field
+            self.float_field = float_field
+
+    record1 = Record('0.1', 0.1)
+    record2 = Record('0.2', 0.2)
+
+    assert record1.decimal_field + record2.decimal_field \
+        == decimal.Decimal('0.3')
+    # >>> 0.1 + 0.2
+    # 0.30000000000000004
+    assert record1.float_field + record2.float_field > 0.3
 
 
 def test_kofia_request_url():
@@ -81,7 +101,7 @@ def test_dart_fetch_data_with_invalid_code():
 def test_miraeasset_transactions(param):
     provider = Miraeasset()
     filename = os.path.join(
-        BASE_PATH, 'data', 'miraeasset_{}.csv'.format(param))
+        BASE_PATH, 'samples', 'miraeasset_{}.csv'.format(param))
     with open(filename) as fin:
         if param == 'local':
             records = provider.parse_local_transactions(fin)
