@@ -1,4 +1,7 @@
+from decimal import Decimal
+
 from finance.importers import import_miraeasset_foreign_records
+from finance.models import Asset
 
 
 def test_import_miraeasset_foreign_records(
@@ -7,3 +10,16 @@ def test_import_miraeasset_foreign_records(
 ):
     with open('tests/samples/miraeasset_foreign.csv') as fin:
         import_miraeasset_foreign_records(fin, account_stock)
+
+    balance = account_stock.balance()
+    balance_sheet = [
+        ('USD', -483.39),
+        ('AMD', 22),
+        ('SPY', 5),
+        ('SBUX', 2),
+        ('AMZN', 3),
+        ('NVDA', 13),
+    ]
+    for symbol, amount in balance_sheet:
+        asset = Asset.get_by_symbol(symbol)
+        assert balance[asset] == Decimal(str(amount))
