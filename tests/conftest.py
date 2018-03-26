@@ -12,7 +12,7 @@ from finance.models import (Account, AccountType, Asset, AssetType,
                             StockAsset)
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='session')
 def app(request):
     """Session-wide test `Flask` application."""
     settings_override = {
@@ -123,7 +123,7 @@ def asset_hf1(request, db):
 @pytest.fixture(scope='module')
 def asset_krw(request, db):
     asset = CurrencyAsset.create(
-        name='KRW', code='KRW', description='Korean Won')
+        code='KRW', description='Korean Won')
     request.addfinalizer(partial(teardown, db=db, record=asset))
     return asset
 
@@ -140,7 +140,7 @@ def asset_sp500(request, db):
 @pytest.fixture(scope='module')
 def asset_usd(request, db):
     asset = CurrencyAsset.create(
-        name='USD', code='USD', description='United States Dollar')
+        code='USD', description='United States Dollar')
     request.addfinalizer(partial(teardown, db=db, record=asset))
     return asset
 
