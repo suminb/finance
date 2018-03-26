@@ -12,8 +12,8 @@ from finance import create_app
 from finance.importers import \
     import_stock_values as import_stock_values_  # Avoid name clashes
 from finance.models import (
-    Account, Asset, AssetValue, DartReport, db, get_asset_by_fund_code,
-    Granularity, Portfolio, Record, Transaction, User)
+    Account, AccountType, Asset, AssetValue, DartReport, db,
+    get_asset_by_fund_code, Granularity, Portfolio, Record, Transaction, User)
 from finance.providers import Dart, Kofia, Miraeasset, Yahoo
 from finance.utils import (
     date_to_datetime, extract_numbers, get_dart_code, insert_asset,
@@ -24,27 +24,6 @@ from finance.utils import (
 
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 log = Logger('finance')
-
-
-def insert_accounts(user):
-    yield Account.create(
-        id=1001, type='checking', name='신한은행 입출금', user=user)
-    yield Account.create(
-        id=9001, type='investment', name='Woori Gold Banking', user=user)
-    yield Account.create(
-        id=7001, type='investment', name='S&P500 Fund', user=user)
-    yield Account.create(
-        id=7002, type='investment', name='East Spring China Fund',
-        user=user)
-    yield Account.create(
-        id=7003, type='investment', name='키움일본인덱스 주식재간접',
-        user=user)
-    yield Account.create(
-        id=8003, type='investment', name='신한 주식', user=user)
-    yield Account.create(
-        id=8001, type='virtual', name='8퍼센트', user=user)
-    yield Account.create(
-        id=8002, type='virtual', name='어니스트펀드', user=user)
 
 
 def insert_stock_assets():
@@ -97,8 +76,13 @@ def insert_test_data():
         user = User.create(
             family_name='Byeon', given_name='Sumin', email='suminb@gmail.com')
 
-        account_checking, _, _, _, _, account_stock, account_8p, _ = \
-            insert_accounts(user)
+        account_checking = Account.create(
+            type=AccountType.checking, name='신한은행 입출금',
+            institution='Shinhan', number='checking', user=user)
+        account_stock = Account.create(
+            type=AccountType.investment, name='미래에셋',
+            institution='Mirae Asset', number='stock', user=user)
+
         for _ in insert_stock_assets():
             pass
 
@@ -114,7 +98,7 @@ def insert_test_data():
 
         portfolio = Portfolio()
         portfolio.base_asset = asset_krw
-        portfolio.add_accounts(account_checking, account_stock, account_8p)
+        portfolio.add_accounts(account_checking, account_stock)
 
 
 @cli.command()
