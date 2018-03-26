@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from finance.providers.provider import Provider
 from finance.providers.record import DateTime, Decimal, Integer, List, String
 
@@ -113,3 +115,18 @@ class Record(object):
                 yield v.strftime(DATE_OUTPUT_FORMAT)
             else:
                 yield str(v)
+
+    @property
+    def synthesized_created_at(self):
+        return synthesize_datetime(self.created_at, self.seq)
+
+
+def synthesize_datetime(datetime, seq):
+    """The original CSV file does not include time information (it only
+    includes date) and there is a high probability of having multiple records
+    on a single day.  However, we have a unique constraint on (account_id,
+    asset_id, created_at, quantity) fields on the Record model. In order to
+    circumvent potential clashes, we are adding up some seconds (with the
+    sequence value) on the original timestamp.
+    """
+    return datetime + timedelta(seconds=seq)

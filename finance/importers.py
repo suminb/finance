@@ -1,7 +1,6 @@
 """A collection of data import functions."""
 import csv
 import io
-from datetime import timedelta
 
 from sqlalchemy.exc import IntegrityError
 
@@ -26,17 +25,6 @@ def import_stock_values(fin: io.TextIOWrapper, code: str, base_asset=None):
         except IntegrityError:
             log.warn('AssetValue for {0} on {1} already exist', code, date)
             db.session.rollback()
-
-
-def synthesize_datetime(datetime, seq):
-    """The original CSV file does not include time information (it only
-    includes date) and there is a high probability of having multiple records
-    on a single day.  However, we have a unique constraint on (account_id,
-    asset_id, created_at, quantity) fields on the Record model. In order to
-    circumvent potential clashes, we are adding up some seconds (with the
-    sequence value) on the original timestamp.
-    """
-    return datetime + timedelta(seconds=seq)
 
 
 def make_single_record_transaction(created_at, account, asset, quantity):
@@ -86,25 +74,25 @@ def import_miraeasset_foreign_records(
         if r.category == '해외주매수':
             asset_stock = Asset.get_by_isin(r.code)
             make_double_record_transaction(
-                synthesize_datetime(r.created_at, r.seq),
+                r.synthesized_created_at,
                 account,
                 target_asset, -r.amount,
                 asset_stock, r.quantity)
         elif r.category == '해외주매도':
             asset_stock = Asset.get_by_isin(r.code)
             make_double_record_transaction(
-                synthesize_datetime(r.created_at, r.seq),
+                r.synthesized_created_at,
                 account,
                 asset_stock, -r.quantity,
                 target_asset, r.amount)
         elif r.category == '해외주배당금':
             make_single_record_transaction(
-                synthesize_datetime(r.created_at, r.seq),
+                r.synthesized_created_at,
                 account, target_asset, r.amount)
         elif r.category == '환전매수':
             local_amount = int(r.raw_columns[6])  # amount in KRW
             make_double_record_transaction(
-                synthesize_datetime(r.created_at, r.seq),
+                r.synthesized_created_at,
                 account,
                 asset_krw, -local_amount,
                 target_asset, r.amount)
@@ -112,7 +100,7 @@ def import_miraeasset_foreign_records(
             raise NotImplementedError
         elif r.category == '외화인지세':
             make_single_record_transaction(
-                synthesize_datetime(r.created_at, r.seq),
+                r.synthesized_created_at,
                 account, target_asset, -r.amount)
         else:
             raise ValueError('Unknown record category: {0}'.format(r.category))
