@@ -43,7 +43,8 @@ def insert_stock_assets():
 
     for code, description in rows:
         log.info('Inserting {} ({})...', code, description)
-        yield Asset.create(type='stock', code=code, description=description)
+        yield Asset.create(type='stock', code=code, description=description,
+                           ignore_if_exists=True)
 
 
 @click.group()
