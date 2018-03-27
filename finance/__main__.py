@@ -16,10 +16,9 @@ from finance.models import (
     get_asset_by_fund_code, Granularity, Portfolio, Record, Transaction, User)
 from finance.providers import Dart, Kofia, Miraeasset, Yahoo
 from finance.utils import (
-    date_to_datetime, extract_numbers, get_dart_code, insert_asset,
-    insert_stock_record, parse_date, parse_stock_records,
-    request_import_stock_values as request_import_stock_values_,
-    serialize_datetime)
+    date_to_datetime, extract_numbers, get_dart_code, insert_stock_record,
+    parse_date, parse_stock_records, request_import_stock_values as
+    request_import_stock_values_, serialize_datetime)
 
 
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -99,12 +98,8 @@ def insert_test_data():
         for _ in insert_stock_assets():
             pass
 
-        insert_asset('security, KB S&P500,', data={'code': 'KR5223941018'})
-        insert_asset('security, 이스트스프링차이나펀드,',
-                     data={'code': 'KR5229221225'})
-        insert_asset('security, 키움일본인덱스,',
-                     data={'code': 'KR5206689717'})
-        insert_asset('bond, 포트폴리오 투자상품 1호,')
+        create_asset(AssetType.security, 'KR5223941018', 'KB S&P500')
+        create_asset(AssetType.security, 'KR5229221225', '이스트스프링차이나')
 
         portfolio = Portfolio()
         portfolio.base_asset = asset_krw
