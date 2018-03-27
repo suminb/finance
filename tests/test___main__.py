@@ -74,10 +74,6 @@ def test_import_stock_values():
     code, name = random.choice(codes)
     StockAsset.create(code=code)
 
-    # TODO: Make `monkeypatch` fixture
-    db_url = os.environ['DB_URL']
-    os.environ['DB_URL'] = os.environ['TEST_DB_URL']
-
     runner = CliRunner()
     result = runner.invoke(
         import_stock_values,
@@ -94,8 +90,6 @@ def test_import_stock_values():
     assert asset_value.low == 30400
     assert asset_value.close == 31000
     assert asset_value.volume == 856210
-
-    os.environ['DB_URL'] = db_url
 
 
 def test_import_stock_records(asset_krw, account_stock, account_checking):
