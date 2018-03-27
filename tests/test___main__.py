@@ -113,8 +113,3 @@ def test_import_miraeasset_foreign_data(
         ['tests/samples/miraeasset_foreign.csv', 'Miraeasset', 'ACCOUNT1'],
         catch_exceptions=False)
     assert result.exit_code == 0
-
-
-def teardown_module(module):
-    runner = CliRunner()
-    runner.invoke(drop_all)
