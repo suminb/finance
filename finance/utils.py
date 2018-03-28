@@ -129,10 +129,6 @@ def parse_int(v, fallback_to=0):
         return fallback_to
 
 
-def parse_nullable_str(v):
-    return v if v else None
-
-
 def parse_stock_code(code: str):
     """Parses a stock code. NOTE: Only works for the Shinhan HTS"""
     if code.startswith('A'):
