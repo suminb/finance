@@ -1,14 +1,14 @@
 import os
 import re
-import types
 from datetime import datetime, timedelta
 
 import pytest
 
+import types
 from finance.models import Asset
-from finance.utils import (date_range, date_to_datetime, extract_numbers,
-                           insert_stock_record, parse_date, parse_datetime,
-                           parse_decimal, parse_stock_code,
+from finance.utils import (DictReader, date_range, date_to_datetime,
+                           extract_numbers, insert_stock_record, parse_date,
+                           parse_datetime, parse_decimal, parse_stock_code,
                            parse_stock_records)
 
 BASE_PATH = os.path.abspath(os.path.dirname(__file__))
@@ -66,6 +66,12 @@ def test_date_to_datetime():
 
     assert date_to_datetime(date) == dt_beginning
     assert date_to_datetime(date, True) == dt_end
+
+
+def test_dict_reader():
+    d = DictReader({'key': 'value'})
+    assert d['key'] == 'value'
+    assert d.key == 'value'
 
 
 def test_extract_numbers():
