@@ -312,21 +312,6 @@ def insert_stock_transfer_record(data: dict, bank_account: object):
             "Unrecognized transfer type '{}'".format(data['name']))
 
 
-def insert_record(row, account, asset, transaction):
-    """
-    (type, created_at, cateory, quantity)
-    """
-    from finance.models import Record
-    type, created_at, category, quantity = [x.strip() for x in row.split(',')]
-    type = parse_nullable_str(type)
-    created_at = parse_date(created_at)
-    category = parse_nullable_str(category)
-    quantity = parse_decimal(quantity)
-    return Record.create(
-        account=account, asset=asset, transaction=transaction, type=type,
-        created_at=created_at, category=category, quantity=quantity)
-
-
 def json_requested():
     """Determines whether the requested content type is application/json."""
     best = request.accept_mimetypes \
