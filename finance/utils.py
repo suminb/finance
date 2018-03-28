@@ -312,20 +312,6 @@ def insert_stock_transfer_record(data: dict, bank_account: object):
             "Unrecognized transfer type '{}'".format(data['name']))
 
 
-def insert_asset_value(row, asset, base_asset):
-    """
-    (evaluated_at, granularity, open, high, low, close)
-    """
-    from finance.models import AssetValue
-    columns = [x.strip() for x in row.split(',')]
-    evaluated_at = parse_date(columns[0])
-    granularity = columns[1]
-    open, high, low, close = map(parse_decimal, columns[2:6])
-    return AssetValue.create(
-        asset=asset, base_asset=base_asset, evaluated_at=evaluated_at,
-        granularity=granularity, open=open, high=high, low=low, close=close)
-
-
 def insert_record(row, account, asset, transaction):
     """
     (type, created_at, cateory, quantity)
