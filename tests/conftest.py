@@ -12,7 +12,7 @@ from finance.models import (Account, AccountType, Asset, AssetType,
                             StockAsset)
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='session')
 def app(request):
     """Session-wide test `Flask` application."""
     settings_override = {
@@ -123,7 +123,7 @@ def asset_hf1(request, db):
 @pytest.fixture(scope='module')
 def asset_krw(request, db):
     asset = CurrencyAsset.create(
-        name='KRW', code='KRW', description='Korean Won')
+        code='KRW', description='Korean Won')
     request.addfinalizer(partial(teardown, db=db, record=asset))
     return asset
 
@@ -140,7 +140,7 @@ def asset_sp500(request, db):
 @pytest.fixture(scope='module')
 def asset_usd(request, db):
     asset = CurrencyAsset.create(
-        name='USD', code='USD', description='United States Dollar')
+        code='USD', description='United States Dollar')
     request.addfinalizer(partial(teardown, db=db, record=asset))
     return asset
 
@@ -163,8 +163,8 @@ def stock_asset_spy(request, db, asset_usd):
     request.addfinalizer(partial(teardown, db=db, record=asset))
 
     with open('tests/samples/SPY.csv') as fin:
-        # TODO: Teardown?
-        import_stock_values(fin, 'SPY', base_asset=asset_usd)
+        for av in import_stock_values(fin, 'SPY', base_asset=asset_usd):
+            request.addfinalizer(partial(teardown, db=db, record=av))
 
     return asset
 
@@ -177,8 +177,8 @@ def stock_asset_amd(request, db, asset_usd):
     request.addfinalizer(partial(teardown, db=db, record=asset))
 
     with open('tests/samples/AMD.csv') as fin:
-        # TODO: Teardown?
-        import_stock_values(fin, 'AMD', base_asset=asset_usd)
+        for av in import_stock_values(fin, 'AMD', base_asset=asset_usd):
+            request.addfinalizer(partial(teardown, db=db, record=av))
 
     return asset
 
@@ -191,8 +191,8 @@ def stock_asset_nvda(request, db, asset_usd):
     request.addfinalizer(partial(teardown, db=db, record=asset))
 
     with open('tests/samples/NVDA.csv') as fin:
-        # TODO: Teardown?
-        import_stock_values(fin, 'NVDA', base_asset=asset_usd)
+        for av in import_stock_values(fin, 'NVDA', base_asset=asset_usd):
+            request.addfinalizer(partial(teardown, db=db, record=av))
 
     return asset
 
@@ -205,8 +205,8 @@ def stock_asset_amzn(request, db, asset_usd):
     request.addfinalizer(partial(teardown, db=db, record=asset))
 
     with open('tests/samples/AMZN.csv') as fin:
-        # TODO: Teardown?
-        import_stock_values(fin, 'AMZN', base_asset=asset_usd)
+        for av in import_stock_values(fin, 'AMZN', base_asset=asset_usd):
+            request.addfinalizer(partial(teardown, db=db, record=av))
 
     return asset
 
@@ -219,8 +219,8 @@ def stock_asset_sbux(request, db, asset_usd):
     request.addfinalizer(partial(teardown, db=db, record=asset))
 
     with open('tests/samples/SBUX.csv') as fin:
-        # TODO: Teardown?
-        import_stock_values(fin, 'SBUX', base_asset=asset_usd)
+        for av in import_stock_values(fin, 'SBUX', base_asset=asset_usd):
+            request.addfinalizer(partial(teardown, db=db, record=av))
 
     return asset
 

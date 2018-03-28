@@ -206,7 +206,8 @@ class Asset(CRUDMixin, db.Model):  # type: ignore
 
     type = db.Column(db.Enum(*asset_types, name='asset_type'))
     name = db.Column(db.String)
-    code = db.Column(db.String)
+    # FIXME: Rename this as `symbol` or rename `get_by_symbol` -> `get_by_code`
+    code = db.Column(db.String, unique=True)
     isin = db.Column(db.String)
     description = db.Column(db.Text)
 

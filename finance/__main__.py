@@ -12,14 +12,13 @@ from finance import create_app
 from finance.importers import \
     import_stock_values as import_stock_values_  # Avoid name clashes
 from finance.models import (
-    Account, AccountType, Asset, AssetValue, DartReport, db,
+    Account, AccountType, Asset, AssetType, AssetValue, DartReport, db,
     get_asset_by_fund_code, Granularity, Portfolio, Record, Transaction, User)
 from finance.providers import Dart, Kofia, Miraeasset, Yahoo
 from finance.utils import (
-    date_to_datetime, extract_numbers, get_dart_code, insert_asset,
-    insert_stock_record, parse_date, parse_stock_records,
-    request_import_stock_values as request_import_stock_values_,
-    serialize_datetime)
+    date_to_datetime, extract_numbers, get_dart_code, insert_stock_record,
+    parse_date, parse_stock_records, request_import_stock_values as
+    request_import_stock_values_, serialize_datetime)
 
 
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -44,7 +43,8 @@ def insert_stock_assets():
 
     for code, description in rows:
         log.info('Inserting {} ({})...', code, description)
-        yield Asset.create(type='stock', code=code, description=description)
+        yield Asset.create(type='stock', code=code, description=description,
+                           ignore_if_exists=True)
 
 
 @click.group()
@@ -68,33 +68,39 @@ def drop_all():
         db.drop_all()
 
 
+def create_account(type_: AccountType, institution: str, number: str, user):
+    return Account.create(
+        type=type_, name='Test account', institution=institution,
+        number=number, user=user, ignore_if_exists=True)
+
+
+def create_asset(type_: AssetType, code: str, description: str):
+    return Asset.create(
+        type=type_, code=code, description=description, ignore_if_exists=True)
+
+
 @cli.command()
 def insert_test_data():
     """Inserts some sample data for testing."""
     app = create_app(__name__)
     with app.app_context():
         user = User.create(
-            family_name='Byeon', given_name='Sumin', email='suminb@gmail.com')
+            family_name='Byeon', given_name='Sumin', email='suminb@gmail.com',
+            ignore_if_exists=True)
 
-        account_checking = Account.create(
-            type=AccountType.checking, name='신한은행 입출금',
-            institution='Shinhan', number='checking', user=user)
-        account_stock = Account.create(
-            type=AccountType.investment, name='미래에셋',
-            institution='Mirae Asset', number='stock', user=user)
+        account_checking = create_account(
+            AccountType.checking, 'Shinhan', 'checking', user)
+        account_stock = create_account(
+            AccountType.investment, 'Mirae Asset', 'stock', user)
+
+        asset_krw = create_asset(AssetType.currency, 'KRW', 'Korean Won')
+        create_asset(AssetType.currency, 'USD', 'United States Dollar')
 
         for _ in insert_stock_assets():
             pass
 
-        asset_krw = insert_asset('currency, KRW, Korean Won')
-        insert_asset('currency, USD, United States Dollar')
-        insert_asset('commodity, Gold, Gold')
-        insert_asset('security, KB S&P500,', data={'code': 'KR5223941018'})
-        insert_asset('security, 이스트스프링차이나펀드,',
-                     data={'code': 'KR5229221225'})
-        insert_asset('security, 키움일본인덱스,',
-                     data={'code': 'KR5206689717'})
-        insert_asset('bond, 포트폴리오 투자상품 1호,')
+        create_asset(AssetType.security, 'KR5223941018', 'KB S&P500')
+        create_asset(AssetType.security, 'KR5229221225', '이스트스프링차이나')
 
         portfolio = Portfolio()
         portfolio.base_asset = asset_krw
@@ -336,7 +342,8 @@ def import_stock_values(code):
         # automatically insert an Asset record when it is not found.
 
         stdin = click.get_text_stream('stdin')
-        import_stock_values_(stdin, code)
+        for _ in import_stock_values_(stdin, code):
+            pass
 
 
 # TODO: Load data from stdin

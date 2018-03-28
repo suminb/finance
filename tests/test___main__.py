@@ -31,6 +31,7 @@ def test_create_all():
     assert result.exit_code == 0
 
 
+@pytest.mark.skip
 def test_insert_test_data_all():
     runner = CliRunner()
     result = runner.invoke(insert_test_data)
@@ -73,10 +74,6 @@ def test_import_stock_values():
     code, name = random.choice(codes)
     StockAsset.create(code=code)
 
-    # TODO: Make `monkeypatch` fixture
-    db_url = os.environ['DB_URL']
-    os.environ['DB_URL'] = os.environ['TEST_DB_URL']
-
     runner = CliRunner()
     result = runner.invoke(
         import_stock_values,
@@ -94,8 +91,6 @@ def test_import_stock_values():
     assert asset_value.close == 31000
     assert asset_value.volume == 856210
 
-    os.environ['DB_URL'] = db_url
-
 
 def test_import_stock_records(asset_krw, account_stock, account_checking):
     for _ in insert_stock_assets():
@@ -109,8 +104,8 @@ def test_import_stock_records(asset_krw, account_stock, account_checking):
 
 
 def test_import_miraeasset_foreign_data(
-    asset_usd, asset_krw, account_stock, stock_assets, stock_asset_spy,
-    stock_asset_amzn, stock_asset_nvda, stock_asset_amd, stock_asset_sbux
+    asset_usd, asset_krw, account_stock, stock_asset_spy, stock_asset_amzn,
+    stock_asset_nvda, stock_asset_amd, stock_asset_sbux
 ):
     runner = CliRunner()
     result = runner.invoke(
@@ -118,8 +113,3 @@ def test_import_miraeasset_foreign_data(
         ['tests/samples/miraeasset_foreign.csv', 'Miraeasset', 'ACCOUNT1'],
         catch_exceptions=False)
     assert result.exit_code == 0
-
-
-def teardown_module(module):
-    runner = CliRunner()
-    runner.invoke(drop_all)

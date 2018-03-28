@@ -312,18 +312,6 @@ def insert_stock_transfer_record(data: dict, bank_account: object):
             "Unrecognized transfer type '{}'".format(data['name']))
 
 
-def insert_asset(row, data=None):
-    """Parses a comma separated values to fill in an Asset object.
-    (type, name, description)
-
-    :param row: comma separated values
-    """
-    from finance.models import Asset
-    type, name, description = [x.strip() for x in row.split(',')]
-    return Asset.create(
-        type=type, name=name, description=description, data=data)
-
-
 def insert_asset_value(row, asset, base_asset):
     """
     (evaluated_at, granularity, open, high, low, close)
