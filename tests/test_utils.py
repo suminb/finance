@@ -8,8 +8,8 @@ import types
 from finance.models import Asset
 from finance.utils import (DictReader, date_range, date_to_datetime,
                            extract_numbers, insert_stock_record, parse_date,
-                           parse_datetime, parse_decimal, parse_stock_code,
-                           parse_stock_records)
+                           parse_datetime, parse_decimal, parse_int,
+                           parse_stock_code, parse_stock_records)
 
 BASE_PATH = os.path.abspath(os.path.dirname(__file__))
 PROJECT_PATH = os.path.abspath(os.path.join(BASE_PATH, '..'))
@@ -137,6 +137,17 @@ def test_parse_datetime():
 def test_parse_decimal():
     assert parse_decimal('1.1') == 1.1
     assert parse_decimal(1) == 1.0
+
+    assert parse_decimal('a') == 0
+    assert parse_decimal('a', fallback_to=1) == 1
+
+
+def test_parse_int():
+    assert parse_int(1) == 1
+    assert parse_int('1') == 1
+
+    assert parse_int('1.1') == 0
+    assert parse_int('1.1', fallback_to=2) == 2
 
 
 @pytest.mark.parametrize('code, result', [

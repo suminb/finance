@@ -113,20 +113,20 @@ def parse_datetime(dt, at=datetime.now(), format='%Y-%m-%d %H:%M:%S'):
         return datetime.strptime(dt, format)
 
 
-def parse_decimal(v, type=float):
+def parse_decimal(v, type_=float, fallback_to=0):
     try:
-        return type(v)
+        return type_(v)
     except ValueError:
-        return None
+        return fallback_to
 
 
-def parse_int(v):
+def parse_int(v, fallback_to=0):
     """Parses a string as an integer value. Falls back to zero when failed to
     parse."""
     try:
         return int(v)
     except ValueError:
-        return 0
+        return fallback_to
 
 
 def parse_nullable_str(v):
