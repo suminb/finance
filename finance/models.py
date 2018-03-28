@@ -578,7 +578,11 @@ class Transaction(CRUDMixin, db.Model):  # type: ignore
             self.close()
 
     def close(self, closed_at=None, commit=True):
-        """Explicitly close a transaction."""
+        """Explicitly close a transaction.
+
+        :param closed_at: Marks a point at which the transaction is close, but
+                          it serves no functionality of scheduled task.
+        """
         if closed_at:
             self.closed_at = closed_at
         else:

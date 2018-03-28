@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pytest
 from sqlalchemy.exc import IntegrityError
 
@@ -184,9 +186,15 @@ def test_portfolio_balance(account_checking, account_savings, account_sp500,
     db.session.commit()
 
 
-def _test_transaction():
+def test_transaction():
     with Transaction.create() as t:
-        t.state = 'xxxx'
+        assert t.state == TransactionState.initiated
+    assert t.state == TransactionState.closed
+
+    t = Transaction.create()
+    assert t.state == TransactionState.initiated
+    t.close(closed_at=datetime.utcnow())
+    assert t.state == TransactionState.closed
 
 
 def test_records(account_checking, asset_krw):
