@@ -1,15 +1,15 @@
 import os
 import re
+import types
 from datetime import datetime, timedelta
 
 import pytest
-
-import types
 from finance.models import Asset
 from finance.utils import (DictReader, date_range, date_to_datetime,
-                           extract_numbers, insert_stock_record, parse_date,
-                           parse_datetime, parse_decimal, parse_int,
-                           parse_stock_code, parse_stock_records)
+                           extract_numbers, get_dart_code, get_dart_codes,
+                           insert_stock_record, parse_date, parse_datetime,
+                           parse_decimal, parse_int, parse_stock_code,
+                           parse_stock_records)
 
 BASE_PATH = os.path.abspath(os.path.dirname(__file__))
 PROJECT_PATH = os.path.abspath(os.path.join(BASE_PATH, '..'))
@@ -89,6 +89,18 @@ def test_extract_numbers():
 
     with pytest.raises(TypeError):
         extract_numbers(b'\x00')
+
+
+def test_get_dart_code():
+    codes = get_dart_codes()
+    assert list(codes) == [
+        ['삼성전자', '00126380'],
+        ['우리은행', '00254045'],
+        ['SK', '00181712'],
+        ['넷마블게임즈', '00904672']
+    ]
+
+    assert get_dart_code('SK') == '00181712'
 
 
 def test_insert_stock_record(db, account_stock, account_checking):
