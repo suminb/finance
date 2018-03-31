@@ -56,7 +56,10 @@ def test_date_range_relative(start, end, count):
 ])
 def test_date_range_exceptions(start, end):
     with pytest.raises(ValueError):
-        [x for x in date_range(start, end)]
+        list(date_range(start, end))
+
+    with pytest.raises(NotImplementedError):
+        list(date_range(start, end, 2))
 
 
 def test_date_to_datetime():
@@ -101,6 +104,9 @@ def test_get_dart_code():
     ]
 
     assert get_dart_code('SK') == '00181712'
+
+    with pytest.raises(ValueError):
+        get_dart_code('Non-exist')
 
 
 def test_insert_stock_record(db, account_stock, account_checking):
