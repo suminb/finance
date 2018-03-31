@@ -9,7 +9,7 @@ from finance.utils import (DictReader, date_range, date_to_datetime,
                            extract_numbers, get_dart_code, get_dart_codes,
                            insert_stock_record, parse_date, parse_datetime,
                            parse_decimal, parse_int, parse_stock_code,
-                           parse_stock_records)
+                           parse_stock_records, serialize_datetime)
 
 BASE_PATH = os.path.abspath(os.path.dirname(__file__))
 PROJECT_PATH = os.path.abspath(os.path.join(BASE_PATH, '..'))
@@ -208,3 +208,15 @@ def test_parse_stock_records():
 
     if flag:
         pytest.fail('No data was read.')
+
+
+def test_serialize_datetime():
+    now = datetime.now()
+    serialized = serialize_datetime(now)
+    # e.g., 2018-04-01T03:13:50.266116
+    assert re.match(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}', serialized)
+
+    with pytest.raises(TypeError):
+        serialize_datetime(None)
+    with pytest.raises(TypeError):
+        serialize_datetime('test')
