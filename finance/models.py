@@ -32,7 +32,7 @@ def get_asset_by_fund_code(code: str):
     # (sqlalchemy.engine.result.RowProxy)
     query = "SELECT * FROM asset WHERE data->>'code' = :code LIMIT 1"
     raw_asset = db.session.execute(query, {'code': code}).first()
-    if not raw_asset:
+    if raw_asset is None:
         raise AssetNotFoundException(
             'Fund code {} is not mapped to any asset'.format(code))
     asset_id = raw_asset[0]
@@ -404,7 +404,7 @@ class Account(CRUDMixin, db.Model):  # type: ignore
 
     def balance(self, evaluated_at=None):
         """Calculates the account balance on a given date."""
-        if not evaluated_at:
+        if evaluated_at is None:
             evaluated_at = datetime.utcnow()
 
         # FIMXE: Consider open transactions
@@ -437,7 +437,7 @@ class Account(CRUDMixin, db.Model):  # type: ignore
         if base_asset is None:
             raise InvalidTargetAssetException('Base asset cannot be null')
 
-        if not evaluated_at:
+        if evaluated_at is None:
             evaluated_at = datetime.utcnow()
 
         if granularity == Granularity.day:
@@ -505,7 +505,7 @@ class Portfolio(CRUDMixin, db.Model):  # type: ignore
 
     def balance(self, evaluated_at=None):
         """Calculates the sum of all account balances on a given date."""
-        if not evaluated_at:
+        if evaluated_at is None:
             evaluated_at = datetime.utcnow()
 
         # Balances of all accounts under this portfolio
