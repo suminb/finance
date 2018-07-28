@@ -126,3 +126,11 @@ using ``brew`` you may install ``openssl`` as following:
 
     brew install openssl
 
+SonarCloud with Travis CI
+*************************
+
+Set ``SONAR_TOKEN`` environment variable on Travis CI repository settings.
+Refer `this document <https://docs.travis-ci.com/user/sonarcloud/>`_ for more
+details. Then you will need to set up ``sonar-project.properties`` file as
+described in `this document
+<https://docs.sonarqube.org/display/SCAN/Analyzing+with+SonarQube+Scanner>`_.
