@@ -7,6 +7,9 @@ Personal Finance Project
 .. image:: https://coveralls.io/repos/github/suminb/finance/badge.svg?branch=develop
    :target: https://coveralls.io/github/suminb/finance?branch=develop
 
+.. image:: https://sonarcloud.io/api/project_badges/measure?project=finance&metric=alert_status
+   :target: https://sonarcloud.io/dashboard?id=finance
+
 NOTE: 제가 주로 사용하는 에디터인 vim 에서 한글 타이핑이 불편하기 때문에 영어로
 문서를 작성하는 것이 일반적이지만, 이 프로젝트의 경우 한국어를 사용하는 청중이
 대부분인 관계로 문서를 한국어로 작성합니다.
