@@ -4,6 +4,17 @@ Infrastructure
 Some of the code is intended to run on AWS, and thus we use
 [Terraform](https://www.terraform.io) to manage our infrastructure.
 
+Build
+-----
+
+```
+./build.sh
+```
+
+NOTE: This fetches a *base system* from S3 (which we previously built and
+uploaded). The *base system* contains Python packages built for AWS Lambda
+environment (Amazon Linux distro).
+
 Deployment
 ----------
 
