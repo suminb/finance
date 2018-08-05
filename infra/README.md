@@ -4,6 +4,14 @@ Infrastructure
 Some of the code is intended to run on AWS, and thus we use
 [Terraform](https://www.terraform.io) to manage our infrastructure.
 
+Architecture
+------------
+
+- `request_import_stock_values` inserts asset codes into SQS.
+- `fetch_asset_values` polls asset codes from SQS and actually fetch data from
+   a source.
+- CloudWatch Alarm invokes both functions periodically.
+
 Build
 -----
 
@@ -23,13 +31,13 @@ is not included in `main.tf` for obvious (security) reasons, so it needs to be
 injected via a command line parameter.
 
 ```
-terraform plan -var db_url="<DB URL>"
+terraform plan -var db_url="postgres://username:password@host:port/database"
 ```
 
 If all is good, apply the plan on the live environment.
 
 ```
-terraform apply -var db_url="<DB URL>"
+terraform apply -var db_url="postgres://username:password@host:port/database"
 ```
 
 Notes
