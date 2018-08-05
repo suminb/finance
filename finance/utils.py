@@ -1,7 +1,11 @@
-from datetime import datetime, timedelta
+import csv
+from datetime import datetime, time, timedelta
+import json
+import os
 
+import boto3
+from flask import request
 from logbook import Logger
-from typedecorator import typed
 
 # NOTE: finance.models should not be imported here in order to avoid circular
 # depencencies
@@ -34,6 +38,16 @@ def date_range(start, end, step=1):
         yield start + timedelta(days=i)
 
 
+def date_to_datetime(date, end_of_day=False):
+    """Converts date to datetime.
+
+    :param end_of_day: Indicates whether we want the datetime of the end of the
+                       day.
+    """
+    return datetime.combine(
+        date, time(23, 59, 59) if end_of_day else time(0, 0, 0))
+
+
 def extract_numbers(value, type=str):
     """Extracts numbers only from a string."""
     def extract(vs):
@@ -43,10 +57,42 @@ def extract_numbers(value, type=str):
     return type(''.join(extract(value)))
 
 
+def get_dart_codes():
+    """Returns all DART codes."""
+    with open('data/dart_codes.csv') as fin:
+        for line in fin.readlines():
+            yield [x.strip() for x in line.split(',')]
+
+
+def get_dart_code(entity_name):
+    for name, code in get_dart_codes():
+        if name == entity_name:
+            return code
+    raise ValueError('CRP code for {} is not found'.format(entity_name))
+
+
+def load_stock_codes(fin):
+    reader = csv.reader(fin, delimiter='\t', quotechar='"')
+    for code, name in reader:
+        if code != 'N/A':
+            yield code, name
+
+
+def make_request_import_stock_values_message(code, start_time, end_time):
+    # type: (str, datetime, datetime) -> dict
+    return {
+        'version': 0,
+        'code': code,
+        'start_time': int(start_time.timestamp()),
+        'end_time': int(end_time.timestamp()),
+    }
+
+
 def parse_date(date, format='%Y-%m-%d'):
-    """Make a datetime object from a string.
+    """Makes a date object from a string.
 
     :type date: str or int
+    :rtype: datetime.date
     """
     if isinstance(date, int):
         return datetime.now().date() + timedelta(days=date)
@@ -54,24 +100,33 @@ def parse_date(date, format='%Y-%m-%d'):
         return datetime.strptime(date, format)
 
 
-def parse_decimal(v, type=float):
+def parse_datetime(dt, at=datetime.now(), format='%Y-%m-%d %H:%M:%S'):
+    """Makes a datetime object from a string.
+
+    :param dt: Datetime
+    :param at: Time at which the relative time is evaluated
+    :param format: Datetime string format
+    """
+    if isinstance(dt, int):
+        return at + timedelta(seconds=dt)
+    else:
+        return datetime.strptime(dt, format)
+
+
+def parse_decimal(v, type_=float, fallback_to=0):
     try:
-        return type(v)
+        return type_(v)
     except ValueError:
-        return None
+        return fallback_to
 
 
-def parse_int(v):
+def parse_int(v, fallback_to=0):
     """Parses a string as an integer value. Falls back to zero when failed to
     parse."""
     try:
         return int(v)
     except ValueError:
-        return 0
-
-
-def parse_nullable_str(v):
-    return v if v else None
+        return fallback_to
 
 
 def parse_stock_code(code: str):
@@ -88,7 +143,9 @@ def parse_stock_records(stream):
     """
     :param stream: A steam to read in a CSV file.
     """
-    first_header, second_header = next(stream), next(stream)
+    # Skip first two lines
+    next(stream), next(stream)
+
     while True:
         try:
             first_line, second_line = next(stream), next(stream)
@@ -144,7 +201,36 @@ def parse_stock_records(stream):
         }
 
 
-@typed
+def poll_import_stock_values_requests(sqs_region, queue_url):
+    client = boto3.client('sqs', region_name=sqs_region)
+    resp = client.receive_message(**{
+        'QueueUrl': queue_url, 'VisibilityTimeout': 180})
+    messages = resp['Messages'] if 'Messages' in resp else []
+
+    for message in messages:
+        yield json.loads(message['Body'])
+        client.delete_message(**{
+            'QueueUrl': queue_url, 'ReceiptHandle': message['ReceiptHandle']})
+
+
+def request_import_stock_values(
+    code, start_time, end_time,
+    sqs_region=os.environ['SQS_REGION'],
+    queue_url=os.environ['REQUEST_IMPORT_STOCK_VALUES_QUEUE_URL']
+):
+    message = make_request_import_stock_values_message(
+        code, start_time, end_time)
+
+    client = boto3.client('sqs', region_name=sqs_region)
+    resp = client.send_message(**{
+        'QueueUrl': queue_url,
+        'MessageBody': json.dumps(message),
+    })
+
+    if resp['ResponseMetadata']['HTTPStatusCode'] != 200:
+        log.error('Something went wrong: {0}', resp)
+
+
 def insert_stock_record(data: dict, stock_account: object,
                         bank_account: object):
     """
@@ -167,10 +253,9 @@ def insert_stock_record(data: dict, stock_account: object,
         return None
 
 
-@typed
 def insert_stock_trading_record(data: dict, stock_account: object):
     """Inserts a stock trading (i.e., buying or selling stocks) records."""
-    from finance.models import get_asset_by_stock_code, Record
+    from finance.models import Asset, Record
     if data['category1'].startswith('장내'):
         code_suffix = '.KS'
     elif data['category1'].startswith('코스닥'):
@@ -183,7 +268,7 @@ def insert_stock_trading_record(data: dict, stock_account: object):
 
     code = data['code'] + code_suffix
 
-    asset = get_asset_by_stock_code(code)
+    asset = Asset.get_by_symbol(code)
     if asset is None:
         raise ValueError(
             "Asset object could not be retrived with code '{}'".format(code))
@@ -196,7 +281,6 @@ def insert_stock_trading_record(data: dict, stock_account: object):
     )
 
 
-@typed
 def insert_stock_transfer_record(data: dict, bank_account: object):
     """Inserts a transfer record between a bank account and a stock account.
     """
@@ -224,45 +308,26 @@ def insert_stock_transfer_record(data: dict, bank_account: object):
             "Unrecognized transfer type '{}'".format(data['name']))
 
 
-def insert_asset(row, data=None):
-    """Parses a comma separated values to fill in an Asset object.
-    (type, name, description)
-
-    :param row: comma separated values
-    """
-    from finance.models import Asset
-    type, name, description = [x.strip() for x in row.split(',')]
-    return Asset.create(
-        type=type, name=name, description=description, data=data)
+def json_requested():
+    """Determines whether the requested content type is application/json."""
+    best = request.accept_mimetypes \
+        .best_match(['application/json', 'text/plain'])
+    return best == 'application/json' and \
+        request.accept_mimetypes[best] > \
+        request.accept_mimetypes['text/plain']
 
 
-def insert_asset_value(row, asset, base_asset):
-    """
-    (evaluated_at, granularity, open, high, low, close)
-    """
-    from finance.models import AssetValue
-    columns = [x.strip() for x in row.split(',')]
-    evaluated_at = parse_date(columns[0])
-    granularity = columns[1]
-    open, high, low, close = map(parse_decimal, columns[2:6])
-    return AssetValue.create(
-        asset=asset, base_asset=base_asset, evaluated_at=evaluated_at,
-        granularity=granularity, open=open, high=high, low=low, close=close)
+def serialize_datetime(obj):
+    """JSON serializer for objects not serializable by default json code. This
+    may be used as follows:
 
+        json.dumps(obj, default=serialize_datetime)
+    """
 
-def insert_record(row, account, asset, transaction):
-    """
-    (type, created_at, cateory, quantity)
-    """
-    from finance.models import Record
-    type, created_at, category, quantity = [x.strip() for x in row.split(',')]
-    type = parse_nullable_str(type)
-    created_at = parse_date(created_at)
-    category = parse_nullable_str(category)
-    quantity = parse_decimal(quantity)
-    return Record.create(
-        account=account, asset=asset, transaction=transaction, type=type,
-        created_at=created_at, category=category, quantity=quantity)
+    if isinstance(obj, datetime):
+        serial = obj.isoformat()
+        return serial
+    raise TypeError('Type not serializable')
 
 
 class DictReader(object):

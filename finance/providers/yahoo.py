@@ -1,65 +1,114 @@
-import csv
 from datetime import datetime
-from contextlib import closing
-import io
+import json
 
 import requests
-from typedecorator import typed
 
+from finance.models import Granularity
 from finance.providers.provider import AssetValueProvider
-from finance.utils import parse_date
 
 
 class Yahoo(AssetValueProvider):
-    @property
-    def request_url(self):
-        return 'http://real-chart.finance.yahoo.com/table.csv'
+    """Fetches and parses financial data from Yahoo Finance."""
 
-    @property
-    def request_headers(self):
-        """Looks like no special header is required."""
-        return {'Accept-Encoding': 'text/plain'}
+    def __init__(self):
+        pass
 
-    @typed
-    def request_params(self: object, code: str, start_year: int,
-                       end_year: int) -> dict:
+    def get_url(self, symbol):
+        """Returns a URL to be fetched.
+
+        :param symbol: A symbol of a security (e.g., NVDA, MSFT)
         """
-        Example request params:
+        return 'https://query1.finance.yahoo.com/v8/finance/chart/{0}'
 
-            d=6&e=2&f=2016&g=d&a=0&b=4&c=2000&ignore=.csv
+    def as_timestamp(self, datetime):
+        return int(datetime.timestamp())
 
-        """
-
-        # NOTE: Seems like 'f' and 'c' have no effect at all... It always
-        # returns data from 2000-01-01 to today's date
-        return {
-            'd': 6,  # ???
-            'e': 2,  # ???
-            'f': end_year,
-            'g': 'd',  # ???
-            'b': 4,  # ???
-            'c': start_year,
-            's': code,
-            'ignore': '.csv',
+    def asset_values(self, symbol, start_time, end_time,
+                     granularity=Granularity.day):
+        mappings = {
+            Granularity.day: self.fetch_daily_data,
+            Granularity.min: self.fetch_data_by_minutes,
         }
 
-    @typed
-    def fetch_data(self: object, code: str, from_date: datetime,
-                   to_date: datetime):
-        params = self.request_params(code, from_date.year, to_date.year)
-        resp = requests.get(self.request_url, headers=self.request_headers,
-                            params=params)
+        try:
+            fetcher = mappings[granularity]
+        except KeyError:
+            raise NotImplementedError
+        else:
+            rows = fetcher(symbol, start_time, end_time)
 
-        if resp.status_code != 200:
-            resp.raise_for_status()
+        return self.filter_empty_rows(rows)
 
-        stream = io.StringIO(resp.text)
+    # NOTE: 'Data by day' would keep the name consistent, but 'daily data'
+    # sounds more natural.
+    def fetch_daily_data(self, symbol, start_time, end_time):
+        url = self.get_url(symbol)
 
-        # Headers are in the following format.
-        # ['Date', 'Open', 'High', 'Low', 'Close', 'Volume', 'Adj Close']
-        headers = next(stream)
+        params = {
+            'symbol': symbol,
+            'period1': self.as_timestamp(start_time),
+            'period2': self.as_timestamp(end_time),
+            'interval': '1d',
+            'includePrePost': 'true',
+            'events': 'div%7Csplit%7Cearn',
+            'corsDomain': 'finance.yahoo.com',
+        }
+        resp = requests.get(url, params=params)
+        rows = self.parse_chart_data(resp.text)
 
-        for row in csv.reader(stream, delimiter=','):
-            date, open_, high, low, close_, volume, adj_close = row
-            yield parse_date(date), float(open_), float(high), float(low), \
-                float(close_), int(volume), float(adj_close)
+        return rows
+
+    def fetch_data_by_minutes(self, symbol, start_time, end_time):
+        url = self.get_url(symbol)
+
+        params = {
+            'symbol': symbol,
+            'period1': self.as_timestamp(start_time),
+            'period2': self.as_timestamp(end_time),
+            'interval': '1m',
+            'includePrePost': 'true',
+            'events': 'div%7Csplit%7Cearn',
+            'corsDomain': 'finance.yahoo.com',
+        }
+        resp = requests.get(url, params=params)
+        rows = self.parse_chart_data(resp.text)
+
+        return rows
+
+    def parse_chart_data(self, raw_json):
+        """Parses Yahoo Finance chart data.
+
+        See some examples if necessary:
+        - sample-data/yahoo_finance_msft_1m.json
+        - sample-data/yahoo_finance_nvda_1d.json
+
+        In case of error, the response will look something like the following:
+
+            {'chart': {
+                'result': None,
+                'error': {
+                    'code': 'Not Found',
+                    'description': 'No data found, symbol may be delisted'}
+                }
+            }
+        """
+        parsed = json.loads(raw_json)
+        error = parsed['chart']['error']
+
+        if error:
+            raise ValueError(error['description'])
+
+        timestamps = parsed['chart']['result'][0]['timestamp']
+        timestamps = [datetime.fromtimestamp(int(t)) for t in timestamps]
+        quote = parsed['chart']['result'][0]['indicators']['quote'][0]
+
+        keys = ['open', 'high', 'low', 'close', 'volume']
+        cols = [timestamps] + [quote[k] for k in keys]
+
+        # Transposition from column-wise data to row-wise data
+        return zip(*cols)
+
+    def filter_empty_rows(self, rows):
+        for row in rows:
+            if all([c is not None for c in row]):
+                yield row

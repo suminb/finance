@@ -15,6 +15,9 @@ log = Logger(__name__)
 class Kofia(AssetValueProvider):
     """Korea Financial Investment Association (금융투자협회)"""
 
+    def __init__(self):
+        pass
+
     @property
     def request_url(self):
         return 'http://dis.kofia.or.kr/proframeWeb/XMLSERVICES/'

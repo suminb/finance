@@ -2,13 +2,14 @@ import os
 import sys
 
 from flask import Flask
-from flask.ext.admin import Admin
-from flask.ext.admin.contrib.sqla import ModelView
-from flask.ext.login import current_user, LoginManager
+from flask_admin import Admin
+from flask_admin.contrib.sqla import ModelView
+from flask_cors import CORS
+from flask_login import current_user, LoginManager
 from logbook import Logger, StreamHandler
 
 
-__version__ = '0.1.5'
+__version__ = '0.3.2'
 __author__ = 'Sumin Byeon'
 __email__ = 'suminb@gmail.com'
 
@@ -16,7 +17,7 @@ __email__ = 'suminb@gmail.com'
 # FIXME: This is temporaroy
 ADMINS = ['suminb@gmail.com']
 
-StreamHandler(sys.stdout).push_application()
+StreamHandler(sys.stderr).push_application()
 log = Logger('finance')
 
 
@@ -27,15 +28,18 @@ class AdminModelView(ModelView):
 
 
 def create_app(name=__name__, config={},
-               static_folder='static', template_folder='templates'):
+               static_folder='assets', template_folder='templates'):
 
     app = Flask(name, static_folder=static_folder,
                 template_folder=template_folder)
     app.secret_key = os.environ.get('SECRET', 'secret')
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DB_URI']
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DB_URL')
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['DEBUG'] = bool(os.environ.get('DEBUG', False))
 
     app.config.update(config)
+
+    CORS(app, resources={r"/entities/*": {"origins": "*"}})
 
     from finance.models import db
     db.init_app(app)

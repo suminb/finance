@@ -1,18 +1,21 @@
 import collections
-from datetime import datetime
 import functools
 import operator
+from datetime import datetime
 
-from flask.ext.login import UserMixin
-from flask.ext.sqlalchemy import SQLAlchemy
-from sqlalchemy.dialects.postgresql import JSON
 import uuid64
+from flask_login import UserMixin
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy.exc import IntegrityError, InvalidRequestError
+from sqlalchemy.ext.indexable import index_property
 
-from finance.exceptions import (
-    AssetNotFoundException, AssetValueUnavailableException,
-    InvalidTargetAssetException)
+from finance.exceptions import (AccountNotFoundException,
+                                AssetNotFoundException,
+                                AssetValueUnavailableException,
+                                InvalidTargetAssetException)
 from finance.utils import date_range
-
+from typing import Any  # noqa
 
 db = SQLAlchemy()
 JsonType = db.String().with_variant(JSON(), 'postgresql')
@@ -29,28 +32,24 @@ def get_asset_by_fund_code(code: str):
     # (sqlalchemy.engine.result.RowProxy)
     query = "SELECT * FROM asset WHERE data->>'code' = :code LIMIT 1"
     raw_asset = db.session.execute(query, {'code': code}).first()
-    if not raw_asset:
+    if raw_asset is None:
         raise AssetNotFoundException(
             'Fund code {} is not mapped to any asset'.format(code))
     asset_id = raw_asset[0]
     return Asset.query.get(asset_id)
 
 
-def get_asset_by_stock_code(code: str):
-    return Asset.query.filter(Asset.code == code).first()
-
-
 class CRUDMixin(object):
     """Copied from https://realpython.com/blog/python/python-web-applications-with-flask-part-ii/
     """  # noqa
 
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {'extend_existing': True}  # type: Any
 
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=False,
                    default=uuid64.issue())
 
     @classmethod
-    def create(cls, commit=True, **kwargs):
+    def create(cls, commit=True, ignore_if_exists=False, **kwargs):
         if 'id' not in kwargs:
             kwargs.update(dict(id=uuid64.issue()))
         instance = cls(**kwargs)
@@ -59,7 +58,14 @@ class CRUDMixin(object):
                 and getattr(instance, 'timestamp') is None:
             instance.timestamp = datetime.utcnow()
 
-        return instance.save(commit=commit)
+        try:
+            return instance.save(commit=commit)
+        except (IntegrityError, InvalidRequestError):
+            if ignore_if_exists:
+                db.session.rollback()
+                return cls.find(**kwargs)
+            else:
+                raise
 
     @classmethod
     def get(cls, id):
@@ -72,8 +78,12 @@ class CRUDMixin(object):
         return cls.query.get_or_404(id)
 
     @classmethod
+    def find(cls, **kwargs):
+        return cls.query.filter_by(**kwargs).first()
+
+    @classmethod
     def exists(cls, **kwargs):
-        row = cls.query.filter_by(**kwargs).first()
+        row = cls.find(**kwargs)
         return row is not None
 
     def update(self, commit=True, **kwargs):
@@ -91,8 +101,13 @@ class CRUDMixin(object):
         db.session.delete(self)
         return commit and db.session.commit()
 
+    def __iter__(self):
+        for column in self.__table__.columns:
+            yield column.name, str(getattr(self, column.name))
 
-class User(db.Model, CRUDMixin, UserMixin):
+
+class User(CRUDMixin, UserMixin, db.Model):  # type: ignore
+
     given_name = db.Column(db.String)
     family_name = db.Column(db.String)
     email = db.Column(db.String, unique=True)
@@ -126,31 +141,44 @@ class Granularity(object):
     month = '1month'
     year = '1year'
 
-    def is_valid(self, value):
-        raise NotImplementedError
+    @classmethod
+    def is_valid(cls, value):
+        return value in (
+            cls.sec, cls.min, cls.five_min, cls.hour, cls.day, cls.week,
+            cls.month, cls.year)
 
 
-class AssetValue(db.Model, CRUDMixin):
+class AssetValue(CRUDMixin, db.Model):  # type: ignore
     """Represents a unit price of an asset at a particular point of time. The
     granularity of the 'particular point of time' may range from one second
-    to a year. See `Granularity` for more details."""
+    to a year. See `Granularity` for more details.
+    """
 
     __table_args__ = (db.UniqueConstraint(
-        'asset_id', 'evaluated_at', 'granularity'), {})
+        'asset_id', 'evaluated_at', 'granularity'), {})  # type: Any
 
     asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
     base_asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
-    base_asset = db.relationship('Asset', uselist=False,
-                                 foreign_keys=[base_asset_id])
+    base_asset = db.relationship(
+        'Asset', uselist=False, foreign_keys=[base_asset_id])
     evaluated_at = db.Column(db.DateTime(timezone=False))
-    granularity = db.Column(db.Enum('1sec', '1min', '5min', '1hour', '1day',
-                                    '1week', '1month', '1year',
-                                    name='granularity'))
+    source = db.Column(db.Enum(
+        'yahoo', 'google', 'kofia', 'test', name='asset_value_source'))
+    granularity = db.Column(db.Enum(
+        '1sec', '1min', '5min', '1hour', '1day', '1week', '1month', '1year',
+        name='granularity'))
+    # NOTE: Should we also store `fetched_at`?
     open = db.Column(db.Numeric(precision=20, scale=4))
     high = db.Column(db.Numeric(precision=20, scale=4))
     low = db.Column(db.Numeric(precision=20, scale=4))
     close = db.Column(db.Numeric(precision=20, scale=4))
     volume = db.Column(db.Integer)
+
+    def __repr__(self):
+        return 'AssetValue(evaluated_at={0}, open={1}, high={2}, low={3}, ' \
+               'close={4}, volume={5})'.format(
+                self.evaluated_at, self.open, self.high, self.low, self.close,
+                self.volume)
 
 
 class AssetType(object):
@@ -168,12 +196,19 @@ asset_types = (
     AssetType.security, AssetType.fund, AssetType.commodity)
 
 
-class Asset(db.Model, CRUDMixin):
+class Asset(CRUDMixin, db.Model):  # type: ignore
     """Represents an asset."""
+
+    __mapper_args__ = {
+        'polymorphic_identity': 'asset',
+        'polymorphic_on': 'type',
+    }
 
     type = db.Column(db.Enum(*asset_types, name='asset_type'))
     name = db.Column(db.String)
-    code = db.Column(db.String)
+    # FIXME: Rename this as `symbol` or rename `get_by_symbol` -> `get_by_code`
+    code = db.Column(db.String, unique=True)
+    isin = db.Column(db.String)
     description = db.Column(db.Text)
 
     #: Arbitrary data
@@ -200,9 +235,76 @@ class Asset(db.Model, CRUDMixin):
     def current_value(self):
         raise NotImplementedError
 
-    #
-    # P2P bonds only features
-    #
+    @classmethod
+    def get_by_symbol(cls, symbol):
+        """Gets an asset by symbol (e.g., AMZN, NVDA)
+
+        NOTE: We may need to rename this method, when we find a more suitable
+        name (rather than 'symbol').
+        """
+        asset = cls.query.filter(cls.code == symbol).first()
+        if asset is None:
+            raise AssetNotFoundException(symbol)
+        else:
+            return asset
+
+    @classmethod
+    def get_by_isin(cls, isin):
+        """Gets an asset by ISIN
+
+        :param isin: International Securities Identification Numbers
+        """
+        asset = cls.query.filter(cls.isin == isin).first()
+        if asset is None:
+            raise AssetNotFoundException(isin)
+        else:
+            return asset
+
+
+class BondAsset(Asset):
+
+    __tablename__ = 'asset'
+
+    __mapper_args__ = {
+        'polymorphic_identity': 'bond',
+    }
+
+
+class CommodityAsset(Asset):
+
+    __tablename__ = 'asset'
+
+    __mapper_args__ = {
+        'polymorphic_identity': 'commodity',
+    }
+
+
+class CurrencyAsset(Asset):
+
+    __tablename__ = 'asset'
+
+    __mapper_args__ = {
+        'polymorphic_identity': 'currency',
+    }
+
+
+class FundAsset(Asset):
+
+    __tablename__ = 'asset'
+
+    __mapper_args__ = {
+        'polymorphic_identity': 'fund',
+    }
+
+
+class P2PBondAsset(Asset):
+
+    __tablename__ = 'asset'
+
+    __mapper_args__ = {
+        'polymorphic_identity': 'p2p_bond',
+    }
+
     def is_delayed(self):
         raise NotImplementedError
 
@@ -220,21 +322,55 @@ class Asset(db.Model, CRUDMixin):
         now = datetime.now()
         return self.asset_values.filter(AssetValue.evaluated_at <= now) \
             .order_by(AssetValue.evaluated_at.desc()).first().close
-    #
-    # End of P2P bonds only features
-    #
 
 
-class Account(db.Model, CRUDMixin):
+class SecurityAsset(Asset):
+
+    __tablename__ = 'asset'
+
+    __mapper_args__ = {
+        'polymorphic_identity': 'security',
+    }
+
+
+class StockAsset(Asset):
+
+    __tablename__ = 'asset'
+
+    __mapper_args__ = {
+        'polymorphic_identity': 'stock',
+    }
+
+    bps = index_property('data', 'bps')
+    eps = index_property('data', 'eps')
+
+
+class AccountType(object):
+    checking = 'checking'
+    savings = 'savings'
+    investment = 'investment'
+    credit_card = 'credit card'
+    virtual = 'virtual'
+
+
+account_types = (
+    AccountType.checking, AccountType.savings, AccountType.investment,
+    AccountType.credit_card, AccountType.virtual)
+
+
+class Account(CRUDMixin, db.Model):  # type: ignore
     """Represents an account. An account may contain multiple records based
     on different assets. For example, a single bank account may have a balance
     in different foreign currencies."""
 
+    __table_args__ = (db.UniqueConstraint(
+        'institution', 'number'), {})  # type: Any
+
     user_id = db.Column(db.BigInteger, db.ForeignKey('user.id'))
     portfolio_id = db.Column(db.BigInteger, db.ForeignKey('portfolio.id'))
-    type = db.Column(db.Enum('checking', 'savings', 'investment',
-                             'credit_card', 'virtual', name='account_type'))
+    type = db.Column(db.Enum(*account_types, name='account_type'))
     name = db.Column(db.String)
+    institution = db.Column(db.String)  # Could be a routing number (US)
     number = db.Column(db.String)  # Account number
     description = db.Column(db.Text)
 
@@ -250,9 +386,25 @@ class Account(db.Model, CRUDMixin):
     def __repr__(self):
         return 'Account <{} ({})>'.format(self.name, self.type)
 
+    @classmethod
+    def get_by_number(cls, institution: str, number: str):
+        account = cls.query \
+            .filter(cls.institution == institution) \
+            .filter(cls.number == number) \
+            .first()
+
+        if account is None:
+            raise AccountNotFoundException
+        else:
+            return account
+
+    def assets(self):
+        """Returns all assets under this account."""
+        raise NotImplementedError
+
     def balance(self, evaluated_at=None):
         """Calculates the account balance on a given date."""
-        if not evaluated_at:
+        if evaluated_at is None:
             evaluated_at = datetime.utcnow()
 
         # FIMXE: Consider open transactions
@@ -285,13 +437,14 @@ class Account(db.Model, CRUDMixin):
         if base_asset is None:
             raise InvalidTargetAssetException('Base asset cannot be null')
 
-        if not evaluated_at:
+        if evaluated_at is None:
             evaluated_at = datetime.utcnow()
 
         if granularity == Granularity.day:
-            # NOTE: Any better way to handle this?
-            date = evaluated_at.date().timetuple()[:6]
-            evaluated_at = datetime(*date)
+            if isinstance(evaluated_at, datetime):
+                # NOTE: Any better way to handle this?
+                date = evaluated_at.date().timetuple()[:6]
+                evaluated_at = datetime(*date)
         else:
             raise NotImplementedError
 
@@ -324,7 +477,7 @@ class Account(db.Model, CRUDMixin):
         return net_asset_value
 
 
-class Portfolio(db.Model, CRUDMixin):
+class Portfolio(CRUDMixin, db.Model):  # type: ignore
     """A collection of accounts (= a collection of assets)."""
     __table_args__ = (
         db.ForeignKeyConstraint(['base_asset_id'], ['asset.id']),
@@ -341,9 +494,18 @@ class Portfolio(db.Model, CRUDMixin):
         if commit:
             db.session.commit()
 
+    def assets(self):
+        """Returns all assets contained by the accounts under this portfolio.
+        """
+        assets = []
+        for account in self.accounts:
+            assets.append(account.assets())
+
+        return set(assets)
+
     def balance(self, evaluated_at=None):
         """Calculates the sum of all account balances on a given date."""
-        if not evaluated_at:
+        if evaluated_at is None:
             evaluated_at = datetime.utcnow()
 
         # Balances of all accounts under this portfolio
@@ -368,6 +530,14 @@ class Portfolio(db.Model, CRUDMixin):
         for date in date_range(date_from, date_to):
             yield date, self.net_worth(date)
 
+    def __iter__(self):
+        merged = super(Portfolio, self).__iter__()
+        # NOTE: Is there any fancier way to do this?
+        merged['accounts'] = [dict(a) for a in self.accounts.all()]
+        merged['net_worth'] = self.net_worth(datetime.utcnow())
+
+        return merged
+
 
 class TransactionState(object):
     initiated = 'initiated'
@@ -381,7 +551,7 @@ transaction_states = (
     TransactionState.pending, TransactionState.invalid)
 
 
-class Transaction(db.Model, CRUDMixin):
+class Transaction(CRUDMixin, db.Model):  # type: ignore
     """A transaction consists of multiple records."""
     initiated_at = db.Column(db.DateTime(timezone=False))
     closed_at = db.Column(db.DateTime(timezone=False))
@@ -408,7 +578,11 @@ class Transaction(db.Model, CRUDMixin):
             self.close()
 
     def close(self, closed_at=None, commit=True):
-        """Explicitly close a transaction."""
+        """Explicitly close a transaction.
+
+        :param closed_at: Marks a point at which the transaction is close, but
+                          it serves no functionality of scheduled task.
+        """
         if closed_at:
             self.closed_at = closed_at
         else:
@@ -429,10 +603,12 @@ record_types = (RecordType.deposit, RecordType.withdraw,
                 RecordType.balance_adjustment)
 
 
-class Record(db.Model, CRUDMixin):
+class Record(CRUDMixin, db.Model):  # type: ignore
+    """A financial transaction consists of one or more records."""
+
     # NOTE: Is this okay to do this?
     __table_args__ = (db.UniqueConstraint(
-        'account_id', 'asset_id', 'created_at', 'quantity'), {})
+        'account_id', 'asset_id', 'created_at', 'quantity'), {})  # type: Any
 
     account_id = db.Column(db.BigInteger, db.ForeignKey('account.id'))
     asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
@@ -452,3 +628,14 @@ class Record(db.Model, CRUDMixin):
             else:
                 kwargs['type'] = RecordType.deposit
         super(self.__class__, self).__init__(*args, **kwargs)
+
+
+class DartReport(CRUDMixin, db.Model):  # type: ignore
+    """NOTE: We need a more generic name for this..."""
+
+    registered_at = db.Column(db.DateTime(timezone=False))
+    title = db.Column(db.String)
+    entity_id = db.Column(db.Integer)
+    entity = db.Column(db.String)
+    reporter = db.Column(db.String)
+    content = db.Column(db.Text)

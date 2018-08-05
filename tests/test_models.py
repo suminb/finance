@@ -1,8 +1,30 @@
-import pytest
+from datetime import datetime
 
-from finance.exceptions import *  # noqa
-from finance.models import *  # noqa
+import pytest
+from sqlalchemy.exc import IntegrityError
+
+from finance.exceptions import (AssetNotFoundException,
+                                AssetValueUnavailableException)
+from finance.models import (Account, Asset, AssetValue, Granularity, Portfolio,
+                            Record, RecordType, Transaction, TransactionState,
+                            db, get_asset_by_fund_code)
 from finance.utils import parse_date
+
+
+def test_create_model():
+    Account.create(institution='Chase', number='1234')
+
+    # IntegrityError is raised due to the unique constraint
+    with pytest.raises(IntegrityError):
+        Account.create(institution='Chase', number='1234')
+
+    assert not Account.create(institution='Chase', number='1234',
+                              ignore_if_exists=True)
+
+
+def test_stock_asset(stock_asset_ncsoft):
+    assert stock_asset_ncsoft.bps
+    assert stock_asset_ncsoft.eps
 
 
 def test_get_asset_by_fund_code(asset_sp500):
@@ -15,9 +37,24 @@ def test_get_asset_by_fund_code_non_existing(asset_sp500):
         get_asset_by_fund_code('non-exisiting')
 
 
-def test_get_asset_by_stock_code(asset_stock_ncsoft):
-    asset = get_asset_by_stock_code('036570.KS')
+def test_get_asset_by_symbol(stock_asset_ncsoft):
+    asset = Asset.get_by_symbol('036570.KS')
     assert asset.description == 'NCsoft Corporation'
+
+
+def test_get_asset_by_symbol_non_existing(asset_sp500):
+    with pytest.raises(AssetNotFoundException):
+        Asset.get_by_symbol('non-exisiting')
+
+
+def test_get_asset_by_isin(stock_asset_nvda):
+    asset = Asset.get_by_isin('US67066G1040')
+    assert asset.code == 'NVDA'
+
+
+def test_get_asset_by_isin_non_existing(stock_asset_nvda):
+    with pytest.raises(AssetNotFoundException):
+        Asset.get_by_isin('non-exisiting')
 
 
 def test_balance(account_checking, asset_krw, asset_usd):
@@ -149,9 +186,15 @@ def test_portfolio_balance(account_checking, account_savings, account_sp500,
     db.session.commit()
 
 
-def _test_transaction():
+def test_transaction():
     with Transaction.create() as t:
-        t.state = 'xxxx'
+        assert t.state == TransactionState.initiated
+    assert t.state == TransactionState.closed
+
+    t = Transaction.create()
+    assert t.state == TransactionState.initiated
+    t.close(closed_at=datetime.utcnow())
+    assert t.state == TransactionState.closed
 
 
 def test_records(account_checking, asset_krw):
@@ -300,6 +343,26 @@ def test_granularity_enum():
 
     with pytest.raises(AttributeError):
         Granularity.nano_sec
+
+
+def test_valid_granularity():
+    values = (
+        Granularity.sec,
+        Granularity.min,
+        Granularity.five_min,
+        Granularity.hour,
+        Granularity.day,
+        Granularity.week,
+        Granularity.month,
+        Granularity.year,
+    )
+    for value in values:
+        assert Granularity.is_valid(value)
+
+
+def test_invalid_granularity():
+    assert not Granularity.is_valid(None)
+    assert not Granularity.is_valid('invalid')
 
 
 def test_transaction_state_enum():

@@ -1,101 +1,37 @@
-from datetime import datetime
+import decimal
 import os
+from datetime import datetime, time, timedelta
 
 import pytest
-from requests.exceptions import HTTPError
 
-from finance.providers import _8Percent, Kofia, Yahoo
+from finance.models import Granularity
+from finance.providers import Dart, Kofia, Miraeasset
+from finance.providers.dart import Report as DartReport
+from finance.providers.record import Decimal, Float
+from finance.providers.yahoo import Yahoo
 from finance.utils import parse_date
-
 
 BASE_PATH = os.path.abspath(os.path.dirname(__file__))
 PROJECT_PATH = os.path.abspath(os.path.join(BASE_PATH, '..'))
 
 
-skip_if_no_credentials = pytest.mark.skipif(
-    '_8PERCENT_USERNAME' not in os.environ or
-    '_8PERCENT_PASSWORD' not in os.environ,
-    reason='8percent credentials are not provided')
+def test_decimal_records():
+    class Record(object):
+        decimal_field = Decimal()
+        float_field = Float()
 
+        def __init__(self, decimal_field, float_field):
+            self.decimal_field = decimal_field
+            self.float_field = float_field
 
-@skip_if_no_credentials
-def test_8percent_login():
-    username = os.environ.get('_8PERCENT_USERNAME')
-    password = os.environ.get('_8PERCENT_PASSWORD')
+    record1 = Record('0.1', 0.1)
+    record2 = Record('0.2', 0.2)
 
-    provider = _8Percent()
-    resp = provider.login(username, password)
-    assert 200 == resp.status_code
-
-
-@skip_if_no_credentials
-def test_8percent_fetch_data():
-    provider = _8Percent()
-    resp = provider.fetch_data(829)
-    assert resp.status_code in [200, 404]
-
-    if resp.status_code == 200:
-        sample_file = os.path.join(PROJECT_PATH, 'tests', 'data',
-                                   '8percent-829.html')
-        with open(sample_file, 'w') as fout:
-            fout.write(resp.text)
-
-
-def test_8percent_parse_data():
-    sample_file = os.path.join(PROJECT_PATH, 'tests', 'data',
-                               '8percent-829.html')
-    with open(sample_file) as fin:
-        raw = fin.read()
-
-    stored_data = [
-        ('2016-04-11', 1694, 613, 160, 340),
-        ('2016-05-11', 1916, 390, 90, 0),
-        ('2016-06-13', 1920, 386, 90, 0),
-        ('2016-07-11', 1982, 324, 80, 0),
-        ('2016-08-10', 1963, 343, 80, 0),
-        ('2016-09-12', 1979, 327, 80, 0),
-        ('2016-10-10', 2005, 301, 70, 0),
-        ('2016-11-14', 1992, 314, 70, 0),
-        ('2016-12-12', 2054, 252, 60, 0),
-        ('2017-01-10', 2044, 262, 60, 0),
-        ('2017-02-13', 2053, 253, 60, 0),
-        ('2017-03-13', 2099, 207, 50, 0),
-        ('2017-04-10', 2101, 205, 50, 0),
-        ('2017-05-15', 2098, 208, 50, 0),
-        ('2017-06-12', 2145, 161, 40, 0),
-        ('2017-07-10', 2151, 155, 30, 0),
-        ('2017-08-14', 2153, 153, 30, 0),
-        ('2017-09-11', 2188, 118, 20, 0),
-        ('2017-10-11', 2198, 108, 20, 0),
-        ('2017-11-13', 2216, 90, 20, 0),
-        ('2017-12-11', 2238, 68, 10, 0),
-        ('2018-01-10', 2251, 55, 10, 0),
-        ('2018-02-12', 2270, 36, 0, 0),
-        ('2018-03-12', 2290, 16, 0, 0),
-    ]
-
-    provider = _8Percent()
-    parsed_data = provider.parse_data(raw)
-
-    assert parsed_data['name']
-    assert parsed_data['grade']
-    assert isinstance(parsed_data['duration'], int)
-    assert isinstance(parsed_data['annual_percentage_yield'], float)
-    assert 0.0 < parsed_data['annual_percentage_yield'] <= 0.3
-    assert isinstance(parsed_data['amount'], int)
-    assert 0 < parsed_data['amount']
-
-    flag = True
-    for expected, actual in zip(stored_data, parsed_data['records']):
-        assert len(expected) == len(actual)
-        expected = list(expected)
-        expected[0] = parse_date(expected[0])
-        for exp, act in zip(expected, actual):
-            flag = False
-            assert exp == act
-
-    if flag:
-        pytest.fail('parse_8percent_data() did not return any data')
+    assert record1.decimal_field + record2.decimal_field \
+        == decimal.Decimal('0.3')
+    # >>> 0.1 + 0.2
+    # 0.30000000000000004
+    assert record1.float_field + record2.float_field > 0.3
 
 
 def test_kofia_request_url():
@@ -144,25 +80,64 @@ def test_kofia_fetch_data():
         assert isinstance(quantity, float)
 
 
-def test_yahoo_fetch_data():
+def test_dart_fetch_data():
+    provider = Dart()
+    end = datetime.now()
+    start = end - timedelta(days=90)
+    reports = list(provider.fetch_reports('삼성전자', '00126380', start, end))
+
+    assert len(reports) > 0
+    for report in reports:
+        assert isinstance(report, DartReport)
+
+
+def test_dart_fetch_data_with_invalid_code():
+    provider = Dart()
+    with pytest.raises(ValueError):
+        list(provider.fetch_reports('_', '_'))
+
+
+@pytest.mark.parametrize('param', ['local', 'foreign'])
+def test_miraeasset_transactions(param):
+    provider = Miraeasset()
+    filename = os.path.join(
+        BASE_PATH, 'samples', 'miraeasset_{}.csv'.format(param))
+    with open(filename) as fin:
+        if param == 'local':
+            records = provider.parse_local_transactions(fin)
+        elif param == 'foreign':
+            records = provider.parse_foreign_transactions(fin)
+        else:
+            raise ValueError('Unknown transaction kind: {}'.format(param))
+
+        for record in records:
+            assert isinstance(record.created_at, datetime)
+            assert isinstance(record.seq, int)
+            assert isinstance(record.quantity, int)
+            assert record.currency in ['KRW', 'USD']
+
+
+@pytest.mark.parametrize('granularity', [Granularity.min, Granularity.day])
+def test_yahoo_provider(granularity):
     provider = Yahoo()
-    from_date, to_date = parse_date('2014-01-01'), parse_date('2015-12-31')
-    data = provider.fetch_data('005380.KS', from_date, to_date)
+    symbol = 'MSFT'
+    start_time = datetime.combine(parse_date(-5), time(0))
+    end_time = datetime.utcnow()
+    asset_values = \
+        provider.asset_values(symbol, start_time, end_time, granularity)
+    flag = False
+    for asset_value in asset_values:
+        flag = True
+        assert len(asset_value) == 6
+        assert all([c is not None for c in asset_value])
+    assert flag
 
-    for date, open_, high, low, close_, volume, adj_close in data:
-        assert isinstance(date, datetime)
-        # assert from_date <= date <= to_date
-        assert isinstance(open_, float)
-        assert isinstance(high, float)
-        assert isinstance(low, float)
-        assert isinstance(close_, float)
-        assert isinstance(volume, int)
-        assert isinstance(adj_close, float)
 
-
-def test_yahoo_fetch_data_with_invalid_code():
+def test_yahoo_provider_with_invalid_symbol():
     provider = Yahoo()
-    from_date, to_date = parse_date('2014-01-01'), parse_date('2015-12-31')
-    with pytest.raises(HTTPError):
-        data = provider.fetch_data('!@#$%', from_date, to_date)
-        next(data)
+    symbol = '(invalid)'
+    end_time = datetime.utcnow()
+    start_time = end_time - timedelta(days=1)
+
+    with pytest.raises(ValueError):
+        provider.asset_values(symbol, start_time, end_time, Granularity.day)

@@ -1,5 +1,7 @@
+import csv
+import json
 import os
-import re
+import sys
 
 import click
 from click.testing import CliRunner
@@ -8,38 +10,19 @@ from sqlalchemy.exc import IntegrityError
 
 from finance import create_app
 from finance.importers import \
-    import_8percent_data, \
     import_stock_values as import_stock_values_  # Avoid name clashes
-from finance.models import *  # noqa
-from finance.providers import _8Percent, Kofia
+from finance.models import (
+    Account, AccountType, Asset, AssetType, AssetValue, DartReport, db,
+    get_asset_by_fund_code, Granularity, Portfolio, Record, Transaction, User)
+from finance.providers import Dart, Kofia, Miraeasset, Yahoo
 from finance.utils import (
-    extract_numbers, insert_asset, insert_record,
-    insert_stock_record, parse_date, parse_stock_records)
+    date_to_datetime, extract_numbers, get_dart_code, insert_stock_record,
+    parse_date, parse_stock_records, request_import_stock_values as
+    request_import_stock_values_, serialize_datetime)
 
 
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 log = Logger('finance')
-
-
-def insert_accounts(user):
-    yield Account.create(
-        id=1001, type='checking', name='신한은행 입출금', user=user)
-    yield Account.create(
-        id=9001, type='investment', name='Woori Gold Banking', user=user)
-    yield Account.create(
-        id=7001, type='investment', name='S&P500 Fund', user=user)
-    yield Account.create(
-        id=7002, type='investment', name='East Spring China Fund',
-        user=user)
-    yield Account.create(
-        id=7003, type='investment', name='키움일본인덱스 주식재간접',
-        user=user)
-    yield Account.create(
-        id=8003, type='investment', name='신한 주식', user=user)
-    yield Account.create(
-        id=8001, type='virtual', name='8퍼센트', user=user)
-    yield Account.create(
-        id=8002, type='virtual', name='어니스트펀드', user=user)
 
 
 def insert_stock_assets():
@@ -55,11 +38,13 @@ def insert_stock_assets():
         ('005380.KS', 'Hyundai Motor Company'),
         ('056080.KQ', 'Yujin Robot Co., Ltd.'),
         ('069500.KS', 'KODEX 200'),
+        ('009830.KS', '한화케미칼'),
     ]
 
     for code, description in rows:
         log.info('Inserting {} ({})...', code, description)
-        yield Asset.create(type='stock', code=code, description=description)
+        yield Asset.create(type='stock', code=code, description=description,
+                           ignore_if_exists=True)
 
 
 @click.group()
@@ -69,6 +54,7 @@ def cli():
 
 @cli.command()
 def create_all():
+    """Creates necessary database tables."""
     app = create_app(__name__)
     with app.app_context():
         db.create_all()
@@ -76,37 +62,87 @@ def create_all():
 
 @cli.command()
 def drop_all():
+    """Drops all database tables."""
     app = create_app(__name__)
     with app.app_context():
         db.drop_all()
 
 
+def create_account(type_: AccountType, institution: str, number: str, user):
+    return Account.create(
+        type=type_, name='Test account', institution=institution,
+        number=number, user=user, ignore_if_exists=True)
+
+
+def create_asset(type_: AssetType, code: str, description: str):
+    return Asset.create(
+        type=type_, code=code, description=description, ignore_if_exists=True)
+
+
 @cli.command()
 def insert_test_data():
+    """Inserts some sample data for testing."""
     app = create_app(__name__)
     with app.app_context():
         user = User.create(
-            family_name='Byeon', given_name='Sumin', email='suminb@gmail.com')
+            family_name='Byeon', given_name='Sumin', email='suminb@gmail.com',
+            ignore_if_exists=True)
 
-        account_checking, _, _, _, _, account_stock, account_8p, _ = \
-            insert_accounts(user)
+        account_checking = create_account(
+            AccountType.checking, 'Shinhan', 'checking', user)
+        account_stock = create_account(
+            AccountType.investment, 'Mirae Asset', 'stock', user)
+
+        asset_krw = create_asset(AssetType.currency, 'KRW', 'Korean Won')
+        create_asset(AssetType.currency, 'USD', 'United States Dollar')
+
         for _ in insert_stock_assets():
             pass
 
-        asset_krw = insert_asset('currency, KRW, Korean Won')
-        asset_usd = insert_asset('currency, USD, United States Dollar')
-        asset_gold = insert_asset('commodity, Gold, Gold')
-        asset_sp500 = insert_asset('security, KB S&P500,',
-                                   data={'code': 'KR5223941018'})
-        asset_esch = insert_asset('security, 이스트스프링차이나펀드,',
-                                  data={'code': 'KR5229221225'})
-        asset_kjp = insert_asset('security, 키움일본인덱스,',
-                                 data={'code': 'KR5206689717'})
-        asset_hf1 = insert_asset('bond, 포트폴리오 투자상품 1호,')
+        create_asset(AssetType.security, 'KR5223941018', 'KB S&P500')
+        create_asset(AssetType.security, 'KR5229221225', '이스트스프링차이나')
 
         portfolio = Portfolio()
         portfolio.base_asset = asset_krw
-        portfolio.add_accounts(account_checking, account_stock, account_8p)
+        portfolio.add_accounts(account_checking, account_stock)
+
+
+@cli.command()
+@click.argument('entity_name')
+def fetch_dart(entity_name):
+    """Fetch all reports from DART (전자공시)."""
+
+    entity_code = get_dart_code(entity_name)
+    provider = Dart()
+
+    log.info('Fetching DART reports for {}', entity_name)
+    reports = provider.fetch_reports(entity_name, entity_code)
+
+    # Apparently generators are not JSON serializable
+    print(json.dumps([dict(r) for r in reports], default=serialize_datetime))
+
+
+# TODO: Load data from stdin
+@cli.command()
+@click.argument('fin', type=click.File('r'))
+def import_dart(fin):
+    """Import DART (전자공시) data."""
+
+    try:
+        data = json.loads(fin.read())
+    except json.decoder.JSONDecodeError as e:
+        log.error('Valid JSON data expected: {}', e)
+
+    app = create_app(__name__)
+    with app.app_context():
+        for row in data:
+            try:
+                report = DartReport.create(**row)
+            except IntegrityError:
+                log.info('DartReport-{} already exists', row['id'])
+                db.session.rollback()
+            else:
+                log.info('Fetched report: {}', report)
 
 
 @cli.command()
@@ -178,80 +214,86 @@ def import_sp500_records():
                     log.warn('Identical record exists')
                     db.session.rollback()
 
-    # print(account_sp500.net_worth(parse_date('2016-02-25'),
-    #      base_asset=asset_krw))
 
-
-@cli.command()
-@click.argument('filename')
-def fetch_8percent(filename):
-    """
-    :param filename: A file containing bond IDs
-    """
+def _parse_miraeasset_data(filename, parse_func):
     with open(filename) as fin:
-        raw = fin.read()
-    bond_ids = [int(x) for x in
-                re.findall(r'/my/repayment_detail/(\d+)', raw)]
-    provider = _8Percent()
-    provider.login()
-    for bond_id in bond_ids:
-        log.info('Fetching bond ID = {}', bond_id)
-        target_path = os.path.join(BASE_PATH, 'sample-data',
-                                   '8percent-{}.html'.format(bond_id))
-        resp = provider.fetch_data(bond_id)
-        with open(target_path, 'w') as fout:
-            fout.write(resp.text)
+        records = parse_func(fin)
+        writer = csv.writer(sys.stdout)
+        for record in records:
+            writer.writerow(record.values())
 
 
 @cli.command()
 @click.argument('filename')
-def import_8percent(filename):
-    """Imports a single file."""
+def parse_miraeasset_foreign_data(filename):
+    """Parses a CSV file exported in 해외거래내역 (9465)."""
+    provider = Miraeasset()
+    _parse_miraeasset_data(filename, provider.parse_foreign_transactions)
+
+
+# TODO: Load data from stdin
+@cli.command()
+@click.argument('filename')
+def parse_miraeasset_local_data(filename):
+    """Parses CSV file exported in 거래내역조회 (0650)."""
+    provider = Miraeasset()
+    _parse_miraeasset_data(filename, provider.parse_local_transactions)
+
+
+# TODO: Load data from stdin
+@cli.command()
+@click.argument('filename')
+@click.argument('account_institution')
+@click.argument('account_number')
+def import_miraeasset_foreign_data(
+    filename, account_institution, account_number
+):
+    """Imports a CSV file exported in 해외거래내역 (9465)."""
+    from finance.importers import import_miraeasset_foreign_records
+
     app = create_app(__name__)
-    provider = _8Percent()
     with app.app_context():
+        account = Account.get_by_number(account_institution, account_number)
+
         with open(filename) as fin:
-            raw = fin.read()
-        account_8p = Account.query.filter(Account.name == '8퍼센트').first()
-        account_checking = Account.query.filter(
-            Account.name == '신한은행 입출금').first()
-        asset_krw = Asset.query.filter(Asset.name == 'KRW').first()
-
-        parsed_data = provider.parse_data(raw)
-        import_8percent_data(
-            parsed_data, account_checking=account_checking,
-            account_8p=account_8p, asset_krw=asset_krw)
+            import_miraeasset_foreign_records(fin, account)
 
 
 @cli.command()
-def import_hf():
-    app = create_app(__name__)
-    app.app_context().push()
+@click.argument('stock_code')  # e.g., NVDA, 027410.KS
+@click.option('-s', '--start', 'start_date',
+              help='Start date (e.g., 2017-01-01)')
+@click.option('-e', '--end', 'end_date',
+              help='End date (e.g., 2017-12-31)')
+def fetch_stock_values(stock_code, start_date, end_date):
+    """Fetches daily stock values from Yahoo Finance."""
 
-    account = Account.get(id=1001)
-    asset = Asset.query.filter_by(name='KRW').first()
+    start_date = date_to_datetime(
+        parse_date(start_date if start_date is not None else -30 * 3600 * 24))
+    end_date = date_to_datetime(
+        parse_date(end_date if end_date is not None else 0))
 
-    with open('sample-data/hf.txt') as fin:
-        for line in fin:
-            if line.strip():
-                insert_record(line, account, asset, None)
+    if start_date > end_date:
+        raise ValueError('start_date must be equal to or less than end_date')
 
+    provider = Yahoo()
+    rows = provider.asset_values(
+        stock_code, start_date, end_date, Granularity.day)
 
-@cli.command()
-def import_rf():
-    app = create_app(__name__)
-    app.app_context().push()
+    for row in rows:
+        # TODO: Write a function to handle this for generic cases
+        # TODO: Convert the timestamp to an ISO format
+        # NOTE: The last column is data source. Not sure if this is an elegant
+        # way to handle this.
 
-    account = Account.get(id=1001)
-    asset = Asset.query.filter_by(name='KRW').first()
+        # FIXME: Think of a better way to handle this
+        dt = row[0].isoformat()
 
-    with open('sample-data/rf.txt') as fin:
-        for line in fin:
-            if line.strip():
-                insert_record(line, account, asset, None)
+        print(', '.join([dt] + [str(c) for c in row[1:]] + ['yahoo']))
 
 
 # NOTE: This will probably be called by AWS Lambda
+# TODO: Load data from stdin
 @cli.command()
 @click.argument('code')
 @click.argument('from-date')
@@ -281,7 +323,8 @@ def import_fund(code, from_date, to_date):
                 AssetValue.create(
                     asset=asset, base_asset=base_asset,
                     evaluated_at=date, close=unit_price,
-                    granularity=Granularity.day)
+                    granularity=Granularity.day,
+                    source='kofia')
             except IntegrityError:
                 log.warn('Identical record has been found for {}. Skipping.',
                          date)
@@ -290,18 +333,20 @@ def import_fund(code, from_date, to_date):
 
 @cli.command()
 @click.argument('code')
-@click.argument('from-date')
-@click.argument('to-date')
-def import_stock_values(code, from_date, to_date):
+def import_stock_values(code):
     """Import stock price information."""
     app = create_app(__name__)
     with app.app_context():
         # NOTE: We assume all Asset records are already in the database, but
         # this is a temporary workaround. We should implement some mechanism to
         # automatically insert an Asset record when it is not found.
-        import_stock_values_(code, parse_date(from_date), parse_date(to_date))
+
+        stdin = click.get_text_stream('stdin')
+        for _ in import_stock_values_(stdin, code):
+            pass
 
 
+# TODO: Load data from stdin
 @cli.command()
 @click.argument('filename')
 def import_stock_records(filename):
@@ -315,6 +360,16 @@ def import_stock_records(filename):
         with open(filename) as fin:
             for parsed in parse_stock_records(fin):
                 insert_stock_record(parsed, account_stock, account_bank)
+
+
+@cli.command()
+@click.argument('code')
+def request_import_stock_values(code):
+    """Enqueue a request to import stock values."""
+    start_time = date_to_datetime(parse_date(-3))
+    end_time = date_to_datetime(parse_date(0))
+
+    request_import_stock_values_(code, start_time, end_time)
 
 
 if __name__ == '__main__':

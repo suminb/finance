@@ -1,13 +1,15 @@
-from datetime import timedelta
 import os
 import re
 import types
+from datetime import datetime, timedelta
 
 import pytest
-
 from finance.models import Asset
-from finance.utils import *  # noqa
-
+from finance.utils import (DictReader, date_range, date_to_datetime,
+                           extract_numbers, get_dart_code, get_dart_codes,
+                           insert_stock_record, parse_date, parse_datetime,
+                           parse_decimal, parse_int, parse_stock_code,
+                           parse_stock_records, serialize_datetime)
 
 BASE_PATH = os.path.abspath(os.path.dirname(__file__))
 PROJECT_PATH = os.path.abspath(os.path.join(BASE_PATH, '..'))
@@ -54,7 +56,25 @@ def test_date_range_relative(start, end, count):
 ])
 def test_date_range_exceptions(start, end):
     with pytest.raises(ValueError):
-        [x for x in date_range(start, end)]
+        list(date_range(start, end))
+
+    with pytest.raises(NotImplementedError):
+        list(date_range(start, end, 2))
+
+
+def test_date_to_datetime():
+    date = parse_date('2018-01-13')
+    dt_beginning = parse_datetime('2018-01-13 00:00:00')
+    dt_end = parse_datetime('2018-01-13 23:59:59')
+
+    assert date_to_datetime(date) == dt_beginning
+    assert date_to_datetime(date, True) == dt_end
+
+
+def test_dict_reader():
+    d = DictReader({'key': 'value'})
+    assert d['key'] == 'value'
+    assert d.key == 'value'
 
 
 def test_extract_numbers():
@@ -72,6 +92,21 @@ def test_extract_numbers():
 
     with pytest.raises(TypeError):
         extract_numbers(b'\x00')
+
+
+def test_get_dart_code():
+    codes = get_dart_codes()
+    assert list(codes) == [
+        ['삼성전자', '00126380'],
+        ['우리은행', '00254045'],
+        ['SK', '00181712'],
+        ['넷마블게임즈', '00904672']
+    ]
+
+    assert get_dart_code('SK') == '00181712'
+
+    with pytest.raises(ValueError):
+        get_dart_code('Non-exist')
 
 
 def test_insert_stock_record(db, account_stock, account_checking):
@@ -108,9 +143,29 @@ def test_parse_date():
     assert delta == timedelta(days=5)
 
 
+def test_parse_datetime():
+    dt = parse_datetime('2018-01-13 01:18:12')
+    assert dt.strftime('%Y-%m-%d %H:%M:%S') == '2018-01-13 01:18:12'
+
+    at = datetime.now()
+    delta = parse_datetime(3600, at) - parse_datetime(1200, at)
+    assert delta == timedelta(seconds=2400)
+
+
 def test_parse_decimal():
     assert parse_decimal('1.1') == 1.1
     assert parse_decimal(1) == 1.0
+
+    assert parse_decimal('a') == 0
+    assert parse_decimal('a', fallback_to=1) == 1
+
+
+def test_parse_int():
+    assert parse_int(1) == 1
+    assert parse_int('1') == 1
+
+    assert parse_int('1.1') == 0
+    assert parse_int('1.1', fallback_to=2) == 2
 
 
 @pytest.mark.parametrize('code, result', [
@@ -123,7 +178,7 @@ def test_parse_stock_code(code, result):
 
 
 def test_parse_stock_records():
-    sample_file = 'tests/data/stocks.csv'
+    sample_file = 'tests/samples/shinhan_stock_records.csv'
     flag = True
     expected_keys = ('date', 'sequence', 'category1', 'category2', 'code',
                      'name', 'quantity', 'unit_price', 'subtotal', 'interest',
@@ -159,3 +214,15 @@ def test_parse_stock_records():
 
     if flag:
         pytest.fail('No data was read.')
+
+
+def test_serialize_datetime():
+    now = datetime.now()
+    serialized = serialize_datetime(now)
+    # e.g., 2018-04-01T03:13:50.266116
+    assert re.match(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}', serialized)
+
+    with pytest.raises(TypeError):
+        serialize_datetime(None)
+    with pytest.raises(TypeError):
+        serialize_datetime('test')

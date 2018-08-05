@@ -1,55 +1,70 @@
-from functools import partial
+import csv
 import os
+from functools import partial
 
 import pytest
-from typedecorator import setup_typecheck
 
 from finance import create_app
-from finance.models import Account, Asset, Portfolio
+from finance.importers import import_stock_values
 from finance.models import db as _db
+from finance.models import (Account, AccountType, Asset, AssetType,
+                            CurrencyAsset, FundAsset, P2PBondAsset, Portfolio,
+                            StockAsset)
 
 
-setup_typecheck()
-
-
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='session')
 def app(request):
     """Session-wide test `Flask` application."""
     settings_override = {
         'TESTING': True,
     }
-    if 'TEST_DB_URI' in os.environ:
-        settings_override['SQLALCHEMY_DATABASE_URI'] = \
-            os.environ.get('TEST_DB_URI')
+    settings_override['SQLALCHEMY_DATABASE_URI'] = os.environ['TEST_DB_URL']
     app = create_app(__name__, config=settings_override)
 
     # Establish an application context before running the tests.
-    ctx = app.app_context()
-    ctx.push()
+    # ctx = app.app_context()
+    # ctx.push()
 
-    def teardown():
-        ctx.pop()
+    # def teardown():
+    #     ctx.pop()
 
-    request.addfinalizer(teardown)
+    # request.addfinalizer(teardown)
     return app
 
 
 @pytest.fixture
 def testapp(app, db):
-    return app.test_client()
+    with app.app_context():
+        yield app.test_client()
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='module', autouse=True)
 def db(app, request):
     """Session-wide test database."""
     def teardown():
-        _db.drop_all()
-
-    _db.app = app
-    _db.create_all()
+        with app.app_context():
+            _db.session.close()
+            _db.drop_all()
 
     request.addfinalizer(teardown)
-    return _db
+
+    _db.app = app
+    with app.app_context():
+        _db.create_all()
+
+        yield _db
+
+
+@pytest.fixture(scope='module')
+def stock_assets():
+    with open('tests/samples/stocks.csv') as fin:
+        reader = csv.reader(fin, delimiter=',')
+        for row in reader:
+            isin, code, name = row
+            if isin.startswith('#'):
+                continue
+            Asset.create(
+                type=AssetType.stock, isin=isin, code=code, name=name)
 
 
 @pytest.fixture(scope='function')
@@ -89,31 +104,34 @@ def account_sp500(request, db):
 
 @pytest.fixture(scope='function')
 def account_stock(request, db):
-    account = Account.create(type='investment', name='신한 주식')
+    account = Account.create(
+        type=AccountType.investment, institution='Miraeasset',
+        number='ACCOUNT1', name='미래에셋대우 1')
     request.addfinalizer(partial(teardown, db=db, record=account))
     return account
 
 
 @pytest.fixture(scope='module')
 def asset_hf1(request, db):
-    asset = Asset.create(
-        type='bond', name='포트폴리오 투자상품 1호')
+    asset = P2PBondAsset.create(
+        name='포트폴리오 투자상품 1호')
     request.addfinalizer(partial(teardown, db=db, record=asset))
+    assert asset.type == 'p2p_bond'
     return asset
 
 
 @pytest.fixture(scope='module')
 def asset_krw(request, db):
-    asset = Asset.create(
-        type='currency', name='KRW', description='Korean Won')
+    asset = CurrencyAsset.create(
+        code='KRW', description='Korean Won')
     request.addfinalizer(partial(teardown, db=db, record=asset))
     return asset
 
 
 @pytest.fixture(scope='module')
 def asset_sp500(request, db):
-    asset = Asset.create(
-        type='security', name='KB Star S&P500', description='',
+    asset = FundAsset.create(
+        name='KB Star S&P500', description='',
         data={'code': 'KR5223941018'})
     request.addfinalizer(partial(teardown, db=db, record=asset))
     return asset
@@ -121,27 +139,89 @@ def asset_sp500(request, db):
 
 @pytest.fixture(scope='module')
 def asset_usd(request, db):
-    asset = Asset.create(
-        type='currency', name='USD', description='United States Dollar')
+    asset = CurrencyAsset.create(
+        code='USD', description='United States Dollar')
     request.addfinalizer(partial(teardown, db=db, record=asset))
     return asset
 
 
 @pytest.fixture(scope='module')
-def asset_stock_ncsoft(request, db):
-    asset = Asset.create(
-        type='stock', name='NCsoft Corporation', code='036570.KS',
-        description='NCsoft Corporation')
+def stock_asset_ncsoft(request, db):
+    asset = StockAsset.create(
+        name='NCsoft Corporation', code='036570.KS',
+        description='NCsoft Corporation',
+        data={'bps': 88772, 'eps': 12416})
     request.addfinalizer(partial(teardown, db=db, record=asset))
     return asset
 
 
 @pytest.fixture(scope='module')
-def asset_stock_nvda(request, db):
-    asset = Asset.create(
-        type='stock', name='NVDA', code='NVDA',
+def stock_asset_spy(request, db, asset_usd):
+    asset = StockAsset.create(
+        name='SPY', code='SPY', isin='US78462F1030',
+        description='SPDR S&P 500 ETF Trust Fund')
+    request.addfinalizer(partial(teardown, db=db, record=asset))
+
+    with open('tests/samples/SPY.csv') as fin:
+        for av in import_stock_values(fin, 'SPY', base_asset=asset_usd):
+            request.addfinalizer(partial(teardown, db=db, record=av))
+
+    return asset
+
+
+@pytest.fixture(scope='module')
+def stock_asset_amd(request, db, asset_usd):
+    asset = StockAsset.create(
+        name='AMD', code='AMD', isin='US0079031078',
+        description='Advanced Micro Devices, Inc')
+    request.addfinalizer(partial(teardown, db=db, record=asset))
+
+    with open('tests/samples/AMD.csv') as fin:
+        for av in import_stock_values(fin, 'AMD', base_asset=asset_usd):
+            request.addfinalizer(partial(teardown, db=db, record=av))
+
+    return asset
+
+
+@pytest.fixture(scope='module')
+def stock_asset_nvda(request, db, asset_usd):
+    asset = StockAsset.create(
+        name='NVDA', code='NVDA', isin='US67066G1040',
         description='NVIDIA Corporation')
     request.addfinalizer(partial(teardown, db=db, record=asset))
+
+    with open('tests/samples/NVDA.csv') as fin:
+        for av in import_stock_values(fin, 'NVDA', base_asset=asset_usd):
+            request.addfinalizer(partial(teardown, db=db, record=av))
+
+    return asset
+
+
+@pytest.fixture(scope='module')
+def stock_asset_amzn(request, db, asset_usd):
+    asset = StockAsset.create(
+        name='AMZN', code='AMZN', isin='US0231351067',
+        description='Amazon')
+    request.addfinalizer(partial(teardown, db=db, record=asset))
+
+    with open('tests/samples/AMZN.csv') as fin:
+        for av in import_stock_values(fin, 'AMZN', base_asset=asset_usd):
+            request.addfinalizer(partial(teardown, db=db, record=av))
+
+    return asset
+
+
+@pytest.fixture(scope='module')
+def stock_asset_sbux(request, db, asset_usd):
+    asset = StockAsset.create(
+        name='SBUX', code='SBUX', isin='US8552441094',
+        description='Starbucks')
+    request.addfinalizer(partial(teardown, db=db, record=asset))
+
+    with open('tests/samples/SBUX.csv') as fin:
+        for av in import_stock_values(fin, 'SBUX', base_asset=asset_usd):
+            request.addfinalizer(partial(teardown, db=db, record=av))
+
     return asset
 
 

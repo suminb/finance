@@ -1,67 +1,106 @@
 """A collection of data import functions."""
-from datetime import datetime
+import csv
+import io
 
-from typedecorator import typed
+from sqlalchemy.exc import IntegrityError
 
-from finance.models import Asset, AssetValue, get_asset_by_stock_code, \
-    Granularity
-from finance.providers import Yahoo
-from finance.utils import DictReader
+from finance import log
+from finance.models import (Account, Asset, AssetValue, Granularity, Record,
+                            Transaction, db)
+from finance.providers import Miraeasset
 
 
-def import_8percent_data(parsed_data, account_checking, account_8p, asset_krw):
-    """Import 8percent `AssetValue`s and `Record`s altogether."""
-    from finance.models import Asset, AssetType, AssetValue, Record, \
-        Transaction
+# NOTE: A verb 'import' means local structured data -> database
+def import_stock_values(fin: io.TextIOWrapper, code: str, base_asset=None):
+    """Import stock values."""
+    asset = Asset.get_by_symbol(code)
+    reader = csv.reader(
+        fin, delimiter=',', quotechar='"', skipinitialspace=True)
+    for date, open_, high, low, close_, volume, source in reader:
+        try:
+            yield AssetValue.create(
+                evaluated_at=date, granularity=Granularity.day, asset=asset,
+                base_asset=base_asset, open=open_, high=high, low=low,
+                close=close_, volume=volume, source=source)
+        except IntegrityError:
+            log.warn('AssetValue for {0} on {1} already exist', code, date)
+            db.session.rollback()
 
-    assert account_checking
-    assert account_8p
-    assert asset_krw
 
-    parsed_data = DictReader(parsed_data)
-    asset_data = {
-        'started_at': parsed_data.started_at.isoformat()
-    }
-    keys = ['annual_percentage_yield', 'amount', 'grade', 'duration',
-            'originator']
-    for key in keys:
-        asset_data[key] = parsed_data[key]
+def make_single_record_transaction(created_at, account, asset, quantity):
+    """Creates a single record transaction (e.g., a deposit)"""
+    return Record.create(
+        account_id=account.id,
+        asset_id=asset.id,
+        created_at=created_at,
+        quantity=quantity,
+    )
 
-    asset_8p = Asset.create(name=parsed_data.name, type=AssetType.p2p_bond,
-                            data=asset_data)
-    remaining_value = parsed_data.amount
-    started_at = parsed_data.started_at
 
+def make_double_record_transaction(
+    created_at, account, asset_from, quantity_from, asset_to, quantity_to
+):
+    """Creates a double record transaction (e.g., a buy order of stocks)"""
     with Transaction.create() as t:
-        Record.create(
-            created_at=started_at, transaction=t, account=account_checking,
-            asset=asset_krw, quantity=-remaining_value)
-        Record.create(
-            created_at=started_at, transaction=t, account=account_8p,
-            asset=asset_8p, quantity=1)
-    AssetValue.create(
-        evaluated_at=started_at, asset=asset_8p,
-        base_asset=asset_krw, granularity='1day', close=remaining_value)
-
-    for record in parsed_data.records:
-        date, principle, interest, tax, fees = record
-        returned = principle + interest - (tax + fees)
-        remaining_value -= principle
-        with Transaction.create() as t:
-            Record.create(
-                created_at=date, transaction=t,
-                account=account_checking, asset=asset_krw, quantity=returned)
-        AssetValue.create(
-            evaluated_at=date, asset=asset_8p,
-            base_asset=asset_krw, granularity='1day', close=remaining_value)
+        record1 = Record.create(
+            transaction=t,
+            account_id=account.id,
+            asset_id=asset_from.id,
+            created_at=created_at,
+            quantity=quantity_from,
+        )
+        record2 = Record.create(
+            transaction=t,
+            account_id=account.id,
+            asset_id=asset_to.id,
+            created_at=created_at,
+            quantity=quantity_to,
+        )
+    return (record1, record2)
 
 
-@typed
-def import_stock_values(code: str, from_date: datetime, to_date: datetime):
-    provider = Yahoo()
-    asset = get_asset_by_stock_code(code)
-    data = provider.fetch_data(code, from_date, to_date)
-    for date, open_, high, low, close_, volume, adj_close in data:
-        AssetValue.create(
-            evaluated_at=date, granularity=Granularity.day, asset=asset,
-            open=open_, high=high, low=low, close=close_, volume=volume)
+def import_miraeasset_foreign_records(
+    fin: io.TextIOWrapper,
+    account: Account,
+):
+    provider = Miraeasset()
+    asset_krw = Asset.get_by_symbol('KRW')
+
+    for r in provider.parse_foreign_transactions(fin):
+        assert r.currency != 'KRW'
+        # FIXME: Handle a case where asset cannot be found
+        target_asset = Asset.get_by_symbol(r.currency)
+
+        if r.category == '해외주매수':
+            asset_stock = Asset.get_by_isin(r.code)
+            make_double_record_transaction(
+                r.synthesized_created_at,
+                account,
+                target_asset, -r.amount,
+                asset_stock, r.quantity)
+        elif r.category == '해외주매도':
+            asset_stock = Asset.get_by_isin(r.code)
+            make_double_record_transaction(
+                r.synthesized_created_at,
+                account,
+                asset_stock, -r.quantity,
+                target_asset, r.amount)
+        elif r.category == '해외주배당금':
+            make_single_record_transaction(
+                r.synthesized_created_at,
+                account, target_asset, r.amount)
+        elif r.category == '환전매수':
+            local_amount = int(r.raw_columns[6])  # amount in KRW
+            make_double_record_transaction(
+                r.synthesized_created_at,
+                account,
+                asset_krw, -local_amount,
+                target_asset, r.amount)
+        elif r.category == '환전매도':
+            raise NotImplementedError
+        elif r.category == '외화인지세':
+            make_single_record_transaction(
+                r.synthesized_created_at,
+                account, target_asset, -r.amount)
+        else:
+            raise ValueError('Unknown record category: {0}'.format(r.category))
