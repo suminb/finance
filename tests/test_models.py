@@ -85,30 +85,6 @@ def test_balance(account_checking, asset_krw, asset_usd):
         == {asset_krw: 500, asset_usd: 40}
 
 
-def test_account_net_worth_1(account_checking, asset_usd):
-    """Ensures Account.net_worth() works with implicit `created_at`, which is
-    the current datetime.
-    """
-    Record.create(
-        account=account_checking, asset=asset_usd, quantity=1000,
-        type=RecordType.deposit)
-
-    net_worth = account_checking.net_worth(
-        base_asset=asset_usd)
-    assert net_worth == 1000
-
-def test_account_net_worth_2(account_checking, asset_usd):
-    """Ensures Account.net_worth() works with explicit `created_at`."""
-    Record.create(
-        account=account_checking, asset=asset_usd, quantity=1000,
-        type=RecordType.deposit,
-        created_at=parse_datetime('2018-08-30 23:00:00'))
-
-    net_worth = account_checking.net_worth(
-        base_asset=asset_usd, evaluated_at=parse_date('2018-08-30'))
-    assert net_worth == 1000
-
-
 def test_portfolio(account_hf, asset_hf1, account_checking, asset_krw):
     portfolio = Portfolio()
     portfolio.base_asset = asset_krw
@@ -279,7 +255,7 @@ def test_net_worth_without_asset_value(request, account_sp500, asset_krw,
     request.addfinalizer(teardown)
 
 
-def test_net_worth_1(account_checking, asset_krw):
+def test_account_net_worth_1(account_checking, asset_krw):
     assert 0 == account_checking.net_worth(
         evaluated_at=parse_date('2016-01-01'), base_asset=asset_krw)
     assert 0 == account_checking.net_worth(
@@ -332,7 +308,7 @@ def test_net_worth_1(account_checking, asset_krw):
         evaluated_at=parse_date('2016-01-04'), base_asset=asset_krw)
 
 
-def test_net_worth_2(account_checking, account_sp500, asset_krw, asset_sp500):
+def test_account_net_worth_2(account_checking, account_sp500, asset_krw, asset_sp500):
     AssetValue.create(
         evaluated_at=parse_date('2016-02-25'), asset=asset_sp500,
         base_asset=asset_krw, granularity=Granularity.day, close=921.77)
@@ -362,6 +338,30 @@ def test_net_worth_2(account_checking, account_sp500, asset_krw, asset_sp500):
     assert 921770 == account_sp500.net_worth(
         evaluated_at=parse_date('2016-03-01'), approximation=True,
         base_asset=asset_krw)
+
+
+def test_account_net_worth_3(account_checking, asset_usd):
+    """Ensures Account.net_worth() works with implicit `created_at`, which is
+    the current datetime.
+    """
+    Record.create(
+        account=account_checking, asset=asset_usd, quantity=1000,
+        type=RecordType.deposit)
+
+    net_worth = account_checking.net_worth(
+        base_asset=asset_usd)
+    assert net_worth == 1000
+
+def test_account_net_worth_4(account_checking, asset_usd):
+    """Ensures Account.net_worth() works with explicit `created_at`."""
+    Record.create(
+        account=account_checking, asset=asset_usd, quantity=1000,
+        type=RecordType.deposit,
+        created_at=parse_datetime('2018-08-30 23:00:00'))
+
+    net_worth = account_checking.net_worth(
+        base_asset=asset_usd, evaluated_at=parse_date('2018-08-30'))
+    assert net_worth == 1000
 
 
 def test_granularity_enum():
