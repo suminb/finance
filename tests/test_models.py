@@ -226,6 +226,15 @@ def test_records(account_checking, asset_krw):
         assert RecordType.balance_adjustment == record.type
 
 
+def test_record_created_at(account_checking, asset_krw):
+    record = Record.create(
+        account=account_checking, asset=asset_krw, quantity=1000,
+        type=RecordType.deposit)
+
+    # `created_at` must be set as the time at which the record created
+    assert record.created_at
+
+
 def test_net_worth_without_asset_value(request, account_sp500, asset_krw,
                                        asset_sp500):
     asset_values = AssetValue.query.filter_by(asset=asset_sp500)

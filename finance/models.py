@@ -54,9 +54,9 @@ class CRUDMixin(object):
             kwargs.update(dict(id=uuid64.issue()))
         instance = cls(**kwargs)
 
-        if hasattr(instance, 'timestamp') \
-                and getattr(instance, 'timestamp') is None:
-            instance.timestamp = datetime.utcnow()
+        if hasattr(instance, 'created_at') \
+                and getattr(instance, 'created_at') is None:
+            instance.created_at  = datetime.utcnow()
 
         try:
             return instance.save(commit=commit)
