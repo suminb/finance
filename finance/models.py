@@ -1,7 +1,7 @@
 import collections
 import functools
 import operator
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import uuid64
 from flask_login import UserMixin
@@ -54,9 +54,9 @@ class CRUDMixin(object):
             kwargs.update(dict(id=uuid64.issue()))
         instance = cls(**kwargs)
 
-        if hasattr(instance, 'timestamp') \
-                and getattr(instance, 'timestamp') is None:
-            instance.timestamp = datetime.utcnow()
+        if hasattr(instance, 'created_at') \
+                and getattr(instance, 'created_at') is None:
+            instance.created_at  = datetime.utcnow()
 
         try:
             return instance.save(commit=commit)
@@ -394,7 +394,7 @@ class Account(CRUDMixin, db.Model):  # type: ignore
             .first()
 
         if account is None:
-            raise AccountNotFoundException
+            raise AccountNotFoundException((institution, number))
         else:
             return account
 
@@ -418,9 +418,9 @@ class Account(CRUDMixin, db.Model):  # type: ignore
         # Sum all transactions to produce {asset: sum(quantity)} dictionary
         bs = {}
         rs = [(r.asset, r.quantity, r.type) for r in records]
-        for asset, quantity, type in rs:
+        for asset, quantity, type_ in rs:
             bs.setdefault(asset, 0)
-            if type == RecordType.balance_adjustment:
+            if type_ == RecordType.balance_adjustment:
                 # Previous records will be ignored when 'balance_adjustment'
                 # is seen.
                 bs[asset] = quantity
@@ -440,16 +440,11 @@ class Account(CRUDMixin, db.Model):  # type: ignore
         if evaluated_at is None:
             evaluated_at = datetime.utcnow()
 
-        if granularity == Granularity.day:
-            if isinstance(evaluated_at, datetime):
-                # NOTE: Any better way to handle this?
-                date = evaluated_at.date().timetuple()[:6]
-                evaluated_at = datetime(*date)
-        else:
-            raise NotImplementedError
+        evaluated_from, evaluated_until = \
+            self.get_bounds(evaluated_at, granularity)
 
         net_asset_value = 0
-        for asset, quantity in self.balance(evaluated_at).items():
+        for asset, quantity in self.balance(evaluated_until).items():
             if asset == base_asset:
                 net_asset_value += quantity
                 continue
@@ -459,12 +454,13 @@ class Account(CRUDMixin, db.Model):  # type: ignore
                         AssetValue.granularity == granularity,
                         AssetValue.base_asset == base_asset)
             if approximation:
-                asset_value = asset_value.filter(
-                    AssetValue.evaluated_at <= evaluated_at) \
+                asset_value = asset_value \
+                    .filter(AssetValue.evaluated_at <= evaluated_until) \
                     .order_by(AssetValue.evaluated_at.desc())
             else:
-                asset_value = asset_value.filter(
-                    AssetValue.evaluated_at == evaluated_at)
+                asset_value = asset_value \
+                    .filter(AssetValue.evaluated_at >= evaluated_from) \
+                    .filter(AssetValue.evaluated_at <= evaluated_until) \
 
             asset_value = asset_value.first()
 
@@ -475,6 +471,25 @@ class Account(CRUDMixin, db.Model):  # type: ignore
             net_asset_value += worth
 
         return net_asset_value
+
+    # FIXME: We probably want to move this function elsewhere
+    # FIXME: Think of a better name
+    @classmethod
+    def get_bounds(cls, evaluated_at=None, granularity=Granularity.day):
+        if granularity == Granularity.day:
+            if isinstance(evaluated_at, datetime):
+                # Truncate by date
+                lower_bound = evaluated_at.replace(
+                    hour=0, minute=0, second=0, microsecond=0)
+
+                # Fast-forward the time to the end of the day, as
+                # `evaluated_at` is expected to be inclusive on the upper bound
+                upper_bound = \
+                    lower_bound + timedelta(days=1) - timedelta(microseconds=1)
+
+                return lower_bound, upper_bound
+        else:
+            raise NotImplementedError
 
 
 class Portfolio(CRUDMixin, db.Model):  # type: ignore
