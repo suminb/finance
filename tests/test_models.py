@@ -8,7 +8,7 @@ from finance.exceptions import (AssetNotFoundException,
 from finance.models import (Account, Asset, AssetValue, Granularity, Portfolio,
                             Record, RecordType, Transaction, TransactionState,
                             db, get_asset_by_fund_code)
-from finance.utils import parse_date
+from finance.utils import parse_date, parse_datetime
 
 
 def test_create_model():
@@ -83,6 +83,30 @@ def test_balance(account_checking, asset_krw, asset_usd):
         asset=asset_usd, quantity=40, type=RecordType.balance_adjustment)
     assert account_checking.balance(parse_date('2016-05-19')) \
         == {asset_krw: 500, asset_usd: 40}
+
+
+def test_account_net_worth_1(account_checking, asset_usd):
+    """Ensures Account.net_worth() works with implicit `created_at`, which is
+    the current datetime.
+    """
+    Record.create(
+        account=account_checking, asset=asset_usd, quantity=1000,
+        type=RecordType.deposit)
+
+    net_worth = account_checking.net_worth(
+        base_asset=asset_usd)
+    assert net_worth == 1000
+
+def test_account_net_worth_2(account_checking, asset_usd):
+    """Ensures Account.net_worth() works with explicit `created_at`."""
+    Record.create(
+        account=account_checking, asset=asset_usd, quantity=1000,
+        type=RecordType.deposit,
+        created_at=parse_datetime('2018-08-30 23:00:00'))
+
+    net_worth = account_checking.net_worth(
+        base_asset=asset_usd, evaluated_at=parse_date('2018-08-30'))
+    assert net_worth == 1000
 
 
 def test_portfolio(account_hf, asset_hf1, account_checking, asset_krw):
