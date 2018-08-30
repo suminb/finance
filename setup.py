@@ -17,7 +17,10 @@ setup(
     py_modules=[
         'finance', 'finance.__main__', 'finance.main.__init__',
         'finance.models', 'finance.importers', 'finance.utils',
-        'finance.exceptions', 'finance.providers.google',
+        'finance.exceptions', 'finance.providers.dart',
+        'finance.providers.google', 'finance.providers.kofia',
+        'finance.providers.miraeasset', 'finance.providers.provider',
+        'finance.providers.record', 'finance.providers.yahoo',
     ],
     version=finance.__version__,
     description='Personal Finance Project',
