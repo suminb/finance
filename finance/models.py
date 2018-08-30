@@ -439,11 +439,12 @@ class Account(CRUDMixin, db.Model):  # type: ignore
 
         if evaluated_at is None:
             evaluated_at = datetime.utcnow()
-        else:
-            evaluated_at = self.get_upper_bound(evaluated_at, granularity)
+
+        evaluated_from, evaluated_until = \
+            self.get_bounds(evaluated_at, granularity)
 
         net_asset_value = 0
-        for asset, quantity in self.balance(evaluated_at).items():
+        for asset, quantity in self.balance(evaluated_until).items():
             if asset == base_asset:
                 net_asset_value += quantity
                 continue
@@ -453,12 +454,13 @@ class Account(CRUDMixin, db.Model):  # type: ignore
                         AssetValue.granularity == granularity,
                         AssetValue.base_asset == base_asset)
             if approximation:
-                asset_value = asset_value.filter(
-                    AssetValue.evaluated_at <= evaluated_at) \
+                asset_value = asset_value \
+                    .filter(AssetValue.evaluated_at <= evaluated_until) \
                     .order_by(AssetValue.evaluated_at.desc())
             else:
-                asset_value = asset_value.filter(
-                    AssetValue.evaluated_at == evaluated_at)
+                asset_value = asset_value \
+                    .filter(AssetValue.evaluated_at >= evaluated_from) \
+                    .filter(AssetValue.evaluated_at <= evaluated_until) \
 
             asset_value = asset_value.first()
 
@@ -473,19 +475,19 @@ class Account(CRUDMixin, db.Model):  # type: ignore
     # FIXME: We probably want to move this function elsewhere
     # FIXME: Think of a better name
     @classmethod
-    def get_upper_bound(cls, evaluated_at=None, granularity=Granularity.day):
+    def get_bounds(cls, evaluated_at=None, granularity=Granularity.day):
         if granularity == Granularity.day:
             if isinstance(evaluated_at, datetime):
                 # Truncate by date
-                evaluated_at = evaluated_at.replace(
+                lower_bound = evaluated_at.replace(
                     hour=0, minute=0, second=0, microsecond=0)
 
                 # Fast-forward the time to the end of the day, as
                 # `evaluated_at` is expected to be inclusive on the upper bound
-                evaluated_at = \
-                    evaluated_at + timedelta(days=1) - timedelta(microseconds=1)
+                upper_bound = \
+                    lower_bound + timedelta(days=1) - timedelta(microseconds=1)
 
-                return evaluated_at
+                return lower_bound, upper_bound
         else:
             raise NotImplementedError
 
