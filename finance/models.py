@@ -394,7 +394,7 @@ class Account(CRUDMixin, db.Model):  # type: ignore
             .first()
 
         if account is None:
-            raise AccountNotFoundException
+            raise AccountNotFoundException((institution, number))
         else:
             return account
 
