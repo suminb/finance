@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 from distutils.core import setup
+from setuptools import find_packages
+
 import finance
 
 
@@ -14,14 +16,6 @@ def readme():
 
 setup(
     name='finance',
-    py_modules=[
-        'finance', 'finance.__main__', 'finance.main.__init__',
-        'finance.models', 'finance.importers', 'finance.utils',
-        'finance.exceptions', 'finance.providers.dart',
-        'finance.providers.google', 'finance.providers.kofia',
-        'finance.providers.miraeasset', 'finance.providers.provider',
-        'finance.providers.record', 'finance.providers.yahoo',
-    ],
     version=finance.__version__,
     description='Personal Finance Project',
     long_description=readme(),
@@ -29,7 +23,7 @@ setup(
     author_email=finance.__email__,
     url='http://github.com/suminb/finance',
     license='BSD',
-    packages=[],
+    packages=find_packages(),
     entry_points={
         'console_scripts': [
             'finance = finance.__main__:cli'
