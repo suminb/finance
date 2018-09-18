@@ -10,6 +10,8 @@ from finance.providers.provider import AssetValueProvider
 class Yahoo(AssetValueProvider):
     """Fetches and parses financial data from Yahoo Finance."""
 
+    name = 'yahoo'
+
     def __init__(self):
         pass
 
