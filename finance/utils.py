@@ -255,7 +255,7 @@ def insert_stock_record(data: dict, stock_account: object,
 
 def insert_stock_trading_record(data: dict, stock_account: object):
     """Inserts a stock trading (i.e., buying or selling stocks) records."""
-    from finance.models import Asset, Record
+    from finance.models import Asset, deposit
     if data['category1'].startswith('장내'):
         code_suffix = '.KS'
     elif data['category1'].startswith('코스닥'):
@@ -273,36 +273,23 @@ def insert_stock_trading_record(data: dict, stock_account: object):
         raise ValueError(
             "Asset object could not be retrived with code '{}'".format(code))
 
-    return Record.create(
-        created_at=data['date'],
-        quantity=data['quantity'],
-        asset=asset,
-        account=stock_account,
-    )
+    return deposit(stock_account, asset, data['quantity'], data['date'])
 
 
 def insert_stock_transfer_record(data: dict, bank_account: object):
     """Inserts a transfer record between a bank account and a stock account.
     """
-    from finance.models import Asset, Record
+    from finance.models import Asset, deposit
 
     # FIXME: Not a good idea to use a hard coded value
     asset_krw = Asset.query.filter(Asset.name == 'KRW').first()
 
     if data['name'] == '증거금이체':
         # Transfer from a bank account to a stock account
-        return Record.create(
-            created_at=data['date'],
-            quantity=-data['subtotal'],
-            asset=asset_krw,
-            account=bank_account)
+        return deposit(bank_account, asset_krw, -data['subtotal'], data['date'])
     elif data['name'] == '매매대금정산':
         # Transfer from a stock account to a bank account
-        return Record.create(
-            created_at=data['date'],
-            quantity=data['subtotal'],
-            asset=asset_krw,
-            account=bank_account)
+        return deposit(bank_account, asset_krw, data['subtotal'], data['date'])
     else:
         raise ValueError(
             "Unrecognized transfer type '{}'".format(data['name']))
