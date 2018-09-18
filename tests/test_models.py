@@ -84,16 +84,12 @@ def test_portfolio(account_hf, asset_hf1, account_checking, asset_krw):
     portfolio.base_asset = asset_krw
     portfolio.add_accounts(account_hf, account_checking)
 
+    deposit(account_checking, asset_krw, 500000, parse_date('2015-12-04'))
+
     with Transaction.create() as t:
-        Record.create(
-            created_at=parse_date('2015-12-04'), transaction=t,
-            account=account_checking, asset=asset_krw, quantity=500000)
-        Record.create(
-            created_at=parse_date('2015-12-04'), transaction=t,
-            account=account_checking, asset=asset_krw, quantity=-500000)
-        Record.create(
-            created_at=parse_date('2015-12-04'), transaction=t,
-            account=account_hf, asset=asset_hf1, quantity=1)
+        deposit(account_checking, asset_krw, -500000, parse_date('2015-12-04'),
+                t)
+        deposit(account_hf, asset_hf1, 1, parse_date('2015-12-04'), t)
 
     # The net asset value shall not be available at this point
     with pytest.raises(AssetValueUnavailableException):
@@ -111,10 +107,8 @@ def test_portfolio(account_hf, asset_hf1, account_checking, asset_krw):
 
     # 1st payment
     interest, tax, returned = 3923, 740, 30930
-    with Transaction.create() as t:
-        Record.create(
-            created_at=parse_date('2016-01-08'), transaction=t,
-            account=account_checking, asset=asset_krw, quantity=returned)
+    deposit(account_checking, asset_krw, returned, parse_date('2016-01-08'))
+
     # Remaining principle value after the 1st payment
     AssetValue.create(
         evaluated_at=parse_date('2016-01-08'), asset=asset_hf1,
@@ -125,10 +119,7 @@ def test_portfolio(account_hf, asset_hf1, account_checking, asset_krw):
     assert 500000 + (interest - tax) == net_worth
 
     # 2nd payment
-    with Transaction.create() as t:
-        Record.create(
-            created_at=parse_date('2016-02-05'), transaction=t,
-            account=account_checking, asset=asset_krw, quantity=25016)
+    deposit(account_checking, asset_krw, 25016, parse_date('2016-02-05'))
     # Remaining principle value after the 2nd payment
     AssetValue.create(
         evaluated_at=parse_date('2016-02-05'), asset=asset_hf1,
@@ -185,28 +176,22 @@ def test_transaction():
 
 def test_records(account_checking, asset_krw):
     with Transaction.create() as t:
-        record = Record.create(
-            created_at=parse_date('2016-03-14'), transaction=t,
-            account=account_checking, asset=asset_krw,
-            quantity=1000)
+        record = deposit(account_checking, asset_krw, 1000,
+                         parse_date('2016-03-14'), t)
 
         # Make sure the record type has been set implictly
         assert RecordType.deposit == record.type
 
     with Transaction.create() as t:
-        record = Record.create(
-            created_at=parse_date('2016-03-14'), transaction=t,
-            account=account_checking, asset=asset_krw,
-            quantity=-2000)
+        record = deposit(account_checking, asset_krw, -2000,
+                         parse_date('2016-03-14'), t)
 
         # Make sure the record type has been set implictly
         assert RecordType.withdraw == record.type
 
     with Transaction.create() as t:
-        record = Record.create(
-            created_at=parse_date('2016-03-14'), transaction=t,
-            account=account_checking, asset=asset_krw,
-            quantity=3000, type=RecordType.balance_adjustment)
+        record = balance_adjustment(
+            account_checking, asset_krw, 3000, parse_date('2016-03-14'), t)
 
         # Make sure the record type has been set explicitly
         assert RecordType.balance_adjustment == record.type
@@ -248,9 +233,7 @@ def test_account_net_worth_1(account_checking, asset_krw):
         evaluated_at=parse_date('2016-01-04'), base_asset=asset_krw)
 
     with Transaction.create() as t:
-        Record.create(
-            created_at=parse_date('2016-01-01'), transaction=t,
-            account=account_checking, asset=asset_krw, quantity=1000)
+        deposit(account_checking, asset_krw, 1000, parse_date('2016-01-01'), t)
 
     assert 1000 == account_checking.net_worth(
         evaluated_at=parse_date('2016-01-01'), base_asset=asset_krw)
@@ -262,9 +245,7 @@ def test_account_net_worth_1(account_checking, asset_krw):
         evaluated_at=parse_date('2016-01-04'), base_asset=asset_krw)
 
     with Transaction.create() as t:
-        Record.create(
-            created_at=parse_date('2016-01-02'), transaction=t,
-            account=account_checking, asset=asset_krw, quantity=2000)
+        deposit(account_checking, asset_krw, 2000, parse_date('2016-01-02'), t)
 
     assert 1000 == account_checking.net_worth(
         evaluated_at=parse_date('2016-01-01'), base_asset=asset_krw)
@@ -276,9 +257,7 @@ def test_account_net_worth_1(account_checking, asset_krw):
         evaluated_at=parse_date('2016-01-04'), base_asset=asset_krw)
 
     with Transaction.create() as t:
-        Record.create(
-            created_at=parse_date('2016-01-03'), transaction=t,
-            account=account_checking, asset=asset_krw, quantity=-1500)
+        deposit(account_checking, asset_krw, -1500, parse_date('2016-01-03'), t)
 
     assert 1000 == account_checking.net_worth(
         evaluated_at=parse_date('2016-01-01'), base_asset=asset_krw)
@@ -305,14 +284,9 @@ def test_account_net_worth_2(account_checking, account_sp500, asset_krw, asset_s
         base_asset=asset_krw, granularity=Granularity.day, close=921.76)
 
     with Transaction.create() as t:
-        Record.create(
-            created_at=parse_date('2016-02-25'), transaction=t,
-            account=account_sp500, asset=asset_sp500,
-            quantity=1000)
-        Record.create(
-            created_at=parse_date('2016-02-25'), transaction=t,
-            account=account_checking, asset=asset_krw,
-            quantity=-1000 * 921.77)
+        deposit(account_sp500, asset_sp500, 1000, parse_date('2016-02-25'), t)
+        deposit(account_checking, asset_krw, -1000 * 921.77,
+                parse_date('2016-02-25'), t)
 
     assert 921770 == account_sp500.net_worth(
         evaluated_at=parse_date('2016-02-25'), base_asset=asset_krw)

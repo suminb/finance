@@ -21,16 +21,18 @@ db = SQLAlchemy()
 JsonType = db.String().with_variant(JSON(), 'postgresql')
 
 
-def balance_adjustment(account, asset, quantity, date=None):
+def balance_adjustment(account, asset, quantity, date=None, transaction=None):
     return Record.create(
         account=account, asset=asset, quantity=quantity,
-        type=RecordType.balance_adjustment, created_at=date)
+        type=RecordType.balance_adjustment, created_at=date,
+        transaction=transaction)
 
 
 def deposit(account, asset, quantity, date=None, transaction=None):
+    record_type = RecordType.deposit if quantity >= 0 else RecordType.withdraw
     return Record.create(
         account=account, asset=asset, quantity=quantity,
-        type=RecordType.deposit, created_at=date, transaction=transaction)
+        type=record_type, created_at=date, transaction=transaction)
 
 
 def get_asset_by_fund_code(code: str):
