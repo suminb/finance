@@ -27,10 +27,10 @@ def balance_adjustment(account, asset, quantity, date=None):
         type=RecordType.balance_adjustment, created_at=date)
 
 
-def deposit(account, asset, quantity, date=None):
+def deposit(account, asset, quantity, date=None, transaction=None):
     return Record.create(
         account=account, asset=asset, quantity=quantity,
-        type=RecordType.deposit, created_at=date)
+        type=RecordType.deposit, created_at=date, transaction=transaction)
 
 
 def get_asset_by_fund_code(code: str):
