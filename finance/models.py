@@ -29,10 +29,9 @@ def balance_adjustment(account, asset, quantity, date=None, transaction=None):
 
 
 def deposit(account, asset, quantity, date=None, transaction=None):
-    record_type = RecordType.deposit if quantity >= 0 else RecordType.withdraw
     return Record.create(
-        account=account, asset=asset, quantity=quantity,
-        type=record_type, created_at=date, transaction=transaction)
+        account=account, asset=asset, quantity=quantity, created_at=date,
+        transaction=transaction)
 
 
 def get_asset_by_fund_code(code: str):
