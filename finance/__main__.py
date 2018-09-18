@@ -197,19 +197,15 @@ def import_sp500_records():
                 # differ by a few days. Need to figure out how to parse this
                 # properly from the raw data.
                 try:
-                    Record.create(
-                        created_at=date, account=account_checking,
-                        asset=asset_krw, quantity=-quantity_krw,
-                        transaction=t)
+                    deposit(account_checking, asset_krw, -quantity_krw, date,
+                            t)
                 except IntegrityError:
                     log.warn('Identical record exists')
                     db.session.rollback()
 
                 try:
-                    Record.create(
-                        created_at=date, account=account_sp500,
-                        asset=asset_sp500, quantity=quantity_sp500,
-                        transaction=t)
+                    deposit(account_sp500, asset_sp500, quantity_sp500,
+                            date, t)
                 except IntegrityError:
                     log.warn('Identical record exists')
                     db.session.rollback()
