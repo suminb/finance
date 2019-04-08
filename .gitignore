@@ -1,10 +1,16 @@
 provision.sh
 .cache
+.coverage
 .DS_Store
+.mypy_cache/
+.pytest_cache/
 frontend/src/assets
 sample-data/*
+dist
 *.pyc
 *.swp
+*.egg-info
 
 # Ignore .json files at root
 /*.json
+
