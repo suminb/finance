@@ -14,6 +14,9 @@ NOTE: 제가 주로 사용하는 에디터인 vim 에서 한글 타이핑이 불
 문서를 작성하는 것이 일반적이지만, 이 프로젝트의 경우 한국어를 사용하는 청중이
 대부분인 관계로 문서를 한국어로 작성합니다.
 
+.. figure:: https://github.com/suminb/finance/raw/develop/moving_average.png
+    :align: center
+    :alt: Moving Average
 
 목표
 ----
@@ -45,11 +48,10 @@ NOTE: 제가 주로 사용하는 에디터인 vim 에서 한글 타이핑이 불
 Daily Net Asset Values
 **********************
 
-매일 총 자산 가치(net asset value; NAV)를 합산하여 그래프로 보여줍니다. 이는 펀드의 단위 가격을 산정하는데 필수적인 데이터입니다.
+매일 총 자산 가치(net asset value; NAV)를 합산하여 그래프로 보여줍니다. 이는
+펀드의 단위 가격을 산정하는데 필수적인 데이터입니다.
 
-.. figure:: http://s33.postimg.org/duyhsnxrz/net_worth.png
-    :align: center
-    :alt: Daily net asset values
+(TODO: Prepare an illustration)
 
 
 앞으로 할 일들
