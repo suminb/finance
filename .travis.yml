@@ -3,6 +3,8 @@ sudo: false
 language: python
 python:
   - "3.6"
+  - "3.7"
+  - "3.8-dev"
 
 addons:
   postgresql: "9.4"
