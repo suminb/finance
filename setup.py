@@ -21,7 +21,7 @@ setup(
     long_description=readme(),
     author=finance.__author__,
     author_email=finance.__email__,
-    url='http://github.com/suminb/finance',
+    url='https://github.com/suminb/finance',
     license='BSD',
     packages=find_packages(),
     entry_points={
