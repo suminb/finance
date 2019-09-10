@@ -284,12 +284,15 @@ def insert_stock_transfer_record(data: dict, bank_account: object):
     # FIXME: Not a good idea to use a hard coded value
     asset_krw = Asset.query.filter(Asset.name == 'KRW').first()
 
+    subtotal = data['subtotal']
+    date = data['date']
+
     if data['name'] == '증거금이체':
         # Transfer from a bank account to a stock account
-        return deposit(bank_account, asset_krw, -data['subtotal'], data['date'])
+        return deposit(bank_account, asset_krw, -subtotal, date)
     elif data['name'] == '매매대금정산':
         # Transfer from a stock account to a bank account
-        return deposit(bank_account, asset_krw, data['subtotal'], data['date'])
+        return deposit(bank_account, asset_krw, subtotal, date)
     else:
         raise ValueError(
             "Unrecognized transfer type '{}'".format(data['name']))

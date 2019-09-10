@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 
 from finance import log
 from finance.models import (
-    Account, Asset, AssetValue, Granularity, Record, Transaction, db, deposit)
+    Account, Asset, AssetValue, Granularity, Transaction, db, deposit)
 from finance.providers import Miraeasset
 
 

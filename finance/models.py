@@ -69,7 +69,7 @@ class CRUDMixin(object):
 
         if hasattr(instance, 'created_at') \
                 and getattr(instance, 'created_at') is None:
-            instance.created_at  = datetime.utcnow()
+            instance.created_at = datetime.utcnow()
 
         try:
             return instance.save(commit=commit)
