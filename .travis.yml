@@ -3,9 +3,15 @@ sudo: false
 language: python
 python:
   - "3.6"
+  - "3.7"
+  - "3.8-dev"
 
 addons:
-  postgresql: "9.4"
+  postgresql: "10"
+  apt:
+    packages:
+      - postgresql-10
+      - postgresql-client-10
   sonarcloud:
     organization: "suminb-github"
 
@@ -18,22 +24,32 @@ env:
     - TEST_DB_URL="postgres:///finance"
     - PYTHONPATH=.
 
+stages:
+  - type checking
+  - test
+
+install:
+  - pip install -r requirements.txt
+  - pip install -r tests/requirements.txt
+  - pip install -e .
+
+script:
+    - psql -c 'CREATE DATABASE finance;' -U postgres
+    - finance create_all
+    - py.test -v tests --cov finance --cov-report term-missing
+    - sonar-scanner
+
+after_success:
+  - coveralls
+
 jobs:
   include:
     - stage: type checking
+      python: "3.7"
       script:
         - pip install mypy
         - mypy --ignore-missing-imports finance
-    - stage: build
-      install:
-        - pip install -r requirements.txt
-        - pip install -r tests/requirements.txt
-        - pip install -e .
-      before_script:
-        - psql -c 'CREATE DATABASE finance;' -U postgres
-        - finance create_all
-      script:
-        - py.test -v tests --cov finance --cov-report term-missing
-        - sonar-scanner
-      after_success:
-        - coveralls
+    # Stage 'test' is a default stage name and it is defined in the top-level
+    # of this YAML document. Looks like defining `install`, `script`, and
+    # `after_success` sections at the top level is the only way to work with
+    # the build matrix (as defined by the `python` section).

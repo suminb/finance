@@ -1,4 +1,4 @@
-from finance.models import Asset, AssetType, AssetValue, db, Granularity
+from finance.models import Granularity
 from finance.providers import Yahoo
 
 

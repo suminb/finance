@@ -99,7 +99,7 @@ PostgreSQL in Docker
         -e POSTGRES_PASSWORD=qwerasdf \
         -e POSTGRES_DB=finance \
         -v $HOME/postgres:/var/lib/postgresql/data \
-        -t postgres
+        -t postgres:10
 
 psycopg2 on Mac
 ***************
