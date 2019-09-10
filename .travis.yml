@@ -45,3 +45,7 @@ jobs:
       script:
         - pip install mypy
         - mypy --ignore-missing-imports finance
+    # Stage 'test' is a default stage name and it is defined in the top-level
+    # of this YAML document. Looks like defining `install`, `script`, and
+    # `after_success` sections at the top level is the only way to work with
+    # the build matrix (as defined by the `python` section).
