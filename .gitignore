@@ -1,16 +1,24 @@
-provision.sh
-.cache
-.coverage
+# OS, editor specific stuff
+.vscode
+*.swp
 .DS_Store
-.mypy_cache/
-.pytest_cache/
-frontend/src/assets
-sample-data/*
+
+# Caches
+.cache
+.pytest_cache
+.mypy_cache
+
+# Build artifcats
 dist
 *.pyc
-*.swp
 *.egg-info
+.coverage
+.scannerwork
 
-# Ignore .json files at root
+# Meant to be provided by users
+provision.sh
+
+# Misc
 /*.json
-
+frontend/src/assets
+sample-data/*
