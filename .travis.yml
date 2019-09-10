@@ -20,22 +20,28 @@ env:
     - TEST_DB_URL="postgres:///finance"
     - PYTHONPATH=.
 
+stages:
+  - type checking
+  - test
+
+install:
+  - pip install -r requirements.txt
+  - pip install -r tests/requirements.txt
+  - pip install -e .
+
+script:
+    - psql -c 'CREATE DATABASE finance;' -U postgres
+    - finance create_all
+    - py.test -v tests --cov finance --cov-report term-missing
+    - sonar-scanner
+
+after_success:
+  - coveralls
+
 jobs:
   include:
     - stage: type checking
+      python: "3.7"
       script:
         - pip install mypy
         - mypy --ignore-missing-imports finance
-    - stage: test
-      install:
-        - pip install -r requirements.txt
-        - pip install -r tests/requirements.txt
-        - pip install -e .
-      before_script:
-        - psql -c 'CREATE DATABASE finance;' -U postgres
-        - finance create_all
-      script:
-        - py.test -v tests --cov finance --cov-report term-missing
-        - sonar-scanner
-      after_success:
-        - coveralls
