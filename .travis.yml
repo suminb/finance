@@ -26,7 +26,7 @@ jobs:
       script:
         - pip install mypy
         - mypy --ignore-missing-imports finance
-    - stage: build
+    - stage: test
       install:
         - pip install -r requirements.txt
         - pip install -r tests/requirements.txt
