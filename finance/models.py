@@ -21,6 +21,19 @@ db = SQLAlchemy()
 JsonType = db.String().with_variant(JSON(), 'postgresql')
 
 
+def balance_adjustment(account, asset, quantity, date=None, transaction=None):
+    return Record.create(
+        account=account, asset=asset, quantity=quantity,
+        type=RecordType.balance_adjustment, created_at=date,
+        transaction=transaction)
+
+
+def deposit(account, asset, quantity, date=None, transaction=None):
+    return Record.create(
+        account=account, asset=asset, quantity=quantity, created_at=date,
+        transaction=transaction)
+
+
 def get_asset_by_fund_code(code: str):
     """Gets an Asset instance mapped to the given fund code.
 
@@ -56,7 +69,7 @@ class CRUDMixin(object):
 
         if hasattr(instance, 'created_at') \
                 and getattr(instance, 'created_at') is None:
-            instance.created_at  = datetime.utcnow()
+            instance.created_at = datetime.utcnow()
 
         try:
             return instance.save(commit=commit)

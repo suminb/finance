@@ -215,8 +215,8 @@ def poll_import_stock_values_requests(sqs_region, queue_url):
 
 def request_import_stock_values(
     code, start_time, end_time,
-    sqs_region=os.environ['SQS_REGION'],
-    queue_url=os.environ['REQUEST_IMPORT_STOCK_VALUES_QUEUE_URL']
+    sqs_region=os.environ.get('SQS_REGION', ''),
+    queue_url=os.environ.get('REQUEST_IMPORT_STOCK_VALUES_QUEUE_URL', '')
 ):
     message = make_request_import_stock_values_message(
         code, start_time, end_time)
@@ -255,7 +255,7 @@ def insert_stock_record(data: dict, stock_account: object,
 
 def insert_stock_trading_record(data: dict, stock_account: object):
     """Inserts a stock trading (i.e., buying or selling stocks) records."""
-    from finance.models import Asset, Record
+    from finance.models import Asset, deposit
     if data['category1'].startswith('장내'):
         code_suffix = '.KS'
     elif data['category1'].startswith('코스닥'):
@@ -273,36 +273,26 @@ def insert_stock_trading_record(data: dict, stock_account: object):
         raise ValueError(
             "Asset object could not be retrived with code '{}'".format(code))
 
-    return Record.create(
-        created_at=data['date'],
-        quantity=data['quantity'],
-        asset=asset,
-        account=stock_account,
-    )
+    return deposit(stock_account, asset, data['quantity'], data['date'])
 
 
 def insert_stock_transfer_record(data: dict, bank_account: object):
     """Inserts a transfer record between a bank account and a stock account.
     """
-    from finance.models import Asset, Record
+    from finance.models import Asset, deposit
 
     # FIXME: Not a good idea to use a hard coded value
     asset_krw = Asset.query.filter(Asset.name == 'KRW').first()
 
+    subtotal = data['subtotal']
+    date = data['date']
+
     if data['name'] == '증거금이체':
         # Transfer from a bank account to a stock account
-        return Record.create(
-            created_at=data['date'],
-            quantity=-data['subtotal'],
-            asset=asset_krw,
-            account=bank_account)
+        return deposit(bank_account, asset_krw, -subtotal, date)
     elif data['name'] == '매매대금정산':
         # Transfer from a stock account to a bank account
-        return Record.create(
-            created_at=data['date'],
-            quantity=data['subtotal'],
-            asset=asset_krw,
-            account=bank_account)
+        return deposit(bank_account, asset_krw, subtotal, date)
     else:
         raise ValueError(
             "Unrecognized transfer type '{}'".format(data['name']))

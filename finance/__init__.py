@@ -9,7 +9,7 @@ from flask_login import current_user, LoginManager
 from logbook import Logger, StreamHandler
 
 
-__version__ = '0.3.5'
+__version__ = '0.3.6'
 __author__ = 'Sumin Byeon'
 __email__ = 'suminb@gmail.com'
 
@@ -27,8 +27,11 @@ class AdminModelView(ModelView):
             current_user.email in ADMINS
 
 
-def create_app(name=__name__, config={},
+def create_app(name=__name__, config=None,
                static_folder='assets', template_folder='templates'):
+
+    if config is None:
+        config = {}
 
     app = Flask(name, static_folder=static_folder,
                 template_folder=template_folder)

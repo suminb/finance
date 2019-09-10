@@ -10,7 +10,7 @@ from finance.__main__ import (create_all, drop_all, fetch_stock_values,
                               import_stock_values, insert_stock_assets,
                               insert_test_data)
 from finance.exceptions import AssetNotFoundException
-from finance.models import StockAsset
+from finance.models import StockAsset, deposit
 from finance.utils import load_stock_codes
 
 
@@ -39,7 +39,7 @@ def test_insert_test_data_all():
 
 
 @pytest.mark.skip
-def _test_import_sp500_records():
+def test_import_sp500_records():
     runner = CliRunner()
     result = runner.invoke(import_sp500_records)
     assert result.exit_code == 0
