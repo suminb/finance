@@ -215,8 +215,8 @@ def poll_import_stock_values_requests(sqs_region, queue_url):
 
 def request_import_stock_values(
     code, start_time, end_time,
-    sqs_region=os.environ['SQS_REGION'],
-    queue_url=os.environ['REQUEST_IMPORT_STOCK_VALUES_QUEUE_URL']
+    sqs_region=os.environ.get('SQS_REGION', ''),
+    queue_url=os.environ.get('REQUEST_IMPORT_STOCK_VALUES_QUEUE_URL', '')
 ):
     message = make_request_import_stock_values_message(
         code, start_time, end_time)
