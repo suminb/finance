@@ -12,6 +12,58 @@ class Miraeasset(Provider):
     # TODO: Ideally, we would like to unify the following two functions
     # (local/foreign transactions)
 
+    def find_header_column_indices(self, headers):
+        return {
+            'created_at': headers.index('거래일자'),
+            'seq': headers.index('거래번호'),
+            'category': headers.index('거래종류'),
+            'amount': headers.index('거래금액'),
+            'currency': headers.index('통화코드'),
+            #'code': headers.index(''),
+            'name': headers.index('종목명'),
+            'unit_price': headers.index('단가'),
+            'quantity': headers.index('수량'),
+            'fees': headers.index('수수료'),
+            'tax': headers.index('제세금합'),
+        }
+
+    # FIXME: This doesn't have to be a method
+    def coalesce(self, value, fallback):
+        return value if value else fallback
+
+    def parse_transactions(self, fin):
+        """거래내역조회 (0650)"""
+        headers = next(fin).strip().split(',')
+
+        col_count = len(headers)
+        assert col_count == 25, 'Invalid column count ({})'.format(col_count)
+
+        column_indices = self.find_header_column_indices(headers)
+
+        for line in fin:
+            columns = [x.strip() for x in line.strip().split(',')]
+            assert len(columns) == col_count, \
+                'Invalid column count ({})'.format(len(columns))
+
+            column_names = [
+                'created_at', 'seq', 'category', 'amount', 'currency',
+                # 'code',
+                'name', 'unit_price', 'quantity', 'fees', 'tax',
+            ]
+            kwargs = {k: columns[column_indices[k]] for k in column_names}
+
+            # FIXME: Fix all this shit
+            kwargs['amount'] = self.coalesce(kwargs['amount'], 0)
+            kwargs['unit_price'] = self.coalesce(kwargs['unit_price'], 0)
+            kwargs['quantity'] = self.coalesce(kwargs['quantity'], 0)
+            kwargs['fees'] = self.coalesce(kwargs['fees'], 0)
+            kwargs['tax'] = self.coalesce(kwargs['tax'], 0)
+            kwargs['code'] = '(unknown)'
+
+            kwargs['raw_columns'] = columns
+
+            yield Record(**kwargs)
+
     def parse_local_transactions(self, fin):
         """Parses local transactions (거래내역조회, 0650)."""
         headers = next(fin)
