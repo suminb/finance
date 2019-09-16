@@ -1,10 +1,32 @@
 from datetime import timedelta
 
+from bidict import bidict
+
 from finance.providers.provider import Provider
 from finance.providers.record import DateTime, Decimal, Integer, List, String
 
 DATE_INPUT_FORMAT = '%Y/%m/%d'
 DATE_OUTPUT_FORMAT = '%Y-%m-%d'
+
+
+# NOTE: This doesn't seem like a good idea...
+name_code_mappings = {
+    '애플': 'AAPL',
+    'AMD': 'AMD',
+    'Advanced Micro Devices  Inc.': 'AMD',
+    '아마존닷컴': 'AMZN',
+    '보잉': 'BA',
+    'Empire State Realty Trust  Inc.': 'ESRT',
+    'EMPIRE ST RLTY TR INC': 'ESRT',
+    'SPDR S&P 500': 'SPY',
+    '엔비디아': 'NVDA',
+    'VANGUARD TAX-EXEMPT BOND ETF': 'VTEB',
+    'ISHARES 20+Y TREASURY BOND ETF': 'TLT',
+    'ISHARES IBOXX $ INVESTMENT GRADE': 'LQD',
+    'VANGUARD EMERGING MARKETS GOVERN': 'VWOB',
+    'VANGUARD SHORT-TERM INFLATION-PR': 'VTIP',
+    '넥슨 일본': '3659.T',
+}
 
 
 class Miraeasset(Provider):
@@ -58,7 +80,10 @@ class Miraeasset(Provider):
             kwargs['quantity'] = self.coalesce(kwargs['quantity'], 0)
             kwargs['fees'] = self.coalesce(kwargs['fees'], 0)
             kwargs['tax'] = self.coalesce(kwargs['tax'], 0)
-            kwargs['code'] = '(unknown)'
+            try:
+                kwargs['code'] = name_code_mappings[kwargs['name']]
+            except KeyError:
+                kwargs['code'] = '(unknown)'
 
             kwargs['raw_columns'] = columns
 
