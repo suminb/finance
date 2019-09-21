@@ -20,6 +20,7 @@ def get_local_copy_path(code, provider):
 def process_local_copy(reader):
     for row in reader:
         row['evaluated_at'] = datetime.fromisoformat(row['evaluated_at'])
+        row['fetched_at'] = datetime.fromisoformat(row['fetched_at'])
         for k in ['open', 'close', 'high', 'low', 'adj_close']:
             row[k] = long_to_float(row[k])
         yield row
@@ -44,12 +45,14 @@ def read_asset_values(code, provider, start, end, force_fetch=False):
         # if not, fetch from the provider
         from pandas_datareader import DataReader
         data = DataReader(code, provider, start, end)
+        fetched_at = datetime.now()
 
         with DataFileWriter(open(local_copy_path, 'wb'), DatumWriter(), schema, codec='deflate') as writer:
             for index, row in data.iterrows():
                 writer.append({
                     'asset_id': 0,
                     'evaluated_at': index.isoformat(),
+                    'fetched_at': fetched_at.isoformat(),
                     'provider': provider,
                     'granularity': '1day',
                     'open': float_to_long(row['Open']),
