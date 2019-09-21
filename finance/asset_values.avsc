@@ -5,7 +5,7 @@
     "fields": [
         {"name": "asset_id", "type": "long"},
         {"name": "evaluated_at",  "type": "string"},
-        {"name": "source", "type": "string"},
+        {"name": "provider", "type": "string"},
         {"name": "granularity", "type": "string"},
         {"name": "open", "type": "long"},
         {"name": "close", "type": "long"},

@@ -50,7 +50,7 @@ def read_asset_values(code, provider, start, end, force_fetch=False):
                 writer.append({
                     'asset_id': 0,
                     'evaluated_at': index.isoformat(),
-                    'source': provider,
+                    'provider': provider,
                     'granularity': '1day',
                     'open': float_to_long(row['Open']),
                     'close': float_to_long(row['Close']),
