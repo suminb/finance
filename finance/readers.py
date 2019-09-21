@@ -40,15 +40,10 @@ def read_asset_values(code, provider, start, end, force_fetch=False):
     schema_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'asset_values.avsc')
     schema = avro.schema.Parse(open(schema_path, 'rb').read())
 
-    if not force_fetch and os.path.exists(local_copy_path):
-        with DataFileReader(open(local_copy_path, 'rb'), DatumReader()) as reader:
-            return DataFrame(process_local_copy(reader))
-                
-    else:
+    if force_fetch or not os.path.exists(local_copy_path):
         # if not, fetch from the provider
         from pandas_datareader import DataReader
         data = DataReader(code, provider, start, end)
-
 
         with DataFileWriter(open(local_copy_path, 'wb'), DatumWriter(), schema, codec='deflate') as writer:
             for index, row in data.iterrows():
@@ -65,7 +60,8 @@ def read_asset_values(code, provider, start, end, force_fetch=False):
                     'volume': int(row['Volume']),
                 })
          
-        return data
+    with DataFileReader(open(local_copy_path, 'rb'), DatumReader()) as reader:
+        return DataFrame(process_local_copy(reader))
 
 
 def float_to_long(value):
