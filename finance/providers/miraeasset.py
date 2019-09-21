@@ -1,6 +1,5 @@
+import codecs
 from datetime import timedelta
-
-from bidict import bidict
 
 from finance.providers.provider import Provider
 from finance.providers.record import DateTime, Decimal, Integer, List, String
@@ -39,15 +38,28 @@ name_code_mappings = {
     'VANGUARD EMERGING MARKETS GOVERN': 'VWOB',
     'VANGUARD SHORT-TERM INFLATION-PR': 'VTIP',
     '넥슨 일본': '3659.T',
+    '삼성전자보통주': '005930.KS',
 }
 
 
 class Miraeasset(Provider):
 
+    DEFAULT_ENCODING = 'euc-kr'
+
     # TODO: Ideally, we would like to unify the following two functions
     # (local/foreign transactions)
 
+    def read_records(self, filename):
+        with codecs.open(filename, 'r', encoding=self.DEFAULT_ENCODING) as fin:
+            for record in self.parse_records(fin):
+                yield record
+
     def find_header_column_indices(self, headers):
+        mappings = [
+            ('created_at', '거래일자'),
+            ('seq', '거래번호'),
+            ('category', '거래종류'),
+        ]
         return {
             'created_at': headers.index('거래일자'),
             'seq': headers.index('거래번호'),
@@ -66,7 +78,7 @@ class Miraeasset(Provider):
     def coalesce(self, value, fallback):
         return value if value else fallback
 
-    def parse_transactions(self, fin):
+    def parse_records(self, fin):
         """거래내역조회 (0650)"""
         headers = next(fin).strip().split(',')
 
