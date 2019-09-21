@@ -1,3 +1,4 @@
+import codecs
 from datetime import timedelta
 
 from finance.providers.provider import Provider
@@ -7,10 +8,111 @@ DATE_INPUT_FORMAT = '%Y/%m/%d'
 DATE_OUTPUT_FORMAT = '%Y-%m-%d'
 
 
+# NOTE: This doesn't seem like a good idea...
+name_code_mappings = {
+    '애플': 'AAPL',
+    'AMD': 'AMD',
+    'Advanced Micro Devic': 'AMD',
+    'Advanced Micro Devices  Inc.': 'AMD',
+    '아마존닷컴': 'AMZN',
+    '아마존 닷컴': 'AMZN',
+    'ARK Web x.0 ETF': 'ARKW',
+    'Berkshire Hathaway I': 'BRK-B', # FIXME: This is a dangerous assumption (could've been BRK-A)
+    '버크셔해서웨이.B': 'BRK-B',
+    '보잉': 'BA',
+    'Credit Suisse High Y': 'DHY',
+    'CREDIT SUISSE HIGH YIELD BOND FU': 'DHY',
+    'Empire State Realty Trust  Inc.': 'ESRT',
+    'Empire State Realty': 'ESRT',
+    'EMPIRE ST RLTY TR INC': 'ESRT',
+    'Direxion Daily Gold': 'NUGT',
+    '엔비디아': 'NVDA',
+    'OXFORD LANE CAPITAL': 'OXLC',
+    '옥스포드 래인 캐피탈': 'OXLC',
+    '스타벅스': 'SBUX',
+    'SPDR S&P 500': 'SPY',
+    '테슬라 모터스': 'TSLA',
+    'VANGUARD TAX-EXEMPT BOND ETF': 'VTEB',
+    'ISHARES 20+Y TREASURY BOND ETF': 'TLT',
+    'ISHARES IBOXX $ INVESTMENT GRADE': 'LQD',
+    'VANGUARD EMERGING MARKETS GOVERN': 'VWOB',
+    'VANGUARD SHORT-TERM INFLATION-PR': 'VTIP',
+    '넥슨 일본': '3659.T',
+    '삼성전자보통주': '005930.KS',
+}
+
+
 class Miraeasset(Provider):
+
+    DEFAULT_ENCODING = 'euc-kr'
 
     # TODO: Ideally, we would like to unify the following two functions
     # (local/foreign transactions)
+
+    def read_records(self, filename):
+        with codecs.open(filename, 'r', encoding=self.DEFAULT_ENCODING) as fin:
+            for record in self.parse_records(fin):
+                yield record
+
+    def find_header_column_indices(self, headers):
+        mappings = [
+            ('created_at', '거래일자'),
+            ('seq', '거래번호'),
+            ('category', '거래종류'),
+        ]
+        return {
+            'created_at': headers.index('거래일자'),
+            'seq': headers.index('거래번호'),
+            'category': headers.index('거래종류'),
+            'amount': headers.index('거래금액'),
+            'currency': headers.index('통화코드'),
+            #'code': headers.index(''),
+            'name': headers.index('종목명'),
+            'unit_price': headers.index('단가'),
+            'quantity': headers.index('수량'),
+            'fees': headers.index('수수료'),
+            'tax': headers.index('제세금합'),
+        }
+
+    # FIXME: This doesn't have to be a method
+    def coalesce(self, value, fallback):
+        return value if value else fallback
+
+    def parse_records(self, fin):
+        """거래내역조회 (0650)"""
+        headers = next(fin).strip().split(',')
+
+        col_count = len(headers)
+        assert col_count == 25, 'Invalid column count ({})'.format(col_count)
+
+        column_indices = self.find_header_column_indices(headers)
+
+        for line in fin:
+            columns = [x.strip() for x in line.strip().split(',')]
+            assert len(columns) == col_count, \
+                'Invalid column count ({})'.format(len(columns))
+
+            column_names = [
+                'created_at', 'seq', 'category', 'amount', 'currency',
+                # 'code',
+                'name', 'unit_price', 'quantity', 'fees', 'tax',
+            ]
+            kwargs = {k: columns[column_indices[k]] for k in column_names}
+
+            # FIXME: Fix all this shit
+            kwargs['amount'] = self.coalesce(kwargs['amount'], 0)
+            kwargs['unit_price'] = self.coalesce(kwargs['unit_price'], 0)
+            kwargs['quantity'] = self.coalesce(kwargs['quantity'], 0)
+            kwargs['fees'] = self.coalesce(kwargs['fees'], 0)
+            kwargs['tax'] = self.coalesce(kwargs['tax'], 0)
+            try:
+                kwargs['code'] = name_code_mappings[kwargs['name']]
+            except KeyError:
+                kwargs['code'] = '(unknown)'
+
+            kwargs['raw_columns'] = columns
+
+            yield Record(**kwargs)
 
     def parse_local_transactions(self, fin):
         """Parses local transactions (거래내역조회, 0650)."""
