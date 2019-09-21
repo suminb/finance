@@ -46,9 +46,6 @@ class Miraeasset(Provider):
 
     DEFAULT_ENCODING = 'euc-kr'
 
-    # TODO: Ideally, we would like to unify the following two functions
-    # (local/foreign transactions)
-
     def read_records(self, filename):
         with codecs.open(filename, 'r', encoding=self.DEFAULT_ENCODING) as fin:
             for record in self.parse_records(fin):
@@ -113,53 +110,6 @@ class Miraeasset(Provider):
             kwargs['raw_columns'] = columns
 
             yield Record(**kwargs)
-
-    def parse_local_transactions(self, fin):
-        """Parses local transactions (거래내역조회, 0650)."""
-        headers = next(fin)
-        col_count = len(headers.split(','))
-        assert col_count == 22, 'Invalid column count'
-
-        for line in fin:
-            cols = [x.strip() for x in line.strip().split(',')]
-            assert len(cols) == col_count, \
-                'Invalid column count ({})'.format(len(cols))
-
-            category = cols[3]
-            if not self.is_local_transaction(category):
-                continue
-
-            record = Record(
-                cols[0], cols[1], cols[3], cols[4], 'KRW', '', cols[5],
-                cols[7], cols[6], cols[9], cols[16], cols)
-            yield record
-
-    def parse_foreign_transactions(self, fin):
-        """Parses foreign transactions (해외거래내역, 9465)."""
-        headers = next(fin)
-        col_count = len(headers.split(','))
-        assert col_count == 22, 'Invalid column count ({})'.format(col_count)
-
-        for line in fin:
-            cols = [x.strip() for x in line.strip().split(',')]
-            assert len(cols) == col_count, \
-                'Invalid column count ({})'.format(len(cols))
-
-            category = cols[3]
-            if not self.is_foreign_transaction(category):
-                continue
-
-            record = Record(
-                *[cols[i] for i in [0, 1, 3, 5, 4, 7, 8, 10, 9, 13, 14]], cols)
-            yield record
-
-    def is_local_transaction(self, category):
-        return category in ['주식매수', '주식매도', '은행이체입금', '예이용료',
-                            '은행이체출금', '배당금입금']
-
-    def is_foreign_transaction(self, category):
-        return category in ['해외주매수', '해외주매도', '외화인지세',
-                            '해외주배당금', '환전매수', '환전매도']
 
 
 class Record(object):
