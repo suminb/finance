@@ -2,11 +2,13 @@ from datetime import datetime
 import os
 
 import avro.schema
-from avro.datafile import DataFileReader, DataFileWriter
-from avro.io import DatumReader, DatumWriter
+from avro.datafile import DataFileReader
+from avro.io import DatumReader
 from pandas import DataFrame
 
+from finance.fetchers import YahooFetcher
 from finance.providers import is_valid_provider
+from finance.writers import DataFrameAvroWriter
 
 
 def get_local_copy_path(code, provider):
@@ -19,7 +21,8 @@ def process_local_copy(reader):
         row['evaluated_at'] = datetime.fromisoformat(row['evaluated_at'])
         row['fetched_at'] = datetime.fromisoformat(row['fetched_at'])
         for k in ['open', 'close', 'high', 'low', 'adj_close']:
-            row[k] = long_to_float(row[k])
+            # NOTE: This is a bad sign...
+            row[k] = DataFrameAvroWriter.long_to_float(None, row[k])
         yield row
 
 
@@ -34,8 +37,12 @@ def load_schema():
 def read_asset_values(code, provider, start, end, force_fetch=False):
     """Reads asset values for a particular time period.
 
+    :param code:
+    :param provider:
     :param start: Start datetime (lowerbound of the time period)
     :param end: End datetime (upperbound of the time period)
+    :force_fetch: If true, it fetches data from the remote source even if a
+                  local copy exists.
     """
     if not is_valid_provider(provider):
         raise ValueError(f'Invalid provider: {provider}')
@@ -44,34 +51,12 @@ def read_asset_values(code, provider, start, end, force_fetch=False):
     schema = load_schema()
 
     if force_fetch or not os.path.exists(local_copy_path):
-        # if not, fetch from the provider
-        from pandas_datareader import DataReader
-        data = DataReader(code, provider, start, end)
+        fetcher = YahooFetcher()
+        data = fetcher.fetch_daily_values(code, start, end)
         fetched_at = datetime.now()
 
-        with DataFileWriter(open(local_copy_path, 'wb'), DatumWriter(), schema, codec='deflate') as writer:
-            for index, row in data.iterrows():
-                writer.append({
-                    'asset_id': 0,
-                    'evaluated_at': index.isoformat(),
-                    'fetched_at': fetched_at.isoformat(),
-                    'provider': provider,
-                    'granularity': '1day',
-                    'open': float_to_long(row['Open']),
-                    'close': float_to_long(row['Close']),
-                    'high': float_to_long(row['High']),
-                    'low': float_to_long(row['Low']),
-                    'adj_close': float_to_long(row['Adj Close']),
-                    'volume': int(row['Volume']),
-                })
-         
+        writer = DataFrameAvroWriter()
+        writer.write(data, 'yahoo', fetched_at, schema, local_copy_path)
+
     with DataFileReader(open(local_copy_path, 'rb'), DatumReader()) as reader:
         return DataFrame(process_local_copy(reader))
-
-
-def float_to_long(value):
-    return int(value * 1000000)
-
-
-def long_to_float(value):
-    return value / 1000000.0

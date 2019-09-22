@@ -15,4 +15,5 @@ __all__ = ['AssetValueProvider', 'Dart', 'Kofia', 'Miraeasset', 'Provider',
 # order to avoid circular imports.
 
 def is_valid_provider(provider):
+    # NOTE: This is tightly coupled with Pandas DataFrame
     return provider in ['yahoo']
