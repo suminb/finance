@@ -13,3 +13,6 @@ __all__ = ['AssetValueProvider', 'Dart', 'Kofia', 'Miraeasset', 'Provider',
 # NOTE: Abstract classes such as Provider, AssetValueProvider, and
 # RecordProvider is defined under the `finance.providers.provider` module in
 # order to avoid circular imports.
+
+def is_valid_provider(provider):
+    return provider in ['yahoo']

@@ -6,10 +6,7 @@ from avro.datafile import DataFileReader, DataFileWriter
 from avro.io import DatumReader, DatumWriter
 from pandas import DataFrame
 
-
-# TODO: Move this elsewhere
-def is_valid_provider(provider):
-    return provider in ['yahoo']
+from finance.providers import is_valid_provider
 
 
 def get_local_copy_path(code, provider):
