@@ -23,6 +23,14 @@ def process_local_copy(reader):
         yield row
 
 
+def load_schema():
+    schema_path = os.path.join(
+        os.path.abspath(os.path.dirname(__file__)), 'asset_values.avsc')
+    schema = avro.schema.Parse(open(schema_path, 'rb').read())
+
+    return schema
+
+
 def read_asset_values(code, provider, start, end, force_fetch=False):
     """Reads asset values for a particular time period.
 
@@ -32,11 +40,8 @@ def read_asset_values(code, provider, start, end, force_fetch=False):
     if not is_valid_provider(provider):
         raise ValueError(f'Invalid provider: {provider}')
 
-    # check if locally available
     local_copy_path = get_local_copy_path(code, provider)
-
-    schema_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'asset_values.avsc')
-    schema = avro.schema.Parse(open(schema_path, 'rb').read())
+    schema = load_schema()
 
     if force_fetch or not os.path.exists(local_copy_path):
         # if not, fetch from the provider
