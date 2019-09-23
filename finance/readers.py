@@ -90,7 +90,9 @@ class RecordCSVDataFrameReader(RecordCSVPlainReader):
 
     def read(self, filename):
         records = super(RecordCSVDataFrameReader, self).read(filename)
-        return DataFrame(records)
+        from finance.providers.miraeasset import Record
+        # FIXME: Can we do this without x.values()?
+        return DataFrame([x.values() for x in records], columns=Record.attributes)
 
 
 def Reader(data_type, source_format, target_format):
