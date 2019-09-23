@@ -20,7 +20,11 @@ def fetch_stock_values(stock_code, start_date, end_date,
         yield row + (provider.name,)
 
 
-class YahooFetcher:
+class Fetcher:
+    pass
+
+
+class YahooFetcher(Fetcher):
 
     def fetch_daily_values(self, code, start, end):
         from pandas_datareader import DataReader
