@@ -56,20 +56,15 @@ class Miraeasset(Provider):
             ('created_at', '거래일자'),
             ('seq', '거래번호'),
             ('category', '거래종류'),
+            ('amount', '거래금액'),
+            ('currency', '통화코드'),
+            ('name', '종목명'),
+            ('unit_price', '단가'),
+            ('quantity', '수량'),
+            ('fees', '수수료'),
+            ('tax', '제세금합'),
         ]
-        return {
-            'created_at': headers.index('거래일자'),
-            'seq': headers.index('거래번호'),
-            'category': headers.index('거래종류'),
-            'amount': headers.index('거래금액'),
-            'currency': headers.index('통화코드'),
-            # 'code': headers.index(''),
-            'name': headers.index('종목명'),
-            'unit_price': headers.index('단가'),
-            'quantity': headers.index('수량'),
-            'fees': headers.index('수수료'),
-            'tax': headers.index('제세금합'),
-        }
+        return {k: headers.index(v) for k, v in mappings}
 
     # FIXME: This doesn't have to be a method
     def coalesce(self, value, fallback):
