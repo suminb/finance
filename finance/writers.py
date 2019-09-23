@@ -7,6 +7,13 @@ Potential issues:
 from avro.datafile import DataFileWriter
 from avro.io import DatumWriter
 
+try:
+    from backports.datetime_fromisoformat import MonkeyPatch
+except ImportError:
+    pass
+else:
+    MonkeyPatch.patch_fromisoformat()
+
 
 class Writer:
 
