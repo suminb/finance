@@ -49,17 +49,17 @@ def read_asset_values(code, provider, start, end, force_fetch=False):
         writer = DataFrameAvroWriter()
         writer.write(data, 'yahoo', fetched_at, schema, local_copy_path)
 
-    reader = AvroDataFrameReader()
+    reader = Reader('AssetValue', 'avro', 'dataframe')
     return reader.read(local_copy_path)
 
 
-class Reader:
+class AbstractReader:
 
     def read(self, *args, **kwargs):
         raise NotImplementedError
 
 
-class AvroDataFrameReader(Reader):
+class AssetValueAvroDataFrameReader(AbstractReader):
 
     def read(self, filename):
         with DataFileReader(open(filename, 'rb'), DatumReader()) as reader:
@@ -72,3 +72,29 @@ class AvroDataFrameReader(Reader):
             for k in ['open', 'close', 'high', 'low', 'adj_close']:
                 row[k] = long_to_float(row[k])
             yield row
+
+
+def Reader(data_type, source_format, target_format):
+    mappings = {
+        ('AssetValue', 'avro', 'dataframe'): AssetValueAvroDataFrameReader,
+        # ('Record', 'csv', 'dataframe'): RecordCSVDataFrameReader,
+    }
+
+    def is_supported_type(data_type):
+        # return data_type in ['asset', 'assetvalue', 'record']
+        return data_type in ['AssetValue', 'Record']
+
+    def is_supported_source_format(format):
+        # return format in ['avro', 'orc', 'db']
+        return format in ['avro']
+
+    def is_supported_target_format(format):
+        return format in ['dataframe']
+
+    if not is_supported_type(data_type):
+        raise ValueError(f'Unsupported data type: {data_type}')
+    if not is_supported_source_format(source_format):
+        raise ValueError(f'Unsupported source format: {source_format}')
+    if not is_supported_target_format(target_format):
+        raise ValueError(f'Unsupported target format: {target_format}')
+    return mappings[(data_type, source_format, target_format)]()
