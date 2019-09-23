@@ -1,7 +1,9 @@
 from finance.models import Granularity
 from finance.providers import Yahoo
+from finance.utils import deprecated
 
 
+@deprecated
 def fetch_stock_values(stock_code, start_date, end_date,
                        granularity=Granularity.day):
     """Fetches stock prices from Yahoo Finance."""
