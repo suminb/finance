@@ -58,5 +58,16 @@ def read_asset_values(code, provider, start, end, force_fetch=False):
         writer = DataFrameAvroWriter()
         writer.write(data, 'yahoo', fetched_at, schema, local_copy_path)
 
-    with DataFileReader(open(local_copy_path, 'rb'), DatumReader()) as reader:
-        return DataFrame(process_local_copy(reader))
+    reader = AvroDataFrameReader()
+    return reader.read(local_copy_path)
+
+
+class Reader:
+    pass
+
+
+class AvroDataFrameReader(Reader):
+
+    def read(self, filename):
+        with DataFileReader(open(filename, 'rb'), DatumReader()) as reader:
+            return DataFrame(process_local_copy(reader))
