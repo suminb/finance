@@ -211,50 +211,6 @@ def import_sp500_records():
                     db.session.rollback()
 
 
-def _parse_miraeasset_data(filename, parse_func):
-    with open(filename) as fin:
-        records = parse_func(fin)
-        writer = csv.writer(sys.stdout)
-        for record in records:
-            writer.writerow(record.values())
-
-
-@cli.command()
-@click.argument('filename')
-def parse_miraeasset_foreign_data(filename):
-    """Parses a CSV file exported in 해외거래내역 (9465)."""
-    provider = Miraeasset()
-    _parse_miraeasset_data(filename, provider.parse_foreign_transactions)
-
-
-# TODO: Load data from stdin
-@cli.command()
-@click.argument('filename')
-def parse_miraeasset_local_data(filename):
-    """Parses CSV file exported in 거래내역조회 (0650)."""
-    provider = Miraeasset()
-    _parse_miraeasset_data(filename, provider.parse_local_transactions)
-
-
-# TODO: Load data from stdin
-@cli.command()
-@click.argument('filename')
-@click.argument('account_institution')
-@click.argument('account_number')
-def import_miraeasset_foreign_data(
-    filename, account_institution, account_number
-):
-    """Imports a CSV file exported in 해외거래내역 (9465)."""
-    from finance.importers import import_miraeasset_foreign_records
-
-    app = create_app(__name__)
-    with app.app_context():
-        account = Account.get_by_number(account_institution, account_number)
-
-        with open(filename) as fin:
-            import_miraeasset_foreign_records(fin, account)
-
-
 @cli.command()
 @click.argument('stock_code')  # e.g., NVDA, 027410.KS
 @click.option('-s', '--start', 'start_date',

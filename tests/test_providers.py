@@ -97,26 +97,6 @@ def test_dart_fetch_data_with_invalid_code():
         list(provider.fetch_reports('_', '_'))
 
 
-@pytest.mark.parametrize('param', ['local', 'foreign'])
-def test_miraeasset_transactions(param):
-    provider = Miraeasset()
-    filename = os.path.join(
-        BASE_PATH, 'samples', 'miraeasset_{}.csv'.format(param))
-    with open(filename) as fin:
-        if param == 'local':
-            records = provider.parse_local_transactions(fin)
-        elif param == 'foreign':
-            records = provider.parse_foreign_transactions(fin)
-        else:
-            raise ValueError('Unknown transaction kind: {}'.format(param))
-
-        for record in records:
-            assert isinstance(record.created_at, datetime)
-            assert isinstance(record.seq, int)
-            assert isinstance(record.quantity, int)
-            assert record.currency in ['KRW', 'USD']
-
-
 @pytest.mark.parametrize('granularity', [Granularity.min, Granularity.day])
 def test_yahoo_provider(granularity):
     provider = Yahoo()
@@ -141,3 +121,15 @@ def test_yahoo_provider_with_invalid_symbol():
 
     with pytest.raises(ValueError):
         provider.asset_values(symbol, start_time, end_time, Granularity.day)
+
+
+def test_miraeasset_records():
+    """Test with miraeasset_records.csv. Note that the .csv file is encoded
+    in euc-kr.
+    """
+    filename = os.path.join(
+        BASE_PATH, 'samples', 'miraeasset_records_euckr.csv')
+    provider = Miraeasset()
+    records = list(provider.read_records(filename))
+    # TODO: We need more comprehensive test cases
+    assert len(records) == 6

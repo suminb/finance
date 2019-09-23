@@ -15,7 +15,7 @@ def readme():
 
 
 setup(
-    name='finance',
+    name='sb-finance',
     version=finance.__version__,
     description='Personal Finance Project',
     long_description=readme(),

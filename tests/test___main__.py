@@ -4,11 +4,10 @@ import random
 import pytest
 from click.testing import CliRunner
 
-from finance.__main__ import (create_all, drop_all, fetch_stock_values,
-                              import_fund, import_miraeasset_foreign_data,
-                              import_sp500_records, import_stock_records,
-                              import_stock_values, insert_stock_assets,
-                              insert_test_data)
+from finance.__main__ import (
+    create_all, drop_all, fetch_stock_values, import_fund,
+    import_sp500_records, import_stock_records, import_stock_values,
+    insert_stock_assets, insert_test_data)
 from finance.exceptions import AssetNotFoundException
 from finance.models import StockAsset, deposit
 from finance.utils import load_stock_codes
@@ -99,17 +98,5 @@ def test_import_stock_records(asset_krw, account_stock, account_checking):
     runner = CliRunner()
     result = runner.invoke(
         import_stock_records, ['tests/samples/shinhan_stock_records.csv'],
-        catch_exceptions=False)
-    assert result.exit_code == 0
-
-
-def test_import_miraeasset_foreign_data(
-    asset_usd, asset_krw, account_stock, stock_asset_spy, stock_asset_amzn,
-    stock_asset_nvda, stock_asset_amd, stock_asset_sbux
-):
-    runner = CliRunner()
-    result = runner.invoke(
-        import_miraeasset_foreign_data,
-        ['tests/samples/miraeasset_foreign.csv', 'Miraeasset', 'ACCOUNT1'],
         catch_exceptions=False)
     assert result.exit_code == 0
