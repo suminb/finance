@@ -8,7 +8,7 @@ from pandas import DataFrame
 
 from finance.avro import long_to_float
 from finance.fetchers import Fetcher
-from finance.providers import is_valid_provider
+from finance.providers import is_valid_provider, Miraeasset
 from finance.writers import DataFrameAvroWriter
 
 
@@ -74,22 +74,39 @@ class AssetValueAvroDataFrameReader(AbstractReader):
             yield row
 
 
+class RecordCSVPlainReader(AbstractReader):
+
+    def __init__(self):
+        # TODO: Allow other providers
+        self.provider = Miraeasset()
+
+    def read(self, filename):
+        for row in self.provider.read_records(filename):
+            yield row
+
+
+class RecordCSVDataFrameReader(RecordCSVPlainReader):
+
+    def read(self, filename):
+        records = super(RecordCSVDataFrameReader, self).read(filename)
+        return DataFrame(records)
+
+
 def Reader(data_type, source_format, target_format):
     mappings = {
         ('AssetValue', 'avro', 'dataframe'): AssetValueAvroDataFrameReader,
-        # ('Record', 'csv', 'dataframe'): RecordCSVDataFrameReader,
+        ('Record', 'csv', 'plain'): RecordCSVPlainReader,
+        ('Record', 'csv', 'dataframe'): RecordCSVDataFrameReader,
     }
 
     def is_supported_type(data_type):
-        # return data_type in ['asset', 'assetvalue', 'record']
         return data_type in ['AssetValue', 'Record']
 
     def is_supported_source_format(format):
-        # return format in ['avro', 'orc', 'db']
-        return format in ['avro']
+        return format in ['avro', 'csv']
 
     def is_supported_target_format(format):
-        return format in ['dataframe']
+        return format in ['plain', 'dataframe']
 
     if not is_supported_type(data_type):
         raise ValueError(f'Unsupported data type: {data_type}')
