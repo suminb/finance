@@ -9,7 +9,7 @@ from pandas import DataFrame
 from finance.avro import long_to_float
 from finance.fetchers import Fetcher
 from finance.providers import is_valid_provider, Miraeasset
-from finance.writers import DataFrameAvroWriter
+from finance.writers import Writer
 
 
 def get_local_copy_path(code, provider):
@@ -25,7 +25,8 @@ def load_schema():
     return schema
 
 
-def read_asset_values(code, provider, start, end, force_fetch=False):
+def read_asset_values(code, provider, start, end, force_fetch=False,
+                      source_format='avro', target_format='dataframe'):
     """Reads asset values for a particular time period.
 
     :param code:
@@ -46,10 +47,10 @@ def read_asset_values(code, provider, start, end, force_fetch=False):
         data = fetcher.fetch_daily_values(code, start, end)
         fetched_at = datetime.now()
 
-        writer = DataFrameAvroWriter()
+        writer = Writer('AssetValue', target_format, source_format)
         writer.write(data, 'yahoo', fetched_at, schema, local_copy_path)
 
-    reader = Reader('AssetValue', 'avro', 'dataframe')
+    reader = Reader('AssetValue', source_format, target_format)
     return reader.read(local_copy_path)
 
 

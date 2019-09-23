@@ -2,6 +2,7 @@ from datetime import datetime
 import os
 
 import pandas
+import pytest
 
 from finance.readers import load_schema, read_asset_values, Reader
 
@@ -16,10 +17,11 @@ def test_load_schema():
     assert len(schema.fields) == 11
 
 
-def test_read_asset_values():
+@pytest.mark.parametrize('force_fetch', [False, True])
+def test_read_asset_values(force_fetch):
     end = datetime.now()
-    start = datetime(end.year - 1, end.month, end.day)
-    asset_values = read_asset_values('SPY', 'yahoo', start, end)
+    start = datetime(end.year, end.month - 1, end.day)
+    asset_values = read_asset_values('SPY', 'yahoo', start, end, force_fetch)
 
     assert isinstance(asset_values, pandas.core.frame.DataFrame)
     assert len(asset_values.columns) == 11
