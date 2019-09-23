@@ -6,6 +6,7 @@ from avro.datafile import DataFileReader
 from avro.io import DatumReader
 from pandas import DataFrame
 
+from finance.avro import long_to_float
 from finance.fetchers import YahooFetcher
 from finance.providers import is_valid_provider
 from finance.writers import DataFrameAvroWriter
@@ -67,6 +68,5 @@ class AvroDataFrameReader(Reader):
             row['evaluated_at'] = datetime.fromisoformat(row['evaluated_at'])
             row['fetched_at'] = datetime.fromisoformat(row['fetched_at'])
             for k in ['open', 'close', 'high', 'low', 'adj_close']:
-                # FIXME: This is a bad sign...
-                row[k] = DataFrameAvroWriter.long_to_float(None, row[k])
+                row[k] = long_to_float(row[k])
             yield row

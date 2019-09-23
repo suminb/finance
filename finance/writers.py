@@ -7,6 +7,8 @@ Potential issues:
 from avro.datafile import DataFileWriter
 from avro.io import DatumWriter
 
+from finance.avro import float_to_long
+
 try:
     from backports.datetime_fromisoformat import MonkeyPatch
 except ImportError:
@@ -33,16 +35,10 @@ class DataFrameAvroWriter(Writer):
                     'fetched_at': fetched_at.isoformat(),
                     'provider': provider,
                     'granularity': '1day',
-                    'open': self.float_to_long(row['Open']),
-                    'close': self.float_to_long(row['Close']),
-                    'high': self.float_to_long(row['High']),
-                    'low': self.float_to_long(row['Low']),
-                    'adj_close': self.float_to_long(row['Adj Close']),
+                    'open': float_to_long(row['Open']),
+                    'close': float_to_long(row['Close']),
+                    'high': float_to_long(row['High']),
+                    'low': float_to_long(row['Low']),
+                    'adj_close': float_to_long(row['Adj Close']),
                     'volume': int(row['Volume']),
                 })
-
-    def float_to_long(self, value):
-        return int(value * 1000000)
-
-    def long_to_float(self, value):
-        return value / 1000000.0
