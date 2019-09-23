@@ -16,16 +16,6 @@ def get_local_copy_path(code, provider):
     return f'{provider}_{code}.avro'
 
 
-def process_local_copy(reader):
-    for row in reader:
-        row['evaluated_at'] = datetime.fromisoformat(row['evaluated_at'])
-        row['fetched_at'] = datetime.fromisoformat(row['fetched_at'])
-        for k in ['open', 'close', 'high', 'low', 'adj_close']:
-            # NOTE: This is a bad sign...
-            row[k] = DataFrameAvroWriter.long_to_float(None, row[k])
-        yield row
-
-
 def load_schema():
     schema_path = os.path.join(
         os.path.abspath(os.path.dirname(__file__)), 'asset_values.avsc')
@@ -70,4 +60,13 @@ class AvroDataFrameReader(Reader):
 
     def read(self, filename):
         with DataFileReader(open(filename, 'rb'), DatumReader()) as reader:
-            return DataFrame(process_local_copy(reader))
+            return DataFrame(self.process_local_copy(reader))
+
+    def process_local_copy(self, reader):
+        for row in reader:
+            row['evaluated_at'] = datetime.fromisoformat(row['evaluated_at'])
+            row['fetched_at'] = datetime.fromisoformat(row['fetched_at'])
+            for k in ['open', 'close', 'high', 'low', 'adj_close']:
+                # FIXME: This is a bad sign...
+                row[k] = DataFrameAvroWriter.long_to_float(None, row[k])
+            yield row
