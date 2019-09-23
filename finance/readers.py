@@ -7,7 +7,7 @@ from avro.io import DatumReader
 from pandas import DataFrame
 
 from finance.avro import long_to_float
-from finance.fetchers import YahooFetcher
+from finance.fetchers import Fetcher
 from finance.providers import is_valid_provider
 from finance.writers import DataFrameAvroWriter
 
@@ -42,7 +42,7 @@ def read_asset_values(code, provider, start, end, force_fetch=False):
     schema = load_schema()
 
     if force_fetch or not os.path.exists(local_copy_path):
-        fetcher = YahooFetcher()
+        fetcher = Fetcher('AssetValue', 'dataframe')
         data = fetcher.fetch_daily_values(code, start, end)
         fetched_at = datetime.now()
 
