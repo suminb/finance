@@ -21,7 +21,9 @@ def fetch_stock_values(stock_code, start_date, end_date,
 
 
 class Fetcher:
-    pass
+
+    def fetch_daily_values(self, *args, **kwargs):
+        raise NotImplementedError
 
 
 class YahooFetcher(Fetcher):

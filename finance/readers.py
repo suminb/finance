@@ -54,7 +54,9 @@ def read_asset_values(code, provider, start, end, force_fetch=False):
 
 
 class Reader:
-    pass
+
+    def read(self, *args, **kwargs):
+        raise NotImplementedError
 
 
 class AvroDataFrameReader(Reader):
