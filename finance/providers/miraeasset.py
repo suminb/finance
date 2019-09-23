@@ -63,7 +63,7 @@ class Miraeasset(Provider):
             'category': headers.index('거래종류'),
             'amount': headers.index('거래금액'),
             'currency': headers.index('통화코드'),
-            #'code': headers.index(''),
+            # 'code': headers.index(''),
             'name': headers.index('종목명'),
             'unit_price': headers.index('단가'),
             'quantity': headers.index('수량'),
