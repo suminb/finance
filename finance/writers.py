@@ -10,6 +10,7 @@ from avro.io import DatumWriter
 from finance.avro import float_to_long
 
 try:
+    # For Python 3.6 compatibility
     from backports.datetime_fromisoformat import MonkeyPatch
 except ImportError:
     pass
@@ -17,13 +18,13 @@ else:
     MonkeyPatch.patch_fromisoformat()
 
 
-class Writer:
+class AbstractWriter:
 
     def write(self, *args, **kwargs):
         raise NotImplementedError
 
 
-class DataFrameAvroWriter(Writer):
+class AssetValueDataFrameAvroWriter(AbstractWriter):
 
     def write(self, dataframe, provider, fetched_at, schema, filename):
         with DataFileWriter(open(filename, 'wb'), DatumWriter(), schema,
@@ -42,3 +43,11 @@ class DataFrameAvroWriter(Writer):
                     'adj_close': float_to_long(row['Adj Close']),
                     'volume': int(row['Volume']),
                 })
+
+
+def Writer(data_type, source_format, target_format):
+    mappings = {
+        ('AssetValue', 'dataframe', 'avro'): AssetValueDataFrameAvroWriter,
+    }
+    # TODO: Assertions for data_type, source_format, target_format
+    return mappings[(data_type, source_format, target_format)]()
