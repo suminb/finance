@@ -56,15 +56,17 @@ def read_asset_values(code, provider, start, end, force_fetch=False,
 
 class AbstractReader:
 
+    def __init__(self):
+        raise NotImplementedError
+
     def read(self, *args, **kwargs):
         raise NotImplementedError
 
 
-class AssetValueAvroDataFrameReader(AbstractReader):
+class AssetValueAvroReader(AbstractReader):
 
-    def read(self, filename):
-        with DataFileReader(open(filename, 'rb'), DatumReader()) as reader:
-            return DataFrame(self.process_local_copy(reader))
+    def __init__(self):
+        raise NotImplementedError
 
     def process_local_copy(self, reader):
         for row in reader:
@@ -73,6 +75,28 @@ class AssetValueAvroDataFrameReader(AbstractReader):
             for k in ['open', 'close', 'high', 'low', 'adj_close']:
                 row[k] = long_to_float(row[k])
             yield row
+
+
+class AssetValueAvroPlainReader(AssetValueAvroReader):
+
+    def __init__(self):
+        pass
+
+    def read(self, filename):
+        with DataFileReader(open(filename, 'rb'), DatumReader()) as reader:
+            for row in self.process_local_copy(reader):
+                # FIXME: We need to return Record object
+                yield row
+
+
+class AssetValueAvroDataFrameReader(AssetValueAvroReader):
+
+    def __init__(self):
+        pass
+
+    def read(self, filename):
+        with DataFileReader(open(filename, 'rb'), DatumReader()) as reader:
+            return DataFrame(self.process_local_copy(reader))
 
 
 class RecordCSVPlainReader(AbstractReader):
@@ -97,6 +121,7 @@ class RecordCSVDataFrameReader(RecordCSVPlainReader):
 
 def Reader(data_type, source_format, target_format):
     mappings = {
+        ('AssetValue', 'avro', 'plain'): AssetValueAvroPlainReader,
         ('AssetValue', 'avro', 'dataframe'): AssetValueAvroDataFrameReader,
         ('Record', 'csv', 'plain'): RecordCSVPlainReader,
         ('Record', 'csv', 'dataframe'): RecordCSVDataFrameReader,
