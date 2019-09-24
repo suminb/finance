@@ -1,14 +1,43 @@
 """Memory-based models. This is a temporary and may or may not be promoted as
 permemant models.
 """
+from datetime import datetime
+
 from finance.models import Granularity
+from finance.readers import read_asset_values
 
 
-class Account:
+class Model:
+
+    def load(self, filename):
+        raise NotImplementedError
+
+    def save(self, filename):
+        raise NotImplementedError
+
+
+class AssetValue(Model):
+
+    def __init__(self):
+        self.asset_values = []
+
+    def load(self, code):
+        provider = 'yahoo'
+        # FIXME: Temporary workaround
+        end = datetime.now()
+        start = datetime(end.year - 1, end.month, end.day)
+        self.asset_values = list(read_asset_values(
+            code, provider, start, end, target_format='plain'))
+
+    def latest(self):
+        return self.asset_values[-1]
+
+
+class Account(Model):
     # Memory-based model (as opposed to DB-based)
-    # TODO: Move this elsewhere
 
     def __init__(self, records):
+        self.asset_values = {}
         self.records = list(records)
 
     def assets(self):
