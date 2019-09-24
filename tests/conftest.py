@@ -7,9 +7,9 @@ import pytest
 from finance import create_app
 from finance.importers import import_stock_values
 from finance.models import db as _db
-from finance.models import (Account, AccountType, Asset, AssetType,
-                            CurrencyAsset, FundAsset, P2PBondAsset, Portfolio,
-                            StockAsset)
+from finance.models import (
+    Account, AccountType, Asset, AssetType, CurrencyAsset, FundAsset,
+    P2PBondAsset, Portfolio, StockAsset)
 
 
 @pytest.fixture(scope='session')
