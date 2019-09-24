@@ -22,6 +22,8 @@ class Account:
                 # Assuming the records may not be in order
                 continue
             balance.setdefault(r.code, 0)
+            # FIXME: The following is Miraeasset specific. We need to
+            # generalize the code.
             if r.category in ['해외주식매수입고', '해외주식매수결제']:
                 balance[r.code] += r.quantity
             elif r.category in ['해외주식매도출고', '해외주식매도결제']:
@@ -42,4 +44,13 @@ class Account:
         If approximation=True and the asset value record is unavailable for the
         given date (evaluated_at), try to pull the most recent AssetValue.
         """
-        raise NotImplementedError
+        balance = self.balance(evaluated_at)
+        total = 0
+        for code, quantity in balance.items():
+            asset_values = AssetValue()
+            asset_values.load(code)
+            self.asset_values[code] = asset_values
+
+            unit_price = asset_values.latest()['adj_close']
+            total += unit_price * quantity
+        return total
