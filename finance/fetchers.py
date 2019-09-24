@@ -20,16 +20,36 @@ def fetch_stock_values(stock_code, start_date, end_date,
         yield row + (provider.name,)
 
 
-class Fetcher:
+class AssetValueFetcher:
 
     def fetch_daily_values(self, *args, **kwargs):
         raise NotImplementedError
 
 
-class YahooFetcher(Fetcher):
+class YahooAssetValueFetcher(AssetValueFetcher):
 
     def fetch_daily_values(self, code, start, end):
         from pandas_datareader import DataReader
         data = DataReader(code, 'yahoo', start, end)
 
         return data
+
+
+def Fetcher(data_type, format):
+    mappings = {
+        # FIXME: Provide another later of abstraction to cope with different
+        # data providers
+        ('AssetValue', 'dataframe'): YahooAssetValueFetcher,
+    }
+
+    def is_supported_type(data_type):
+        return data_type in ['AssetValue']
+
+    def is_supported_format(format):
+        return format in ['dataframe']
+
+    if not is_supported_type(data_type):
+        raise ValueError(f'Unsupported data type: {data_type}')
+    if not is_supported_format(format):
+        raise ValueError(f'Unsupported format: {format}')
+    return mappings[(data_type, format)]()

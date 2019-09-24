@@ -110,6 +110,10 @@ class Miraeasset(Provider):
 class Record(object):
     """Represents a single transaction record."""
 
+    attributes = ['created_at', 'seq', 'category', 'amount', 'currency',
+                  'code', 'name', 'unit_price', 'quantity', 'fees', 'tax',
+                  'raw_columns']
+
     created_at = DateTime(date_format=DATE_INPUT_FORMAT)
     seq = Integer()
     category = String()
@@ -149,10 +153,7 @@ class Record(object):
 
             dict(record)
         """
-        attrs = ['created_at', 'seq', 'category', 'amount', 'currency',
-                 'code', 'name', 'unit_price', 'quantity', 'fees', 'tax',
-                 'raw_columns']
-        for attr in attrs:
+        for attr in self.attributes:
             yield attr, getattr(self, attr)
 
     def values(self):
