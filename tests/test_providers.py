@@ -133,3 +133,8 @@ def test_miraeasset_records():
     records = list(provider.read_records(filename))
     # TODO: We need more comprehensive test cases
     assert len(records) == 6
+
+    for record in records:
+        assert record.currency in ['USD', 'KRW']
+        assert record.unit_price > 0
+        assert record.quantity != 0

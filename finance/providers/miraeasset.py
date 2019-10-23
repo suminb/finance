@@ -98,7 +98,7 @@ class Miraeasset(Provider):
             for record in self.parse_records(fin):
                 yield record
 
-    def find_header_column_indices(self, headers):
+    def local_transaction_column_indices(self, headers):
         mappings = [
             ('created_at', '거래일자'),
             ('seq', '거래번호'),
@@ -113,12 +113,33 @@ class Miraeasset(Provider):
         ]
         return {k: headers.index(v) for k, v in mappings}
 
+    def foreign_transaction_column_indices(self, headers):
+        mappings = [
+            ('created_at', '거래일자'),
+            ('seq', '거래번호'),
+            ('category', '거래종류'),
+            ('amount', '외화거래금액'),
+            ('currency', '통화코드'),
+            ('name', '종목명'),
+            ('unit_price', '단가'),
+            ('quantity', '수량'),
+            ('fees', '수수료'),
+            ('tax', '제세금합'),
+        ]
+        return {k: headers.index(v) for k, v in mappings}
+
     @property
     def assumed_krw_transaction_categories(self):
         cart_prod = itertools.product(
             ['매수', '매도'],
             ['입고', '출고', '입금', '출금'])
-        return ['주식' + x + y for x, y in cart_prod]
+        return ['주식' + x + y for x, y in cart_prod] + ['예탁금이용료입금']
+
+    def get_category(self, columns):
+        return columns[3]
+
+    def is_local_transaction(self, category):
+        return not ('해외' in category or '외화' in category)
 
     def parse_records(self, fin):
         """거래내역조회 (0650)"""
@@ -127,7 +148,8 @@ class Miraeasset(Provider):
         col_count = len(headers)
         assert col_count == 25, 'Invalid column count ({})'.format(col_count)
 
-        column_indices = self.find_header_column_indices(headers)
+        local_column_indices = self.local_transaction_column_indices(headers)
+        foreign_column_indices = self.foreign_transaction_column_indices(headers)
 
         for line in fin:
             columns = [x.strip() for x in line.strip().split(',')]
@@ -139,6 +161,10 @@ class Miraeasset(Provider):
                 # 'code',
                 'name', 'unit_price', 'quantity', 'fees', 'tax',
             ]
+            if self.is_local_transaction(self.get_category(columns)):
+                column_indices = local_column_indices
+            else:
+                column_indices = foreign_column_indices
             kwargs = {k: columns[column_indices[k]] for k in column_names}
 
             # FIXME: Fix all this shit
@@ -153,6 +179,10 @@ class Miraeasset(Provider):
                 kwargs['code'] = '(unknown)'
             if kwargs['category'] in self.assumed_krw_transaction_categories:
                 kwargs['currency'] = 'KRW'
+                kwargs['unit_price'] = 1
+                kwargs['quantity'] = kwargs['amount']
+            elif kwargs['category'] == '배당금외화입금':
+                # TODO: Assert dividened - tax == amount
                 kwargs['unit_price'] = 1
                 kwargs['quantity'] = kwargs['amount']
 
