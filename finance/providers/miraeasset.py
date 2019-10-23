@@ -113,10 +113,6 @@ class Miraeasset(Provider):
         ]
         return {k: headers.index(v) for k, v in mappings}
 
-    # FIXME: This doesn't have to be a method
-    def coalesce(self, value, fallback):
-        return value if value else fallback
-
     @property
     def assumed_krw_transaction_categories(self):
         cart_prod = itertools.product(
@@ -146,11 +142,11 @@ class Miraeasset(Provider):
             kwargs = {k: columns[column_indices[k]] for k in column_names}
 
             # FIXME: Fix all this shit
-            kwargs['amount'] = self.coalesce(kwargs['amount'], 0)
-            kwargs['unit_price'] = self.coalesce(kwargs['unit_price'], 0)
-            kwargs['quantity'] = self.coalesce(kwargs['quantity'], 0)
-            kwargs['fees'] = self.coalesce(kwargs['fees'], 0)
-            kwargs['tax'] = self.coalesce(kwargs['tax'], 0)
+            kwargs['amount'] = coalesce(kwargs['amount'], 0)
+            kwargs['unit_price'] = coalesce(kwargs['unit_price'], 0)
+            kwargs['quantity'] = coalesce(kwargs['quantity'], 0)
+            kwargs['fees'] = coalesce(kwargs['fees'], 0)
+            kwargs['tax'] = coalesce(kwargs['tax'], 0)
             try:
                 kwargs['code'] = name_code_mappings[kwargs['name']]
             except KeyError:
@@ -236,3 +232,7 @@ def synthesize_datetime(datetime, seq):
     sequence value) on the original timestamp.
     """
     return datetime + timedelta(seconds=seq)
+
+
+def coalesce(value, fallback):
+    return value if value else fallback
