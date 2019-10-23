@@ -177,7 +177,7 @@ class Record(object):
     code = String()
     name = String()
     unit_price = Decimal()
-    quantity = Integer()
+    quantity = Decimal()
     fees = Decimal()
     tax = Decimal()
     raw_columns = List()
