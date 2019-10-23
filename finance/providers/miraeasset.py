@@ -1,5 +1,6 @@
 import codecs
 from datetime import timedelta
+import itertools
 
 from finance.providers.provider import Provider
 from finance.providers.record import DateTime, Decimal, Integer, List, String
@@ -116,6 +117,13 @@ class Miraeasset(Provider):
     def coalesce(self, value, fallback):
         return value if value else fallback
 
+    @property
+    def assumed_krw_transaction_categories(self):
+        cart_prod = itertools.product(
+            ['매수', '매도'],
+            ['입고', '출고', '입금', '출금'])
+        return ['주식' + x + y for x, y in cart_prod]
+
     def parse_records(self, fin):
         """거래내역조회 (0650)"""
         headers = next(fin).strip().split(',')
@@ -147,6 +155,8 @@ class Miraeasset(Provider):
                 kwargs['code'] = name_code_mappings[kwargs['name']]
             except KeyError:
                 kwargs['code'] = '(unknown)'
+            if kwargs['category'] in self.assumed_krw_transaction_categories:
+                kwargs['currency'] = 'KRW'
 
             kwargs['raw_columns'] = columns
 
