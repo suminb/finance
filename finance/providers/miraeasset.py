@@ -157,6 +157,8 @@ class Miraeasset(Provider):
                 kwargs['code'] = '(unknown)'
             if kwargs['category'] in self.assumed_krw_transaction_categories:
                 kwargs['currency'] = 'KRW'
+                kwargs['unit_price'] = 1
+                kwargs['quantity'] = kwargs['amount']
 
             kwargs['raw_columns'] = columns
 
