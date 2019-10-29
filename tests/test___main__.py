@@ -5,9 +5,16 @@ import pytest
 from click.testing import CliRunner
 
 from finance.__main__ import (
-    create_all, drop_all, fetch_stock_values, import_fund,
-    import_sp500_records, import_stock_records, import_stock_values,
-    insert_stock_assets, insert_test_data)
+    create_all,
+    drop_all,
+    fetch_stock_values,
+    import_fund,
+    import_sp500_records,
+    import_stock_records,
+    import_stock_values,
+    insert_stock_assets,
+    insert_test_data,
+)
 from finance.exceptions import AssetNotFoundException
 from finance.models import StockAsset, deposit
 from finance.utils import load_stock_codes
@@ -15,7 +22,7 @@ from finance.utils import load_stock_codes
 
 @pytest.fixture(autouse=True)
 def monkeypatch_db_url(monkeypatch):
-    monkeypatch.setitem(os.environ, 'DB_URL', os.environ['TEST_DB_URL'])
+    monkeypatch.setitem(os.environ, "DB_URL", os.environ["TEST_DB_URL"])
 
 
 def test_drop_all():
@@ -46,28 +53,28 @@ def test_import_sp500_records():
 
 def test_import_fund(asset_sp500):
     runner = CliRunner()
-    result = runner.invoke(import_fund,
-                           ['KR5223941018', '2016-01-01', '2016-01-31'])
+    result = runner.invoke(import_fund, ["KR5223941018", "2016-01-01", "2016-01-31"])
     assert result.exit_code == 0
 
 
 def test_import_non_existing_fund():
     runner = CliRunner()
-    result = runner.invoke(import_fund, ['???', '2016-01-01', '2016-01-31'])
+    result = runner.invoke(import_fund, ["???", "2016-01-01", "2016-01-31"])
     assert isinstance(result.exception, AssetNotFoundException)
 
 
 def test_fetch_stock_values():
     runner = CliRunner()
-    result = runner.invoke(fetch_stock_values,
-                           ['NVDA', '-s', '2017-01-01', '-e', '2017-01-15'])
+    result = runner.invoke(
+        fetch_stock_values, ["NVDA", "-s", "2017-01-01", "-e", "2017-01-15"]
+    )
     assert result.exit_code == 0
 
 
 # NOTE: This test case may intermittently fail as some of the stock codes
 # is not available for download in Google Finance
 def test_import_stock_values():
-    with open('stock_codes.csv', 'r') as fin:
+    with open("stock_codes.csv", "r") as fin:
         codes = list(load_stock_codes(fin))
 
     code, name = random.choice(codes)
@@ -77,8 +84,9 @@ def test_import_stock_values():
     result = runner.invoke(
         import_stock_values,
         [code],
-        input='2017-08-28, 31100.0, 31150.0, 30400.0, 31000.0, 856210, test',
-        catch_exceptions=False)
+        input="2017-08-28, 31100.0, 31150.0, 30400.0, 31000.0, 856210, test",
+        catch_exceptions=False,
+    )
     assert result.exit_code == 0
 
     asset = StockAsset.get_by_symbol(code)
@@ -97,6 +105,8 @@ def test_import_stock_records(asset_krw, account_stock, account_checking):
 
     runner = CliRunner()
     result = runner.invoke(
-        import_stock_records, ['tests/samples/shinhan_stock_records.csv'],
-        catch_exceptions=False)
+        import_stock_records,
+        ["tests/samples/shinhan_stock_records.csv"],
+        catch_exceptions=False,
+    )
     assert result.exit_code == 0

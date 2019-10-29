@@ -25,7 +25,7 @@ env:
     - PYTHONPATH=.
 
 stages:
-  - type checking
+  - static analysis
   - test
 
 install:
@@ -44,10 +44,11 @@ after_success:
 
 jobs:
   include:
-    - stage: type checking
+    - stage: static analysis
       python: "3.7"
       script:
-        - pip install mypy
+        - pip install mypy black
+        - black --check .
         - mypy --ignore-missing-imports finance
     # Stage 'test' is a default stage name and it is defined in the top-level
     # of this YAML document. Looks like defining `install`, `script`, and
