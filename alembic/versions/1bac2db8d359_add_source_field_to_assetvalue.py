@@ -11,21 +11,19 @@ from sqlalchemy.dialects.postgresql import ENUM
 
 
 # revision identifiers, used by Alembic.
-revision = '1bac2db8d359'
-down_revision = '34a1efbca5fa'
+revision = "1bac2db8d359"
+down_revision = "34a1efbca5fa"
 branch_labels = None
 depends_on = None
 
 
 def upgrade():
     # If we don't do this, Alembic won't create the type automatically
-    enum_type = ENUM('yahoo', 'google', 'kofia', name='asset_value_source')
+    enum_type = ENUM("yahoo", "google", "kofia", name="asset_value_source")
     enum_type.create(op.get_bind())
 
-    op.add_column(
-        'asset_value',
-        sa.Column('source', enum_type, nullable=False))
+    op.add_column("asset_value", sa.Column("source", enum_type, nullable=False))
 
 
 def downgrade():
-    op.drop_column('asset_value', 'source')
+    op.drop_column("asset_value", "source")

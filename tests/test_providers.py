@@ -12,7 +12,7 @@ from finance.providers.yahoo import Yahoo
 from finance.utils import parse_date
 
 BASE_PATH = os.path.abspath(os.path.dirname(__file__))
-PROJECT_PATH = os.path.abspath(os.path.join(BASE_PATH, '..'))
+PROJECT_PATH = os.path.abspath(os.path.join(BASE_PATH, ".."))
 
 
 def test_decimal_records():
@@ -24,11 +24,10 @@ def test_decimal_records():
             self.decimal_field = decimal_field
             self.float_field = float_field
 
-    record1 = Record('0.1', 0.1)
-    record2 = Record('0.2', 0.2)
+    record1 = Record("0.1", 0.1)
+    record2 = Record("0.2", 0.2)
 
-    assert record1.decimal_field + record2.decimal_field \
-        == decimal.Decimal('0.3')
+    assert record1.decimal_field + record2.decimal_field == decimal.Decimal("0.3")
     # >>> 0.1 + 0.2
     # 0.30000000000000004
     assert record1.float_field + record2.float_field > 0.3
@@ -36,42 +35,43 @@ def test_decimal_records():
 
 def test_kofia_request_url():
     provider = Kofia()
-    assert 'kofia.or.kr' in provider.request_url
+    assert "kofia.or.kr" in provider.request_url
 
 
 def test_kofia_request_headers():
     provider = Kofia()
     headers = provider.request_headers
 
-    assert 'Origin' in headers
-    assert 'kofia.or.kr' in headers['Origin']
+    assert "Origin" in headers
+    assert "kofia.or.kr" in headers["Origin"]
 
-    assert 'User-Agent' in headers
+    assert "User-Agent" in headers
 
-    assert 'Content-Type' in headers
-    assert headers['Content-Type'] == 'text/xml'
+    assert "Content-Type" in headers
+    assert headers["Content-Type"] == "text/xml"
 
-    assert 'Accept' in headers
-    assert headers['Accept'] == 'text/xml'
+    assert "Accept" in headers
+    assert headers["Accept"] == "text/xml"
 
-    assert 'Referer' in headers
-    assert 'kofia.or.kr' in headers['Referer']
+    assert "Referer" in headers
+    assert "kofia.or.kr" in headers["Referer"]
 
 
 def test_kofia_get_request_body():
     provider = Kofia()
     body = provider.get_request_body(
-        'KR5223941018', parse_date('2016-06-02'), parse_date('2016-06-03'))
+        "KR5223941018", parse_date("2016-06-02"), parse_date("2016-06-03")
+    )
 
     # TODO: Parse XML for assertion
-    assert '20160602' in body
-    assert '20160603' in body
+    assert "20160602" in body
+    assert "20160603" in body
 
 
 def test_kofia_fetch_data():
     provider = Kofia()
-    from_date, to_date = parse_date('2016-05-01'), parse_date('2016-05-30')
-    data = provider.fetch_data('KR5223941018', from_date, to_date)
+    from_date, to_date = parse_date("2016-05-01"), parse_date("2016-05-30")
+    data = provider.fetch_data("KR5223941018", from_date, to_date)
 
     for date, unit_price, quantity in data:
         assert isinstance(date, datetime)
@@ -84,7 +84,7 @@ def test_dart_fetch_data():
     provider = Dart()
     end = datetime.now()
     start = end - timedelta(days=90)
-    reports = list(provider.fetch_reports('삼성전자', '00126380', start, end))
+    reports = list(provider.fetch_reports("삼성전자", "00126380", start, end))
 
     assert len(reports) > 0
     for report in reports:
@@ -94,17 +94,16 @@ def test_dart_fetch_data():
 def test_dart_fetch_data_with_invalid_code():
     provider = Dart()
     with pytest.raises(ValueError):
-        list(provider.fetch_reports('_', '_'))
+        list(provider.fetch_reports("_", "_"))
 
 
-@pytest.mark.parametrize('granularity', [Granularity.min, Granularity.day])
+@pytest.mark.parametrize("granularity", [Granularity.min, Granularity.day])
 def test_yahoo_provider(granularity):
     provider = Yahoo()
-    symbol = 'MSFT'
+    symbol = "MSFT"
     start_time = datetime.combine(parse_date(-5), time(0))
     end_time = datetime.utcnow()
-    asset_values = \
-        provider.asset_values(symbol, start_time, end_time, granularity)
+    asset_values = provider.asset_values(symbol, start_time, end_time, granularity)
     flag = False
     for asset_value in asset_values:
         flag = True
@@ -115,7 +114,7 @@ def test_yahoo_provider(granularity):
 
 def test_yahoo_provider_with_invalid_symbol():
     provider = Yahoo()
-    symbol = '(invalid)'
+    symbol = "(invalid)"
     end_time = datetime.utcnow()
     start_time = end_time - timedelta(days=1)
 
@@ -127,8 +126,7 @@ def test_miraeasset_records():
     """Test with miraeasset_records.csv. Note that the .csv file is encoded
     in euc-kr.
     """
-    filename = os.path.join(
-        BASE_PATH, 'samples', 'miraeasset_records_euckr.csv')
+    filename = os.path.join(BASE_PATH, "samples", "miraeasset_records_euckr.csv")
     provider = Miraeasset()
     records = list(provider.read_records(filename))
     # TODO: We need more comprehensive test cases
