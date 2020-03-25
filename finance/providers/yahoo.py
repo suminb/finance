@@ -20,7 +20,7 @@ class Yahoo(AssetValueProvider):
 
         :param symbol: A symbol of a security (e.g., NVDA, MSFT)
         """
-        return "https://query1.finance.yahoo.com/v8/finance/chart/{0}"
+        return "https://query1.finance.yahoo.com/v8/finance/chart/{0}".format(symbol)
 
     def as_timestamp(self, datetime):
         return int(datetime.timestamp())
