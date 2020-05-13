@@ -3,6 +3,7 @@ import requests
 
 from finance.ext.profile.base import BaseProfile
 
+
 class NaverProfile(BaseProfile):
     """
     Example profile source: https://finance.naver.com/item/coinfo.nhn?code=063170
