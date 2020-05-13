@@ -12,6 +12,6 @@ else:
     log = Logger("finance")
 
 
-__version__ = "0.4.1"
+__version__ = "0.4.2"
 __author__ = "Sumin Byeon"
 __email__ = "suminb@gmail.com"
