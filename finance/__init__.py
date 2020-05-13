@@ -1,12 +1,17 @@
 import sys
 
-from logbook import Logger, StreamHandler
+# FIXME: Any better way to handle this..?
+try:
+    from logbook import Logger, StreamHandler
+except ImportError:
+    import warnings
+
+    warnings.warn("Could not import logbook")
+else:
+    StreamHandler(sys.stderr).push_application()
+    log = Logger("finance")
 
 
 __version__ = "0.4.1"
 __author__ = "Sumin Byeon"
 __email__ = "suminb@gmail.com"
-
-
-StreamHandler(sys.stderr).push_application()
-log = Logger("finance")
