@@ -4,7 +4,7 @@ from functools import partial
 
 import pytest
 
-from finance import create_app
+from finance.web import create_app
 from finance.importers import import_stock_values
 from finance.models import db as _db
 from finance.models import (

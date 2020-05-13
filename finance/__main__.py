@@ -6,7 +6,7 @@ from click.testing import CliRunner
 from logbook import Logger
 from sqlalchemy.exc import IntegrityError
 
-from finance import create_app
+from finance.web import create_app
 from finance.importers import (
     import_stock_values as import_stock_values_,
 )  # Avoid name clashes
