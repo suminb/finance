@@ -10,7 +10,7 @@ from logbook import Logger
 # NOTE: finance.models should not be imported here in order to avoid circular
 # depencencies
 
-log = Logger('finance')
+log = Logger("finance")
 
 
 def date_range(start, end, step=1):
@@ -21,8 +21,9 @@ def date_range(start, end, step=1):
     :param step: Number of days to jump (currently unsupported)
     """
     if step != 1:
-        raise NotImplementedError('Any value of step that is not 1 is not '
-                                  'supported at the moment')
+        raise NotImplementedError(
+            "Any value of step that is not 1 is not " "supported at the moment"
+        )
 
     if isinstance(start, str) or isinstance(start, int):
         start = parse_date(start)
@@ -31,7 +32,7 @@ def date_range(start, end, step=1):
         end = parse_date(end)
 
     if start > end:
-        raise ValueError('Start date must be smaller than end date')
+        raise ValueError("Start date must be smaller than end date")
 
     delta = end - start
     for i in range(0, delta.days):
@@ -44,20 +45,22 @@ def date_to_datetime(date, end_of_day=False):
     :param end_of_day: Indicates whether we want the datetime of the end of the
                        day.
     """
-    return datetime.combine(
-        date, time(23, 59, 59) if end_of_day else time(0, 0, 0))
+    return datetime.combine(date, time(23, 59, 59) if end_of_day else time(0, 0, 0))
 
 
 def deprecated(func):
-    '''This is a decorator which can be used to mark functions
+    """This is a decorator which can be used to mark functions
     as deprecated. It will result in a warning being emitted
-    when the function is used.'''
+    when the function is used."""
     import warnings
 
     def new_func(*args, **kwargs):
-        warnings.warn('Call to deprecated function {}'.format(func.__name__),
-                      category=DeprecationWarning)
+        warnings.warn(
+            "Call to deprecated function {}".format(func.__name__),
+            category=DeprecationWarning,
+        )
         return func(*args, **kwargs)
+
     new_func.__name__ = func.__name__
     new_func.__doc__ = func.__doc__
     new_func.__dict__.update(func.__dict__)
@@ -66,45 +69,47 @@ def deprecated(func):
 
 def extract_numbers(value, type=str):
     """Extracts numbers only from a string."""
+
     def extract(vs):
         for v in vs:
-            if v in '01234567890.':
+            if v in "01234567890.":
                 yield v
-    return type(''.join(extract(value)))
+
+    return type("".join(extract(value)))
 
 
 def get_dart_codes():
     """Returns all DART codes."""
-    with open('data/dart_codes.csv') as fin:
+    with open("data/dart_codes.csv") as fin:
         for line in fin.readlines():
-            yield [x.strip() for x in line.split(',')]
+            yield [x.strip() for x in line.split(",")]
 
 
 def get_dart_code(entity_name):
     for name, code in get_dart_codes():
         if name == entity_name:
             return code
-    raise ValueError('CRP code for {} is not found'.format(entity_name))
+    raise ValueError("CRP code for {} is not found".format(entity_name))
 
 
 def load_stock_codes(fin):
-    reader = csv.reader(fin, delimiter='\t', quotechar='"')
+    reader = csv.reader(fin, delimiter="\t", quotechar='"')
     for code, name in reader:
-        if code != 'N/A':
+        if code != "N/A":
             yield code, name
 
 
 def make_request_import_stock_values_message(code, start_time, end_time):
     # type: (str, datetime, datetime) -> dict
     return {
-        'version': 0,
-        'code': code,
-        'start_time': int(start_time.timestamp()),
-        'end_time': int(end_time.timestamp()),
+        "version": 0,
+        "code": code,
+        "start_time": int(start_time.timestamp()),
+        "end_time": int(end_time.timestamp()),
     }
 
 
-def parse_date(date, format='%Y-%m-%d'):
+def parse_date(date, format="%Y-%m-%d"):
     """Makes a date object from a string.
 
     :type date: str or int
@@ -116,7 +121,7 @@ def parse_date(date, format='%Y-%m-%d'):
         return datetime.strptime(date, format)
 
 
-def parse_datetime(dt, at=datetime.now(), format='%Y-%m-%d %H:%M:%S'):
+def parse_datetime(dt, at=datetime.now(), format="%Y-%m-%d %H:%M:%S"):
     """Makes a datetime object from a string.
 
     :param dt: Datetime
@@ -147,9 +152,9 @@ def parse_int(v, fallback_to=0):
 
 def parse_stock_code(code: str):
     """Parses a stock code. NOTE: Only works for the Shinhan HTS"""
-    if code.startswith('A'):
+    if code.startswith("A"):
         return code[1:]
-    elif code == '':
+    elif code == "":
         return None
     else:
         return code
@@ -168,15 +173,39 @@ def parse_stock_records(stream):
         except StopIteration:
             break
 
-        cols1 = first_line.split('\t')[:13]
-        cols2 = second_line.split('\t')[:12]
+        cols1 = first_line.split("\t")[:13]
+        cols2 = second_line.split("\t")[:12]
 
-        date, category1, code, quantity, subtotal, 미수발생_변제, interest, \
-            fees, late_fees, 상대처, 변동금액, 대출일, 처리자 = cols1
+        (
+            date,
+            category1,
+            code,
+            quantity,
+            subtotal,
+            미수발생_변제,
+            interest,
+            fees,
+            late_fees,
+            상대처,
+            변동금액,
+            대출일,
+            처리자,
+        ) = cols1
 
-        상품, category2, name, unit_price, 신용_대출금, 신용_대출이자, \
-            예탁금이용료, 제세금, channel, 의뢰자명, final_amount, 만기일 \
-            = cols2
+        (
+            상품,
+            category2,
+            name,
+            unit_price,
+            신용_대출금,
+            신용_대출이자,
+            예탁금이용료,
+            제세금,
+            channel,
+            의뢰자명,
+            final_amount,
+            만기일,
+        ) = cols2
 
         # NOTE: Date is in some peculiar format as following:
         #
@@ -197,58 +226,57 @@ def parse_stock_records(stream):
         # violation. As a temporary workaround, we will put the daily sequence
         # as a microsecond portion of the datetime. If we have more than a
         # million transactions per day this will cause a problem.
-        date = parse_date('{}.{:06d}'.format(date[:8], sequence), '%Y%m%d.%f')
+        date = parse_date("{}.{:06d}".format(date[:8], sequence), "%Y%m%d.%f")
 
         yield {
-            'date': date,
-            'sequence': sequence,
-            'category1': category1,
-            'category2': category2,
-            'code': parse_stock_code(code),
-            'name': name,
-            'unit_price': parse_int(unit_price),
-            'quantity': parse_int(quantity),
-            'subtotal': parse_int(subtotal),
-            'interest': parse_int(interest),
-            'fees': parse_int(fees),
-            'late_fees': parse_int(late_fees),
-            'channel': channel,
-            'final_amount': parse_int(final_amount),
+            "date": date,
+            "sequence": sequence,
+            "category1": category1,
+            "category2": category2,
+            "code": parse_stock_code(code),
+            "name": name,
+            "unit_price": parse_int(unit_price),
+            "quantity": parse_int(quantity),
+            "subtotal": parse_int(subtotal),
+            "interest": parse_int(interest),
+            "fees": parse_int(fees),
+            "late_fees": parse_int(late_fees),
+            "channel": channel,
+            "final_amount": parse_int(final_amount),
         }
 
 
 def poll_import_stock_values_requests(sqs_region, queue_url):
-    client = boto3.client('sqs', region_name=sqs_region)
-    resp = client.receive_message(**{
-        'QueueUrl': queue_url, 'VisibilityTimeout': 180})
-    messages = resp['Messages'] if 'Messages' in resp else []
+    client = boto3.client("sqs", region_name=sqs_region)
+    resp = client.receive_message(**{"QueueUrl": queue_url, "VisibilityTimeout": 180})
+    messages = resp["Messages"] if "Messages" in resp else []
 
     for message in messages:
-        yield json.loads(message['Body'])
-        client.delete_message(**{
-            'QueueUrl': queue_url, 'ReceiptHandle': message['ReceiptHandle']})
+        yield json.loads(message["Body"])
+        client.delete_message(
+            **{"QueueUrl": queue_url, "ReceiptHandle": message["ReceiptHandle"]}
+        )
 
 
 def request_import_stock_values(
-    code, start_time, end_time,
-    sqs_region=os.environ.get('SQS_REGION', ''),
-    queue_url=os.environ.get('REQUEST_IMPORT_STOCK_VALUES_QUEUE_URL', '')
+    code,
+    start_time,
+    end_time,
+    sqs_region=os.environ.get("SQS_REGION", ""),
+    queue_url=os.environ.get("REQUEST_IMPORT_STOCK_VALUES_QUEUE_URL", ""),
 ):
-    message = make_request_import_stock_values_message(
-        code, start_time, end_time)
+    message = make_request_import_stock_values_message(code, start_time, end_time)
 
-    client = boto3.client('sqs', region_name=sqs_region)
-    resp = client.send_message(**{
-        'QueueUrl': queue_url,
-        'MessageBody': json.dumps(message),
-    })
+    client = boto3.client("sqs", region_name=sqs_region)
+    resp = client.send_message(
+        **{"QueueUrl": queue_url, "MessageBody": json.dumps(message),}
+    )
 
-    if resp['ResponseMetadata']['HTTPStatusCode'] != 200:
-        log.error('Something went wrong: {0}', resp)
+    if resp["ResponseMetadata"]["HTTPStatusCode"] != 200:
+        log.error("Something went wrong: {0}", resp)
 
 
-def insert_stock_record(data: dict, stock_account: object,
-                        bank_account: object):
+def insert_stock_record(data: dict, stock_account: object, bank_account: object):
     """
     account_id = db.Column(db.BigInteger, db.ForeignKey('account.id'))
     asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
@@ -260,36 +288,39 @@ def insert_stock_record(data: dict, stock_account: object,
     category = db.Column(db.String)
     quantity = db.Column(db.Numeric(precision=20, scale=4))
     """
-    if data['category2'] in ['매도', '매수']:
+    if data["category2"] in ["매도", "매수"]:
         return insert_stock_trading_record(data, stock_account)
-    elif data['category2'] in ['제휴입금', '매매대금출금']:
+    elif data["category2"] in ["제휴입금", "매매대금출금"]:
         return insert_stock_transfer_record(data, bank_account)
     else:
-        log.info('Skipping {} record...', data['category2'])
+        log.info("Skipping {} record...", data["category2"])
         return None
 
 
 def insert_stock_trading_record(data: dict, stock_account: object):
     """Inserts a stock trading (i.e., buying or selling stocks) records."""
     from finance.models import Asset, deposit
-    if data['category1'].startswith('장내'):
-        code_suffix = '.KS'
-    elif data['category1'].startswith('코스닥'):
-        code_suffix = '.KQ'
+
+    if data["category1"].startswith("장내"):
+        code_suffix = ".KS"
+    elif data["category1"].startswith("코스닥"):
+        code_suffix = ".KQ"
     else:
-        code_suffix = ''
+        code_suffix = ""
         raise ValueError(
             "code_suffix could not be determined with the category '{}'"
-            ''.format(data['category1']))
+            "".format(data["category1"])
+        )
 
-    code = data['code'] + code_suffix
+    code = data["code"] + code_suffix
 
     asset = Asset.get_by_symbol(code)
     if asset is None:
         raise ValueError(
-            "Asset object could not be retrived with code '{}'".format(code))
+            "Asset object could not be retrived with code '{}'".format(code)
+        )
 
-    return deposit(stock_account, asset, data['quantity'], data['date'])
+    return deposit(stock_account, asset, data["quantity"], data["date"])
 
 
 def insert_stock_transfer_record(data: dict, bank_account: object):
@@ -298,29 +329,28 @@ def insert_stock_transfer_record(data: dict, bank_account: object):
     from finance.models import Asset, deposit
 
     # FIXME: Not a good idea to use a hard coded value
-    asset_krw = Asset.query.filter(Asset.name == 'KRW').first()
+    asset_krw = Asset.query.filter(Asset.name == "KRW").first()
 
-    subtotal = data['subtotal']
-    date = data['date']
+    subtotal = data["subtotal"]
+    date = data["date"]
 
-    if data['name'] == '증거금이체':
+    if data["name"] == "증거금이체":
         # Transfer from a bank account to a stock account
         return deposit(bank_account, asset_krw, -subtotal, date)
-    elif data['name'] == '매매대금정산':
+    elif data["name"] == "매매대금정산":
         # Transfer from a stock account to a bank account
         return deposit(bank_account, asset_krw, subtotal, date)
     else:
-        raise ValueError(
-            "Unrecognized transfer type '{}'".format(data['name']))
+        raise ValueError("Unrecognized transfer type '{}'".format(data["name"]))
 
 
 def json_requested():
     """Determines whether the requested content type is application/json."""
-    best = request.accept_mimetypes \
-        .best_match(['application/json', 'text/plain'])
-    return best == 'application/json' and \
-        request.accept_mimetypes[best] > \
-        request.accept_mimetypes['text/plain']
+    best = request.accept_mimetypes.best_match(["application/json", "text/plain"])
+    return (
+        best == "application/json"
+        and request.accept_mimetypes[best] > request.accept_mimetypes["text/plain"]
+    )
 
 
 def serialize_datetime(obj):
@@ -333,13 +363,13 @@ def serialize_datetime(obj):
     if isinstance(obj, datetime):
         serial = obj.isoformat()
         return serial
-    raise TypeError('Type not serializable')
+    raise TypeError("Type not serializable")
 
 
 class DictReader(object):
     def __init__(self, value):
         if not isinstance(value, dict):
-            raise ValueError('DictReader only accepts dict type')
+            raise ValueError("DictReader only accepts dict type")
         self.value = value
 
     def __getattr__(self, name):

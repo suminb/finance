@@ -9,8 +9,7 @@ class AssetValueProvider(Provider):
     def __init__(self):
         raise NotImplementedError
 
-    def asset_values(self, symbol, start_date, end_date,
-                     granularity=Granularity.day):
+    def asset_values(self, symbol, start_date, end_date, granularity=Granularity.day):
         """Returns a list of asset value records (list of tuples).
 
         (datetime, open, high, low, close, volume)

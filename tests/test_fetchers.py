@@ -12,7 +12,7 @@ def test_fetch_stock_values():
     now = datetime.utcnow()
     start_date = now - timedelta(days=2)
     end_date = now - timedelta(days=1)
-    rows = fetch_stock_values('SPY', start_date, end_date)
+    rows = fetch_stock_values("SPY", start_date, end_date)
 
     for date, open_, high, low, close_, volume, provider in rows:
         assert isinstance(date, datetime)
@@ -24,7 +24,7 @@ def test_fetch_stock_values():
         assert low <= open_ <= high
         assert low <= close_ <= high
         assert volume >= 0
-        assert provider == 'yahoo'
+        assert provider == "yahoo"
 
 
 def test_assetvalue_fetcher():
@@ -32,8 +32,8 @@ def test_assetvalue_fetcher():
     start_date = now - timedelta(days=8)
     end_date = now - timedelta(days=1)
 
-    fetcher = Fetcher('AssetValue', 'dataframe')
-    values = fetcher.fetch_daily_values('SPY', start_date, end_date)
+    fetcher = Fetcher("AssetValue", "dataframe")
+    values = fetcher.fetch_daily_values("SPY", start_date, end_date)
 
     # TODO: We need more comprehensive test cases
     assert isinstance(values, pandas.core.frame.DataFrame)

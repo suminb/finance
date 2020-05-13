@@ -41,8 +41,7 @@ def run_migrations_offline():
 
     """
     url = config.get_main_option("sqlalchemy.url")
-    context.configure(
-        url=url, target_metadata=target_metadata, literal_binds=True)
+    context.configure(url=url, target_metadata=target_metadata, literal_binds=True)
 
     with context.begin_transaction():
         context.run_migrations()
@@ -56,21 +55,19 @@ def run_migrations_online():
 
     """
     # Loads database URL from an environment variable
-    if bool(config.get_main_option('pytest.istest')):
-        config.set_main_option('sqlalchemy.url', os.environ['TEST_DB_URL'])
+    if bool(config.get_main_option("pytest.istest")):
+        config.set_main_option("sqlalchemy.url", os.environ["TEST_DB_URL"])
     else:
-        config.set_main_option('sqlalchemy.url', os.environ['DB_URL'])
+        config.set_main_option("sqlalchemy.url", os.environ["DB_URL"])
 
     connectable = engine_from_config(
         config.get_section(config.config_ini_section),
-        prefix='sqlalchemy.',
-        poolclass=pool.NullPool)
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()
