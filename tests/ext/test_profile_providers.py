@@ -29,9 +29,9 @@ def test_naver_profile():
 
 
 def test_fetch_naver_profile():
-    profile = fetch_profile("naver", "063170")
+    profile = fetch_profile("naver", "005430")
 
-    assert profile.name == "서울옥션"
+    assert profile.name == "한국공항"
     # NOTE: Testing with live data. Some information is unknown at the time of
     # writing code.
     assert profile.current_price > 0
