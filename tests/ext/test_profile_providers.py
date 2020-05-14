@@ -30,6 +30,7 @@ def test_naver_profile():
     assert profile.name == "서울옥션"
     assert profile.current_price == 4470
     assert profile.outstanding_shares == 16917500
+    assert profile.market_cap == 4470 * 16917500
 
 
 def test_fetch_naver_profile():

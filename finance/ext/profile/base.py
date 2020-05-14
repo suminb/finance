@@ -10,3 +10,7 @@ class BaseProfile:
 
     def parse(self, raw: str):
         raise NotImplementedError
+
+    @property
+    def market_cap(self):
+        return self.current_price * self.outstanding_shares
