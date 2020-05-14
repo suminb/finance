@@ -1,3 +1,4 @@
+from math import isnan
 import os
 
 import pytest
@@ -27,7 +28,9 @@ def test_naver_profile():
     assert profile.outstanding_shares == 16917500
     assert profile.market_cap == 4470 * 16917500
     assert profile.eps == -395
+    assert isnan(profile.per)
     assert profile.bps == 4344
+    assert profile.pbr == pytest.approx(1.03, 0.01)
 
 
 def test_fetch_naver_profile():
