@@ -1,6 +1,6 @@
 class BaseProfile:
     def __init__(self):
-        pass
+        raise NotImplementedError
 
     def parse(self, raw: str):
-        pass
+        raise NotImplementedError
