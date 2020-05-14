@@ -9,11 +9,6 @@ from finance.ext.profile.naver_finance import NaverProfile
 BASE_PATH = os.path.abspath(os.path.dirname(__file__))
 
 
-def test_base_profile():
-    with pytest.raises(NotImplementedError):
-        BaseProfile()
-
-
 def test_invalid_provider():
     with pytest.raises(ValueError):
         fetch_profile("unknown", "063170")
