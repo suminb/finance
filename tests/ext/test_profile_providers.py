@@ -41,3 +41,5 @@ def test_fetch_naver_profile():
     # writing code.
     assert profile.current_price > 0
     assert profile.outstanding_shares > 0
+    assert profile.eps != 0
+    assert profile.bps > 0
