@@ -38,6 +38,19 @@ class NaverProfile(BaseProfile):
         outstanding_shares_raw = rows[2].select("td")[0].text
         self.outstanding_shares = int(outstanding_shares_raw.replace(",", ""))
 
+        eps_tag = self.soup.find(id="_eps")
+        self.eps = int(eps_tag.text.replace(",", ""))
+
+        # For some reason they provide `#_pbr` tag but do not provide `#_bps`,
+        # we have to find the value by exploring siblings of `#_pbr`.
+        pbr_tag = self.soup.find(id="_pbr")
+        siblings = pbr_tag.next_siblings
+        # This could break at any moment. We need to find a more robust way to
+        # handle this.
+        for _ in range(4):
+            bps_tag = next(siblings)
+        self.bps = int(bps_tag.text.replace(",", ""))
+
 
 def fetch_naver_profile(symbol: str):
     profile = NaverProfile(symbol)

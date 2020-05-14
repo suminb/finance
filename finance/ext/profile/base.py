@@ -7,6 +7,8 @@ class BaseProfile:
         self.name = None
         self.current_price = nan
         self.outstanding_shares = nan
+        self.eps = nan
+        self.bps = nan
 
     def parse(self, raw: str):
         raise NotImplementedError
