@@ -91,8 +91,24 @@ Usage
 
 (TODO: 사용법 계속 채워넣기)
 
-Company Profiles from Naver Finance
-***********************************
+Search For Listings On Naver Finance
+************************************
+
+.. code::
+
+   >>> from finance.ext.search import search_listings
+   >>> results = search_listings("naver", "KODEX")
+   >>> next(results)
+   Listing(069500, KODEX 200, https://finance.naver.com/item/main.nhn?code=069500)
+   >>> next(results)
+   Listing(091160, KODEX 반도체, https://finance.naver.com/item/main.nhn?code=091160)
+   >>> next(results)
+   Listing(091170, KODEX 은행, https://finance.naver.com/item/main.nhn?code=091170)
+   >>> # Or, we could make it as a list
+   >>> listings = list(results)
+
+Fetch Company Profiles From Naver Finance
+*****************************************
 
 .. code::
 
