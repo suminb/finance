@@ -1,13 +1,10 @@
 import csv
-import os
 from functools import partial
 
 import pytest
 
-from finance.web import create_app
 from finance.importers import import_stock_values
 from finance.models import (
-    db as _db,
     engine as _engine,
     session as _session,
 )
@@ -25,57 +22,16 @@ from finance.models import (
 )
 
 
-@pytest.fixture(scope="session")
-def app(request):
-    """Session-wide test `Flask` application."""
-    settings_override = {
-        "TESTING": True,
-    }
-    settings_override["SQLALCHEMY_DATABASE_URI"] = os.environ["TEST_DB_URL"]
-    app = create_app(__name__, config=settings_override)
-    os.environ["TESTING"] = ""
-
-    # Establish an application context before running the tests.
-    # ctx = app.app_context()
-    # ctx.push()
-
-    # def teardown():
-    #     ctx.pop()
-
-    # request.addfinalizer(teardown)
-    return app
-
-
-@pytest.fixture
-def testapp(app):
-    with app.app_context():
-        yield app.test_client()
-
-
 @pytest.fixture(scope="module", autouse=True)
-def db(app, request, session, engine):
-    """Session-wide test database."""
-
+def session(request):
+    """A database session. Shall not be confused with test sessions."""
     def teardown():
-        session.close()
-        Base.metadata.drop_all(engine)
-        # with app.app_context():
-        #     _db.session.close()
-        #     _db.drop_all()
+        _session.close()
+        Base.metadata.drop_all(_engine)
 
     request.addfinalizer(teardown)
 
-    Base.metadata.create_all(engine)
-
-    # _db.app = app
-    # with app.app_context():
-    #     _db.create_all()
-
-    #     yield _db
-
-
-@pytest.fixture(scope="module", autouse=True)
-def session():
+    Base.metadata.create_all(_engine)
     return _session
 
 
@@ -101,173 +57,173 @@ def stock_assets():
 
 
 @pytest.fixture(scope="function")
-def account_checking(request, db):
+def account_checking(request):
     account = Account.create(type="checking", name="신한은행 입출금")
-    request.addfinalizer(partial(teardown, db=db, record=account))
+    request.addfinalizer(partial(teardown, record=account))
     return account
 
 
 @pytest.fixture(scope="function")
-def account_savings(request, db):
+def account_savings(request):
     account = Account.create(type="savings", name="신한은행 적금")
-    request.addfinalizer(partial(teardown, db=db, record=account))
+    request.addfinalizer(partial(teardown, record=account))
     return account
 
 
 @pytest.fixture(scope="function")
-def account_8p(request, db):
+def account_8p(request):
     account = Account.create(type="virtual", name="8퍼센트")
-    request.addfinalizer(partial(teardown, db=db, record=account))
+    request.addfinalizer(partial(teardown, record=account))
     return account
 
 
 @pytest.fixture(scope="function")
-def account_hf(request, db):
+def account_hf(request):
     account = Account.create(type="virtual", name="어니스트펀드")
-    request.addfinalizer(partial(teardown, db=db, record=account))
+    request.addfinalizer(partial(teardown, record=account))
     return account
 
 
 @pytest.fixture(scope="function")
-def account_sp500(request, db):
+def account_sp500(request):
     account = Account.create(type="investment", name="S&P500 Fund")
-    request.addfinalizer(partial(teardown, db=db, record=account))
+    request.addfinalizer(partial(teardown, record=account))
     return account
 
 
 @pytest.fixture(scope="function")
-def account_stock(request, db):
+def account_stock(request):
     account = Account.create(
         type=AccountType.investment,
         institution="Miraeasset",
         number="ACCOUNT1",
         name="미래에셋대우 1",
     )
-    request.addfinalizer(partial(teardown, db=db, record=account))
+    request.addfinalizer(partial(teardown, record=account))
     return account
 
 
-@pytest.fixture(scope="module")
-def asset_hf1(request, db):
+@pytest.fixture(scope="function")
+def asset_hf1(request):
     asset = P2PBondAsset.create(name="포트폴리오 투자상품 1호")
-    request.addfinalizer(partial(teardown, db=db, record=asset))
+    request.addfinalizer(partial(teardown, record=asset))
     assert asset.type == "p2p_bond"
     return asset
 
 
-@pytest.fixture(scope="module")
-def asset_krw(request, db):
+@pytest.fixture(scope="function")
+def asset_krw(request):
     asset = CurrencyAsset.create(code="KRW", description="Korean Won")
-    request.addfinalizer(partial(teardown, db=db, record=asset))
+    request.addfinalizer(partial(teardown, record=asset))
     return asset
 
 
-@pytest.fixture(scope="module")
-def asset_sp500(request, db):
+@pytest.fixture(scope="function")
+def asset_sp500(request):
     asset = FundAsset.create(
         name="KB Star S&P500", description="", data={"code": "KR5223941018"}
     )
-    request.addfinalizer(partial(teardown, db=db, record=asset))
+    request.addfinalizer(partial(teardown, record=asset))
     return asset
 
 
-@pytest.fixture(scope="module")
-def asset_usd(request, db):
+@pytest.fixture(scope="function")
+def asset_usd(request):
     asset = CurrencyAsset.create(code="USD", description="United States Dollar")
-    request.addfinalizer(partial(teardown, db=db, record=asset))
+    request.addfinalizer(partial(teardown, record=asset))
     return asset
 
 
-@pytest.fixture(scope="module")
-def stock_asset_ncsoft(request, db):
+@pytest.fixture(scope="function")
+def stock_asset_ncsoft(request):
     asset = StockAsset.create(
         name="NCsoft Corporation",
         code="036570.KS",
         description="NCsoft Corporation",
         data={"bps": 88772, "eps": 12416},
     )
-    request.addfinalizer(partial(teardown, db=db, record=asset))
+    request.addfinalizer(partial(teardown, record=asset))
     return asset
 
 
-@pytest.fixture(scope="module")
-def stock_asset_spy(request, db, asset_usd):
+@pytest.fixture(scope="function")
+def stock_asset_spy(request, asset_usd):
     asset = StockAsset.create(
         name="SPY",
         code="SPY",
         isin="US78462F1030",
         description="SPDR S&P 500 ETF Trust Fund",
     )
-    request.addfinalizer(partial(teardown, db=db, record=asset))
+    request.addfinalizer(partial(teardown, record=asset))
 
     with open("tests/samples/SPY.csv") as fin:
         for av in import_stock_values(fin, "SPY", base_asset=asset_usd):
-            request.addfinalizer(partial(teardown, db=db, record=av))
+            request.addfinalizer(partial(teardown, record=av))
 
     return asset
 
 
-@pytest.fixture(scope="module")
-def stock_asset_amd(request, db, asset_usd):
+@pytest.fixture(scope="function")
+def stock_asset_amd(request, asset_usd):
     asset = StockAsset.create(
         name="AMD",
         code="AMD",
         isin="US0079031078",
         description="Advanced Micro Devices, Inc",
     )
-    request.addfinalizer(partial(teardown, db=db, record=asset))
+    request.addfinalizer(partial(teardown, record=asset))
 
     with open("tests/samples/AMD.csv") as fin:
         for av in import_stock_values(fin, "AMD", base_asset=asset_usd):
-            request.addfinalizer(partial(teardown, db=db, record=av))
-
-    return asset
-
-
-@pytest.fixture(scope="module")
-def stock_asset_nvda(request, db, asset_usd):
-    asset = StockAsset.create(
-        name="NVDA", code="NVDA", isin="US67066G1040", description="NVIDIA Corporation"
-    )
-    request.addfinalizer(partial(teardown, db=db, record=asset))
-
-    with open("tests/samples/NVDA.csv") as fin:
-        for av in import_stock_values(fin, "NVDA", base_asset=asset_usd):
-            request.addfinalizer(partial(teardown, db=db, record=av))
-
-    return asset
-
-
-@pytest.fixture(scope="module")
-def stock_asset_amzn(request, db, asset_usd):
-    asset = StockAsset.create(
-        name="AMZN", code="AMZN", isin="US0231351067", description="Amazon"
-    )
-    request.addfinalizer(partial(teardown, db=db, record=asset))
-
-    with open("tests/samples/AMZN.csv") as fin:
-        for av in import_stock_values(fin, "AMZN", base_asset=asset_usd):
-            request.addfinalizer(partial(teardown, db=db, record=av))
-
-    return asset
-
-
-@pytest.fixture(scope="module")
-def stock_asset_sbux(request, db, asset_usd):
-    asset = StockAsset.create(
-        name="SBUX", code="SBUX", isin="US8552441094", description="Starbucks"
-    )
-    request.addfinalizer(partial(teardown, db=db, record=asset))
-
-    with open("tests/samples/SBUX.csv") as fin:
-        for av in import_stock_values(fin, "SBUX", base_asset=asset_usd):
-            request.addfinalizer(partial(teardown, db=db, record=av))
+            request.addfinalizer(partial(teardown, record=av))
 
     return asset
 
 
 @pytest.fixture(scope="function")
-def portfolio(request, db, asset_krw, account_checking, account_sp500):
+def stock_asset_nvda(request, asset_usd):
+    asset = StockAsset.create(
+        name="NVDA", code="NVDA", isin="US67066G1040", description="NVIDIA Corporation"
+    )
+    request.addfinalizer(partial(teardown, record=asset))
+
+    with open("tests/samples/NVDA.csv") as fin:
+        for av in import_stock_values(fin, "NVDA", base_asset=asset_usd):
+            request.addfinalizer(partial(teardown, record=av))
+
+    return asset
+
+
+@pytest.fixture(scope="function")
+def stock_asset_amzn(request, asset_usd):
+    asset = StockAsset.create(
+        name="AMZN", code="AMZN", isin="US0231351067", description="Amazon"
+    )
+    request.addfinalizer(partial(teardown, record=asset))
+
+    with open("tests/samples/AMZN.csv") as fin:
+        for av in import_stock_values(fin, "AMZN", base_asset=asset_usd):
+            request.addfinalizer(partial(teardown, record=av))
+
+    return asset
+
+
+@pytest.fixture(scope="function")
+def stock_asset_sbux(request, asset_usd):
+    asset = StockAsset.create(
+        name="SBUX", code="SBUX", isin="US8552441094", description="Starbucks"
+    )
+    request.addfinalizer(partial(teardown, record=asset))
+
+    with open("tests/samples/SBUX.csv") as fin:
+        for av in import_stock_values(fin, "SBUX", base_asset=asset_usd):
+            request.addfinalizer(partial(teardown, record=av))
+
+    return asset
+
+
+@pytest.fixture(scope="function")
+def portfolio(request, asset_krw, account_checking, account_sp500):
     p = Portfolio.create(base_asset=asset_krw)
     p.add_accounts(account_checking, account_sp500)
 
@@ -282,6 +238,6 @@ def portfolio(request, db, asset_krw, account_checking, account_sp500):
     return p
 
 
-def teardown(db, record):
+def teardown(record):
     _session.delete(record)
     _session.commit()
