@@ -4,7 +4,6 @@ import json
 import os
 
 import boto3
-from flask import request
 from logbook import Logger
 
 # NOTE: finance.models should not be imported here in order to avoid circular
@@ -331,15 +330,6 @@ def insert_stock_transfer_record(data: dict, bank_account: object):
         return deposit(bank_account, asset_krw, subtotal, date)
     else:
         raise ValueError("Unrecognized transfer type '{}'".format(data["name"]))
-
-
-def json_requested():
-    """Determines whether the requested content type is application/json."""
-    best = request.accept_mimetypes.best_match(["application/json", "text/plain"])
-    return (
-        best == "application/json"
-        and request.accept_mimetypes[best] > request.accept_mimetypes["text/plain"]
-    )
 
 
 def serialize_datetime(obj):
