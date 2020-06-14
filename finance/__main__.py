@@ -6,7 +6,6 @@ from click.testing import CliRunner
 from logbook import Logger
 from sqlalchemy.exc import IntegrityError
 
-from finance.web import create_app
 from finance.importers import (
     import_stock_values as import_stock_values_,
 )  # Avoid name clashes
@@ -16,11 +15,13 @@ from finance.models import (
     Asset,
     AssetType,
     AssetValue,
+    Base,
     DartReport,
-    db,
+    engine,
     get_asset_by_fund_code,
     Granularity,
     Portfolio,
+    session,
     Transaction,
     User,
 )
@@ -72,17 +73,13 @@ def cli():
 @cli.command()
 def create_all():
     """Creates necessary database tables."""
-    app = create_app(__name__)
-    with app.app_context():
-        db.create_all()
+    Base.metadata.create_all(engine)
 
 
 @cli.command()
 def drop_all():
     """Drops all database tables."""
-    app = create_app(__name__)
-    with app.app_context():
-        db.drop_all()
+    Base.metadata.drop_all(engine)
 
 
 def create_account(type_: AccountType, institution: str, number: str, user):
@@ -105,34 +102,28 @@ def create_asset(type_: AssetType, code: str, description: str):
 @cli.command()
 def insert_test_data():
     """Inserts some sample data for testing."""
-    app = create_app(__name__)
-    with app.app_context():
-        user = User.create(
-            family_name="Byeon",
-            given_name="Sumin",
-            email="suminb@gmail.com",
-            ignore_if_exists=True,
-        )
+    user = User.create(
+        family_name="Byeon",
+        given_name="Sumin",
+        email="suminb@gmail.com",
+        ignore_if_exists=True,
+    )
 
-        account_checking = create_account(
-            AccountType.checking, "Shinhan", "checking", user
-        )
-        account_stock = create_account(
-            AccountType.investment, "Mirae Asset", "stock", user
-        )
+    account_checking = create_account(AccountType.checking, "Shinhan", "checking", user)
+    account_stock = create_account(AccountType.investment, "Mirae Asset", "stock", user)
 
-        asset_krw = create_asset(AssetType.currency, "KRW", "Korean Won")
-        create_asset(AssetType.currency, "USD", "United States Dollar")
+    asset_krw = create_asset(AssetType.currency, "KRW", "Korean Won")
+    create_asset(AssetType.currency, "USD", "United States Dollar")
 
-        for _ in insert_stock_assets():
-            pass
+    for _ in insert_stock_assets():
+        pass
 
-        create_asset(AssetType.security, "KR5223941018", "KB S&P500")
-        create_asset(AssetType.security, "KR5229221225", "이스트스프링차이나")
+    create_asset(AssetType.security, "KR5223941018", "KB S&P500")
+    create_asset(AssetType.security, "KR5229221225", "이스트스프링차이나")
 
-        portfolio = Portfolio()
-        portfolio.base_asset = asset_krw
-        portfolio.add_accounts(account_checking, account_stock)
+    portfolio = Portfolio()
+    portfolio.base_asset = asset_krw
+    portfolio.add_accounts(account_checking, account_stock)
 
 
 @cli.command()
@@ -161,16 +152,14 @@ def import_dart(fin):
     except json.decoder.JSONDecodeError as e:
         log.error("Valid JSON data expected: {}", e)
 
-    app = create_app(__name__)
-    with app.app_context():
-        for row in data:
-            try:
-                report = DartReport.create(**row)
-            except IntegrityError:
-                log.info("DartReport-{} already exists", row["id"])
-                db.session.rollback()
-            else:
-                log.info("Fetched report: {}", report)
+    for row in data:
+        try:
+            report = DartReport.create(**row)
+        except IntegrityError:
+            log.info("DartReport-{} already exists", row["id"])
+            session.rollback()
+        else:
+            log.info("Fetched report: {}", report)
 
 
 @cli.command()
@@ -185,9 +174,6 @@ def import_sp500_asset_values():
 def import_sp500_records():
     """Import S&P500 fund sample data. Expects a tab seprated value document.
     """
-    app = create_app(__name__)
-    app.app_context().push()
-
     account_checking = Account.get(id=1001)
     account_sp500 = Account.get(id=7001)
     asset_krw = Asset.query.filter_by(name="KRW").first()
@@ -228,13 +214,13 @@ def import_sp500_records():
                     deposit(account_checking, asset_krw, -quantity_krw, date, t)
                 except IntegrityError:
                     log.warn("Identical record exists")
-                    db.session.rollback()
+                    session.rollback()
 
                 try:
                     deposit(account_sp500, asset_sp500, quantity_sp500, date, t)
                 except IntegrityError:
                     log.warn("Identical record exists")
-                    db.session.rollback()
+                    session.rollback()
 
 
 @cli.command()
@@ -281,45 +267,40 @@ def import_fund(code, from_date, to_date):
     :param to_date: e.g., 2016-02-28
     """
     provider = Kofia()
+    asset = get_asset_by_fund_code(code)
 
-    app = create_app(__name__)
-    with app.app_context():
-        asset = get_asset_by_fund_code(code)
+    # FIXME: Target asset should also be determined by asset.data.code
+    base_asset = Asset.query.filter_by(name="KRW").first()
 
-        # FIXME: Target asset should also be determined by asset.data.code
-        base_asset = Asset.query.filter_by(name="KRW").first()
-
-        data = provider.fetch_data(code, parse_date(from_date), parse_date(to_date))
-        for date, unit_price, quantity in data:
-            log.info("Import data on {}", date)
-            unit_price /= 1000.0
-            try:
-                AssetValue.create(
-                    asset=asset,
-                    base_asset=base_asset,
-                    evaluated_at=date,
-                    close=unit_price,
-                    granularity=Granularity.day,
-                    source="kofia",
-                )
-            except IntegrityError:
-                log.warn("Identical record has been found for {}. Skipping.", date)
-                db.session.rollback()
+    data = provider.fetch_data(code, parse_date(from_date), parse_date(to_date))
+    for date, unit_price, quantity in data:
+        log.info("Import data on {}", date)
+        unit_price /= 1000.0
+        try:
+            AssetValue.create(
+                asset=asset,
+                base_asset=base_asset,
+                evaluated_at=date,
+                close=unit_price,
+                granularity=Granularity.day,
+                source="kofia",
+            )
+        except IntegrityError:
+            log.warn("Identical record has been found for {}. Skipping.", date)
+            session.rollback()
 
 
 @cli.command()
 @click.argument("code")
 def import_stock_values(code):
     """Import stock price information."""
-    app = create_app(__name__)
-    with app.app_context():
-        # NOTE: We assume all Asset records are already in the database, but
-        # this is a temporary workaround. We should implement some mechanism to
-        # automatically insert an Asset record when it is not found.
+    # NOTE: We assume all Asset records are already in the database, but
+    # this is a temporary workaround. We should implement some mechanism to
+    # automatically insert an Asset record when it is not found.
 
-        stdin = click.get_text_stream("stdin")
-        for _ in import_stock_values_(stdin, code):
-            pass
+    stdin = click.get_text_stream("stdin")
+    for _ in import_stock_values_(stdin, code):
+        pass
 
 
 # TODO: Load data from stdin
@@ -327,13 +308,11 @@ def import_stock_values(code):
 @click.argument("filename")
 def import_stock_records(filename):
     """Parses exported data from the Shinhan HTS."""
-    app = create_app(__name__)
-    with app.app_context():
-        account_bank = Account.query.filter(Account.name == "신한 입출금").first()
-        account_stock = Account.query.filter(Account.name == "신한 주식").first()
-        with open(filename) as fin:
-            for parsed in parse_stock_records(fin):
-                insert_stock_record(parsed, account_stock, account_bank)
+    account_bank = Account.query.filter(Account.name == "신한 입출금").first()
+    account_stock = Account.query.filter(Account.name == "신한 주식").first()
+    with open(filename) as fin:
+        for parsed in parse_stock_records(fin):
+            insert_stock_record(parsed, account_stock, account_bank)
 
 
 @cli.command()

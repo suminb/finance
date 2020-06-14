@@ -114,7 +114,7 @@ def test_get_dart_code():
         get_dart_code("Non-exist")
 
 
-def test_insert_stock_record(db, account_stock, account_checking):
+def test_insert_stock_record(session, account_stock, account_checking):
     data = {
         "date": parse_date("2016-06-30"),
         "sequence": 1,
@@ -135,9 +135,9 @@ def test_insert_stock_record(db, account_stock, account_checking):
     record = insert_stock_record(data, account_stock, account_checking)
 
     # TODO: Automate this process
-    db.session.delete(record)
-    db.session.delete(asset)
-    db.session.commit()
+    session.delete(record)
+    session.delete(asset)
+    session.commit()
 
 
 def test_parse_date():

@@ -99,7 +99,7 @@ def test_import_stock_values():
     assert asset_value.volume == 856210
 
 
-def test_import_stock_records(asset_krw, account_stock, account_checking):
+def test_import_stock_records(session, asset_krw, account_stock, account_checking):
     for _ in insert_stock_assets():
         pass
 

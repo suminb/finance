@@ -2,6 +2,8 @@ from alembic import command
 from alembic.config import Config
 import pytest
 
+from finance.models import Base
+
 
 @pytest.fixture
 def config():
@@ -14,14 +16,15 @@ def config():
     return config
 
 
-def test_upgrade(config, db):
+@pytest.mark.skip
+def test_upgrade(config, base_class, engine, session):
     # NOTE: At this point, all the tables should be populated by the `db`
     # fixture. So we drop all tables first.
-    db.drop_all()
-    db.engine.execute("DROP TABLE IF EXISTS alembic_version")
+    Base.metadata.drop_all(engine)
+    session.execute("DROP TABLE IF EXISTS alembic_version")
 
     command.upgrade(config, "head")
     command.downgrade(config, "base")
 
     # Finally we need to drop `alembic_version`
-    db.engine.execute("DROP TABLE alembic_version")
+    session.execute("DROP TABLE alembic_version")
