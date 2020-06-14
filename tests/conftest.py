@@ -6,12 +6,17 @@ import pytest
 
 from finance.web import create_app
 from finance.importers import import_stock_values
-from finance.models import db as _db
+from finance.models import (
+    db as _db,
+    engine as _engine,
+    session as _session,
+)
 from finance.models import (
     Account,
     AccountType,
     Asset,
     AssetType,
+    Base,
     CurrencyAsset,
     FundAsset,
     P2PBondAsset,
@@ -28,6 +33,7 @@ def app(request):
     }
     settings_override["SQLALCHEMY_DATABASE_URI"] = os.environ["TEST_DB_URL"]
     app = create_app(__name__, config=settings_override)
+    os.environ["TESTING"] = ""
 
     # Establish an application context before running the tests.
     # ctx = app.app_context()
@@ -41,27 +47,46 @@ def app(request):
 
 
 @pytest.fixture
-def testapp(app, db):
+def testapp(app):
     with app.app_context():
         yield app.test_client()
 
 
 @pytest.fixture(scope="module", autouse=True)
-def db(app, request):
+def db(app, request, session, engine):
     """Session-wide test database."""
 
     def teardown():
-        with app.app_context():
-            _db.session.close()
-            _db.drop_all()
+        session.close()
+        Base.metadata.drop_all(engine)
+        # with app.app_context():
+        #     _db.session.close()
+        #     _db.drop_all()
 
     request.addfinalizer(teardown)
 
-    _db.app = app
-    with app.app_context():
-        _db.create_all()
+    Base.metadata.create_all(engine)
 
-        yield _db
+    # _db.app = app
+    # with app.app_context():
+    #     _db.create_all()
+
+    #     yield _db
+
+
+@pytest.fixture(scope="module", autouse=True)
+def session():
+    return _session
+
+
+@pytest.fixture(scope="module")
+def base_class():
+    return Base
+
+
+@pytest.fixture(scope="module")
+def engine():
+    return _engine
 
 
 @pytest.fixture(scope="module")
@@ -250,13 +275,13 @@ def portfolio(request, db, asset_krw, account_checking, account_sp500):
         # NOTE: The following statement is necessary because the scope of
         # `asset_krw` is a module, whereas the scope of `p` is a function.
         p.base_asset = None
-        db.session.delete(p)
-        db.session.commit()
+        _session.delete(p)
+        _session.commit()
 
     request.addfinalizer(teardown)
     return p
 
 
 def teardown(db, record):
-    db.session.delete(record)
-    db.session.commit()
+    _session.delete(record)
+    _session.commit()

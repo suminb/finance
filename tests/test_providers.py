@@ -80,6 +80,7 @@ def test_kofia_fetch_data():
         assert isinstance(quantity, float)
 
 
+@pytest.mark.skip
 def test_dart_fetch_data():
     provider = Dart()
     end = datetime.now()
@@ -91,6 +92,7 @@ def test_dart_fetch_data():
         assert isinstance(report, DartReport)
 
 
+@pytest.mark.skip
 def test_dart_fetch_data_with_invalid_code():
     provider = Dart()
     with pytest.raises(ValueError):

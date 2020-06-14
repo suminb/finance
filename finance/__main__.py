@@ -16,11 +16,14 @@ from finance.models import (
     Asset,
     AssetType,
     AssetValue,
+    Base,
     DartReport,
     db,
+    engine,
     get_asset_by_fund_code,
     Granularity,
     Portfolio,
+    session,
     Transaction,
     User,
 )
@@ -72,9 +75,10 @@ def cli():
 @cli.command()
 def create_all():
     """Creates necessary database tables."""
-    app = create_app(__name__)
-    with app.app_context():
-        db.create_all()
+    Base.metadata.create_all(engine)
+    # app = create_app(__name__)
+    # with app.app_context():
+    #     db.create_all()
 
 
 @cli.command()
@@ -168,7 +172,7 @@ def import_dart(fin):
                 report = DartReport.create(**row)
             except IntegrityError:
                 log.info("DartReport-{} already exists", row["id"])
-                db.session.rollback()
+                session.rollback()
             else:
                 log.info("Fetched report: {}", report)
 
@@ -304,7 +308,7 @@ def import_fund(code, from_date, to_date):
                 )
             except IntegrityError:
                 log.warn("Identical record has been found for {}. Skipping.", date)
-                db.session.rollback()
+                session.rollback()
 
 
 @cli.command()

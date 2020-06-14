@@ -2,13 +2,18 @@ import collections
 import functools
 import operator
 from datetime import datetime, timedelta
+import os
 
 import uuid64
 from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import create_engine, desc
+from sqlalchemy import Column, Enum
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.indexable import index_property
+from sqlalchemy.orm import sessionmaker
 
 from finance.exceptions import (
     AccountNotFoundException,
@@ -19,8 +24,18 @@ from finance.exceptions import (
 from finance.utils import date_range
 from typing import Any  # noqa
 
+
 db = SQLAlchemy()
 JsonType = db.String().with_variant(JSON(), "postgresql")
+
+Base = declarative_base()
+
+is_testing = bool(os.environ.get("TESTING", ""))
+db_url = os.environ.get("DB_URL" if is_testing else "TEST_DB_URL")
+engine = create_engine(db_url, echo=False)
+Session = sessionmaker(bind=engine)
+
+session = Session()
 
 
 def balance_adjustment(account, asset, quantity, date=None, transaction=None):
@@ -54,7 +69,7 @@ def get_asset_by_fund_code(code: str):
     # Asset model from a raw query result
     # (sqlalchemy.engine.result.RowProxy)
     query = "SELECT * FROM asset WHERE data->>'code' = :code LIMIT 1"
-    raw_asset = db.session.execute(query, {"code": code}).first()
+    raw_asset = session.execute(query, {"code": code}).first()
     if raw_asset is None:
         raise AssetNotFoundException(
             "Fund code {} is not mapped to any asset".format(code)
@@ -63,15 +78,50 @@ def get_asset_by_fund_code(code: str):
     return Asset.query.get(asset_id)
 
 
+class ClassPropertyDescriptor(object):
+
+    def __init__(self, fget, fset=None):
+        self.fget = fget
+        self.fset = fset
+
+    def __get__(self, obj, klass=None):
+        if klass is None:
+            klass = type(obj)
+        return self.fget.__get__(obj, klass)()
+
+    def __set__(self, obj, value):
+        if not self.fset:
+            raise AttributeError("can't set attribute")
+        type_ = type(obj)
+        return self.fset.__get__(obj, type_)(value)
+
+    def setter(self, func):
+        if not isinstance(func, (classmethod, staticmethod)):
+            func = classmethod(func)
+        self.fset = func
+        return self
+
+
+def classproperty(func):
+    if not isinstance(func, (classmethod, staticmethod)):
+        func = classmethod(func)
+
+    return ClassPropertyDescriptor(func)
+
+
 class CRUDMixin(object):
     """Copied from https://realpython.com/blog/python/python-web-applications-with-flask-part-ii/
     """  # noqa
 
     __table_args__ = {"extend_existing": True}  # type: Any
 
-    id = db.Column(
+    id = Column(
         db.BigInteger, primary_key=True, autoincrement=False, default=uuid64.issue()
     )
+
+    @classproperty
+    def query(cls):
+        return session.query(cls)
 
     @classmethod
     def create(cls, commit=True, ignore_if_exists=False, **kwargs):
@@ -86,7 +136,7 @@ class CRUDMixin(object):
             return instance.save(commit=commit)
         except (IntegrityError, InvalidRequestError):
             if ignore_if_exists:
-                db.session.rollback()
+                session.rollback()
                 return cls.find(**kwargs)
             else:
                 raise
@@ -116,28 +166,30 @@ class CRUDMixin(object):
         return commit and self.save() or self
 
     def save(self, commit=True):
-        db.session.add(self)
+        session.add(self)
         if commit:
-            db.session.commit()
+            session.commit()
         return self
 
     def delete(self, commit=True):
-        db.session.delete(self)
-        return commit and db.session.commit()
+        session.delete(self)
+        return commit and session.commit()
 
     def __iter__(self):
         for column in self.__table__.columns:
             yield column.name, str(getattr(self, column.name))
 
 
-class User(CRUDMixin, UserMixin, db.Model):  # type: ignore
+class User(CRUDMixin, UserMixin, Base):  # type: ignore
 
-    given_name = db.Column(db.String)
-    family_name = db.Column(db.String)
-    email = db.Column(db.String, unique=True)
+    __tablename__ = "user"
+
+    given_name = Column(db.String)
+    family_name = Column(db.String)
+    email = Column(db.String, unique=True)
 
     #: Arbitrary data
-    data = db.Column(JsonType)
+    data = Column(JsonType)
 
     accounts = db.relationship("Account", backref="user", lazy="dynamic")
 
@@ -179,26 +231,27 @@ class Granularity(object):
         )
 
 
-class AssetValue(CRUDMixin, db.Model):  # type: ignore
+class AssetValue(CRUDMixin, Base):  # type: ignore
     """Represents a unit price of an asset at a particular point of time. The
     granularity of the 'particular point of time' may range from one second
     to a year. See `Granularity` for more details.
     """
 
+    __tablename__ = "asset_value"
     __table_args__ = (
         db.UniqueConstraint("asset_id", "evaluated_at", "granularity"),
         {},
     )  # type: Any
 
-    asset_id = db.Column(db.BigInteger, db.ForeignKey("asset.id"))
-    base_asset_id = db.Column(db.BigInteger, db.ForeignKey("asset.id"))
+    asset_id = Column(db.BigInteger, db.ForeignKey("asset.id"))
+    base_asset_id = Column(db.BigInteger, db.ForeignKey("asset.id"))
     base_asset = db.relationship("Asset", uselist=False, foreign_keys=[base_asset_id])
-    evaluated_at = db.Column(db.DateTime(timezone=False))
-    source = db.Column(
-        db.Enum("yahoo", "google", "kofia", "test", name="asset_value_source")
+    evaluated_at = Column(db.DateTime(timezone=False))
+    source = Column(
+        Enum("yahoo", "google", "kofia", "test", name="asset_value_source")
     )
-    granularity = db.Column(
-        db.Enum(
+    granularity = Column(
+        Enum(
             "1sec",
             "1min",
             "5min",
@@ -211,11 +264,11 @@ class AssetValue(CRUDMixin, db.Model):  # type: ignore
         )
     )
     # NOTE: Should we also store `fetched_at`?
-    open = db.Column(db.Numeric(precision=20, scale=4))
-    high = db.Column(db.Numeric(precision=20, scale=4))
-    low = db.Column(db.Numeric(precision=20, scale=4))
-    close = db.Column(db.Numeric(precision=20, scale=4))
-    volume = db.Column(db.Integer)
+    open = Column(db.Numeric(precision=20, scale=4))
+    high = Column(db.Numeric(precision=20, scale=4))
+    low = Column(db.Numeric(precision=20, scale=4))
+    close = Column(db.Numeric(precision=20, scale=4))
+    volume = Column(db.Integer)
 
     def __repr__(self):
         return (
@@ -252,23 +305,24 @@ asset_types = (
 )
 
 
-class Asset(CRUDMixin, db.Model):  # type: ignore
+class Asset(CRUDMixin, Base):  # type: ignore
     """Represents an asset."""
 
+    __tablename__ = "asset"
     __mapper_args__ = {
         "polymorphic_identity": "asset",
         "polymorphic_on": "type",
     }
 
-    type = db.Column(db.Enum(*asset_types, name="asset_type"))
-    name = db.Column(db.String)
+    type = Column(Enum(*asset_types, name="asset_type"))
+    name = Column(db.String)
     # FIXME: Rename this as `symbol` or rename `get_by_symbol` -> `get_by_code`
-    code = db.Column(db.String, unique=True)
-    isin = db.Column(db.String)
-    description = db.Column(db.Text)
+    code = Column(db.String, unique=True)
+    isin = Column(db.String)
+    description = Column(db.Text)
 
     #: Arbitrary data
-    data = db.Column(JsonType)
+    data = Column(JsonType)
 
     asset_values = db.relationship(
         "AssetValue",
@@ -429,23 +483,24 @@ account_types = (
 )
 
 
-class Account(CRUDMixin, db.Model):  # type: ignore
+class Account(CRUDMixin, Base):  # type: ignore
     """Represents an account. An account may contain multiple records based
     on different assets. For example, a single bank account may have a balance
     in different foreign currencies."""
 
+    __tablename__ = "account"
     __table_args__ = (db.UniqueConstraint("institution", "number"), {})  # type: Any
 
-    user_id = db.Column(db.BigInteger, db.ForeignKey("user.id"))
-    portfolio_id = db.Column(db.BigInteger, db.ForeignKey("portfolio.id"))
-    type = db.Column(db.Enum(*account_types, name="account_type"))
-    name = db.Column(db.String)
-    institution = db.Column(db.String)  # Could be a routing number (US)
-    number = db.Column(db.String)  # Account number
-    description = db.Column(db.Text)
+    user_id = Column(db.BigInteger, db.ForeignKey("user.id"))
+    portfolio_id = Column(db.BigInteger, db.ForeignKey("portfolio.id"))
+    type = Column(Enum(*account_types, name="account_type"))
+    name = Column(db.String)
+    institution = Column(db.String)  # Could be a routing number (US)
+    number = Column(db.String)  # Account number
+    description = Column(db.Text)
 
     #: Arbitrary data
-    data = db.Column(JsonType)
+    data = Column(JsonType)
 
     # NOTE: Transaction-Account relationship is many-to-many
     # transactions = db.relationship('Transaction', backref='account',
@@ -565,20 +620,21 @@ class Account(CRUDMixin, db.Model):  # type: ignore
             raise NotImplementedError
 
 
-class Portfolio(CRUDMixin, db.Model):  # type: ignore
+class Portfolio(CRUDMixin, Base):  # type: ignore
     """A collection of accounts (= a collection of assets)."""
 
+    __tablename__ = "portfolio"
     __table_args__ = (db.ForeignKeyConstraint(["base_asset_id"], ["asset.id"]),)
-    name = db.Column(db.String)
-    description = db.Column(db.String)
+    name = Column(db.String)
+    description = Column(db.String)
     accounts = db.relationship("Account", backref="portfolio", lazy="dynamic")
-    base_asset_id = db.Column(db.BigInteger)
+    base_asset_id = Column(db.BigInteger)
     base_asset = db.relationship("Asset", uselist=False, foreign_keys=[base_asset_id])
 
     def add_accounts(self, *accounts, commit=True):
         self.accounts.extend(accounts)
         if commit:
-            db.session.commit()
+            session.commit()
 
     def assets(self):
         """Returns all assets contained by the accounts under this portfolio.
@@ -639,12 +695,14 @@ transaction_states = (
 )
 
 
-class Transaction(CRUDMixin, db.Model):  # type: ignore
+class Transaction(CRUDMixin, Base):  # type: ignore
     """A transaction consists of multiple records."""
 
-    initiated_at = db.Column(db.DateTime(timezone=False))
-    closed_at = db.Column(db.DateTime(timezone=False))
-    state = db.Column(db.Enum(*transaction_states, name="transaction_state"))
+    __tablename__ = "transaction"
+
+    initiated_at = Column(db.DateTime(timezone=False))
+    closed_at = Column(db.DateTime(timezone=False))
+    state = Column(Enum(*transaction_states, name="transaction_state"))
     #: Individual record
     records = db.relationship("Record", backref="transaction", lazy="dynamic")
 
@@ -678,7 +736,7 @@ class Transaction(CRUDMixin, db.Model):  # type: ignore
         self.state = TransactionState.closed
 
         if commit:
-            db.session.commit()
+            session.commit()
 
 
 class RecordType(object):
@@ -690,8 +748,10 @@ class RecordType(object):
 record_types = (RecordType.deposit, RecordType.withdraw, RecordType.balance_adjustment)
 
 
-class Record(CRUDMixin, db.Model):  # type: ignore
+class Record(CRUDMixin, Base):  # type: ignore
     """A financial transaction consists of one or more records."""
+
+    __tablename__ = "record"
 
     # NOTE: Is this okay to do this?
     __table_args__ = (
@@ -699,15 +759,15 @@ class Record(CRUDMixin, db.Model):  # type: ignore
         {},
     )  # type: Any
 
-    account_id = db.Column(db.BigInteger, db.ForeignKey("account.id"))
-    asset_id = db.Column(db.BigInteger, db.ForeignKey("asset.id"))
+    account_id = Column(db.BigInteger, db.ForeignKey("account.id"))
+    asset_id = Column(db.BigInteger, db.ForeignKey("asset.id"))
     # asset = db.relationship(Asset, uselist=False)
-    transaction_id = db.Column(db.BigInteger, db.ForeignKey("transaction.id"))
-    type = db.Column(db.Enum(*record_types, name="record_type"))
+    transaction_id = Column(db.BigInteger, db.ForeignKey("transaction.id"))
+    type = Column(Enum(*record_types, name="record_type"))
     # NOTE: We'll always use the UTC time
-    created_at = db.Column(db.DateTime(timezone=False))
-    category = db.Column(db.String)
-    quantity = db.Column(db.Numeric(precision=20, scale=4))
+    created_at = Column(db.DateTime(timezone=False))
+    category = Column(db.String)
+    quantity = Column(db.Numeric(precision=20, scale=4))
 
     def __init__(self, *args, **kwargs):
         # Record.type could be 'balance_adjustment'
@@ -719,12 +779,14 @@ class Record(CRUDMixin, db.Model):  # type: ignore
         super(self.__class__, self).__init__(*args, **kwargs)
 
 
-class DartReport(CRUDMixin, db.Model):  # type: ignore
+class DartReport(CRUDMixin, Base):  # type: ignore
     """NOTE: We need a more generic name for this..."""
 
-    registered_at = db.Column(db.DateTime(timezone=False))
-    title = db.Column(db.String)
-    entity_id = db.Column(db.Integer)
-    entity = db.Column(db.String)
-    reporter = db.Column(db.String)
-    content = db.Column(db.Text)
+    __tablename__ = "dart_report"
+
+    registered_at = Column(db.DateTime(timezone=False))
+    title = Column(db.String)
+    entity_id = Column(db.Integer)
+    entity = Column(db.String)
+    reporter = Column(db.String)
+    content = Column(db.Text)
