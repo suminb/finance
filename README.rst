@@ -86,6 +86,27 @@ Daily Net Asset Values
 .. [1] 코드에서는 ``base asset`` 이라는 이름으로 부르고 있지만, 더 적당한 용어가
    있다면 그것으로 대체할 용의가 있습니다.
 
+Usage
+-----
+
+(TODO: 사용법 계속 채워넣기)
+
+Company Profiles from Naver Finance
+***********************************
+
+.. code::
+
+   >>> from finance.ext.profile import fetch_profile
+   >>> profile = fetch_profile("naver", "063170")
+   >>> profile.name
+   서울옥션
+   >>> profile.current_price
+   4300
+   >>> profile.eps
+   -494
+   >>> profile.bps
+   4290
+
 Some Technical Details
 ----------------------
 
