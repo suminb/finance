@@ -20,7 +20,6 @@ def config():
 def test_upgrade(config, base_class, engine, session):
     # NOTE: At this point, all the tables should be populated by the `db`
     # fixture. So we drop all tables first.
-    import pdb; pdb.set_trace()
     Base.metadata.drop_all(engine)
     session.execute("DROP TABLE IF EXISTS alembic_version")
 

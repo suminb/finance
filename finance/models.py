@@ -79,7 +79,6 @@ def get_asset_by_fund_code(code: str):
 
 
 class ClassPropertyDescriptor(object):
-
     def __init__(self, fget, fset=None):
         self.fget = fget
         self.fset = fset
@@ -247,9 +246,7 @@ class AssetValue(CRUDMixin, Base):  # type: ignore
     base_asset_id = Column(db.BigInteger, db.ForeignKey("asset.id"))
     base_asset = db.relationship("Asset", uselist=False, foreign_keys=[base_asset_id])
     evaluated_at = Column(db.DateTime(timezone=False))
-    source = Column(
-        Enum("yahoo", "google", "kofia", "test", name="asset_value_source")
-    )
+    source = Column(Enum("yahoo", "google", "kofia", "test", name="asset_value_source"))
     granularity = Column(
         Enum(
             "1sec",

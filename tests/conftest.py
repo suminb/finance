@@ -25,6 +25,7 @@ from finance.models import (
 @pytest.fixture(scope="module", autouse=True)
 def session(request):
     """A database session. Shall not be confused with test sessions."""
+
     def teardown():
         _session.close()
         Base.metadata.drop_all(_engine)

@@ -154,8 +154,7 @@ def test_portfolio(session, account_hf, asset_hf1, account_checking, asset_krw):
 
 
 def test_portfolio_balance(
-    session, account_checking, account_savings, account_sp500, asset_krw,
-    asset_sp500
+    session, account_checking, account_savings, account_sp500, asset_krw, asset_sp500
 ):
     """Ensures a portfolio, which is essentially a collection of accounts,
     calculates its balance correctly.

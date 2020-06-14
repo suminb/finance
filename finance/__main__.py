@@ -111,12 +111,8 @@ def insert_test_data():
         ignore_if_exists=True,
     )
 
-    account_checking = create_account(
-        AccountType.checking, "Shinhan", "checking", user
-    )
-    account_stock = create_account(
-        AccountType.investment, "Mirae Asset", "stock", user
-    )
+    account_checking = create_account(AccountType.checking, "Shinhan", "checking", user)
+    account_stock = create_account(AccountType.investment, "Mirae Asset", "stock", user)
 
     asset_krw = create_asset(AssetType.currency, "KRW", "Korean Won")
     create_asset(AssetType.currency, "USD", "United States Dollar")
