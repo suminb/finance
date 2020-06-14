@@ -20,10 +20,12 @@ NOTE: 제가 주로 사용하는 에디터인 vim 에서 한글 타이핑이 불
 
 목표
 ----
-이 프로젝트의 목적은 크게 두 가지입니다.
+이 프로젝트의 목적은 크게 네 가지입니다.
 
-#. 총 자산 가치를 자동으로 추적하고 (비공식) SB 펀드의 가격을 산정하기.
-#. 계량 투자에 필요한 보조 도구들을 제공하기.
+#. 거래 내역 관리, 포트폴리오 시각화 등 자산 현황 파악하기.
+#. 종목 리서치에 필요한 기능 제공하기.
+#. 미리 설정해놓은 조건을 만족할 경우 알람 보내기.
+#. 자동으로 거래하기. (먼 미래의 이야기)
 
 
 비전
@@ -83,6 +85,27 @@ Daily Net Asset Values
 
 .. [1] 코드에서는 ``base asset`` 이라는 이름으로 부르고 있지만, 더 적당한 용어가
    있다면 그것으로 대체할 용의가 있습니다.
+
+Usage
+-----
+
+(TODO: 사용법 계속 채워넣기)
+
+Company Profiles from Naver Finance
+***********************************
+
+.. code::
+
+   >>> from finance.ext.profile import fetch_profile
+   >>> profile = fetch_profile("naver", "063170")
+   >>> profile.name
+   서울옥션
+   >>> profile.current_price
+   4300
+   >>> profile.eps
+   -494
+   >>> profile.bps
+   4290
 
 Some Technical Details
 ----------------------

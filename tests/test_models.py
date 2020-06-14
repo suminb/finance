@@ -14,7 +14,6 @@ from finance.models import (
     RecordType,
     Transaction,
     TransactionState,
-    db,
     balance_adjustment,
     deposit,
     get_asset_by_fund_code,
@@ -89,7 +88,8 @@ def test_balance(account_checking, asset_krw, asset_usd):
     }
 
 
-def test_portfolio(account_hf, asset_hf1, account_checking, asset_krw):
+# FIXME: I don't understand why `autouse` does not work for `session` fixture
+def test_portfolio(session, account_hf, asset_hf1, account_checking, asset_krw):
     portfolio = Portfolio()
     portfolio.base_asset = asset_krw
     portfolio.add_accounts(account_hf, account_checking)
@@ -149,12 +149,12 @@ def test_portfolio(account_hf, asset_hf1, account_checking, asset_krw):
         close=450195,
     )
 
-    db.session.delete(portfolio)
-    db.session.commit()
+    session.delete(portfolio)
+    session.commit()
 
 
 def test_portfolio_balance(
-    account_checking, account_savings, account_sp500, asset_krw, asset_sp500
+    session, account_checking, account_savings, account_sp500, asset_krw, asset_sp500
 ):
     """Ensures a portfolio, which is essentially a collection of accounts,
     calculates its balance correctly.
@@ -189,8 +189,8 @@ def test_portfolio_balance(
         asset_sp500: 120,
     }
 
-    db.session.delete(portfolio)
-    db.session.commit()
+    session.delete(portfolio)
+    session.commit()
 
 
 def test_transaction():
@@ -235,11 +235,13 @@ def test_record_created_at(account_checking, asset_krw):
     assert record.created_at
 
 
-def test_net_worth_without_asset_value(request, account_sp500, asset_krw, asset_sp500):
+def test_net_worth_without_asset_value(
+    session, request, account_sp500, asset_krw, asset_sp500
+):
     asset_values = AssetValue.query.filter_by(asset=asset_sp500)
     for asset_value in asset_values:
-        db.session.delete(asset_value)
-    db.session.commit()
+        session.delete(asset_value)
+    session.commit()
 
     record = deposit(account_sp500, asset_sp500, 1000, parse_date("2016-05-27"))
 
@@ -247,8 +249,8 @@ def test_net_worth_without_asset_value(request, account_sp500, asset_krw, asset_
         account_sp500.net_worth(parse_date("2016-05-28"), base_asset=asset_krw)
 
     def teardown():
-        db.session.delete(record)
-        db.session.commit()
+        session.delete(record)
+        session.commit()
 
     request.addfinalizer(teardown)
 
