@@ -83,14 +83,14 @@ class ClassPropertyDescriptor(object):
         self.fget = fget
         self.fset = fset
 
-    def __get__(self, obj, klass=None):
-        if klass is None:
-            klass = type(obj)
-        return self.fget.__get__(obj, klass)()
+    def __get__(self, obj, class_=None):
+        if class_ is None:
+            class_ = type(obj)
+        return self.fget.__get__(obj, class_)()
 
     def __set__(self, obj, value):
         if not self.fset:
-            raise AttributeError("can't set attribute")
+            raise AttributeError("Cannot set attribute")
         type_ = type(obj)
         return self.fset.__get__(obj, type_)(value)
 
