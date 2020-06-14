@@ -50,3 +50,7 @@ class NaverSearch:
                 page += 1
             else:
                 break
+
+
+def search_naver_listings(query: str):
+    return NaverSearch().search(query)
