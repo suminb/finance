@@ -17,7 +17,6 @@ from finance.models import (
     AssetValue,
     Base,
     DartReport,
-    db,
     engine,
     get_asset_by_fund_code,
     Granularity,
@@ -215,13 +214,13 @@ def import_sp500_records():
                     deposit(account_checking, asset_krw, -quantity_krw, date, t)
                 except IntegrityError:
                     log.warn("Identical record exists")
-                    db.session.rollback()
+                    session.rollback()
 
                 try:
                     deposit(account_sp500, asset_sp500, quantity_sp500, date, t)
                 except IntegrityError:
                     log.warn("Identical record exists")
-                    db.session.rollback()
+                    session.rollback()
 
 
 @cli.command()

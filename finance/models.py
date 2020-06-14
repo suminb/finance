@@ -4,16 +4,26 @@ import operator
 from datetime import datetime, timedelta
 import os
 
-import uuid64
-from flask_login import UserMixin
-from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine, desc
-from sqlalchemy import Column, Enum
+from sqlalchemy import (
+    BigInteger,
+    Column,
+    DateTime,
+    Enum,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.indexable import index_property
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import relationship, sessionmaker
+import uuid64
 
 from finance.exceptions import (
     AccountNotFoundException,
@@ -25,8 +35,7 @@ from finance.utils import date_range
 from typing import Any  # noqa
 
 
-db = SQLAlchemy()
-JsonType = db.String().with_variant(JSON(), "postgresql")
+JsonType = String().with_variant(JSON(), "postgresql")
 
 Base = declarative_base()
 
@@ -115,7 +124,7 @@ class CRUDMixin(object):
     __table_args__ = {"extend_existing": True}  # type: Any
 
     id = Column(
-        db.BigInteger, primary_key=True, autoincrement=False, default=uuid64.issue()
+        BigInteger, primary_key=True, autoincrement=False, default=uuid64.issue()
     )
 
     @classproperty
@@ -179,18 +188,18 @@ class CRUDMixin(object):
             yield column.name, str(getattr(self, column.name))
 
 
-class User(CRUDMixin, UserMixin, Base):  # type: ignore
+class User(CRUDMixin, Base):  # type: ignore
 
     __tablename__ = "user"
 
-    given_name = Column(db.String)
-    family_name = Column(db.String)
-    email = Column(db.String, unique=True)
+    given_name = Column(String)
+    family_name = Column(String)
+    email = Column(String, unique=True)
 
     #: Arbitrary data
     data = Column(JsonType)
 
-    accounts = db.relationship("Account", backref="user", lazy="dynamic")
+    accounts = relationship("Account", backref="user", lazy="dynamic")
 
     def __repr__(self):
         return "User <{}>".format(self.name)
@@ -238,14 +247,14 @@ class AssetValue(CRUDMixin, Base):  # type: ignore
 
     __tablename__ = "asset_value"
     __table_args__ = (
-        db.UniqueConstraint("asset_id", "evaluated_at", "granularity"),
+        UniqueConstraint("asset_id", "evaluated_at", "granularity"),
         {},
     )  # type: Any
 
-    asset_id = Column(db.BigInteger, db.ForeignKey("asset.id"))
-    base_asset_id = Column(db.BigInteger, db.ForeignKey("asset.id"))
-    base_asset = db.relationship("Asset", uselist=False, foreign_keys=[base_asset_id])
-    evaluated_at = Column(db.DateTime(timezone=False))
+    asset_id = Column(BigInteger, ForeignKey("asset.id"))
+    base_asset_id = Column(BigInteger, ForeignKey("asset.id"))
+    base_asset = relationship("Asset", uselist=False, foreign_keys=[base_asset_id])
+    evaluated_at = Column(DateTime(timezone=False))
     source = Column(Enum("yahoo", "google", "kofia", "test", name="asset_value_source"))
     granularity = Column(
         Enum(
@@ -261,11 +270,11 @@ class AssetValue(CRUDMixin, Base):  # type: ignore
         )
     )
     # NOTE: Should we also store `fetched_at`?
-    open = Column(db.Numeric(precision=20, scale=4))
-    high = Column(db.Numeric(precision=20, scale=4))
-    low = Column(db.Numeric(precision=20, scale=4))
-    close = Column(db.Numeric(precision=20, scale=4))
-    volume = Column(db.Integer)
+    open = Column(Numeric(precision=20, scale=4))
+    high = Column(Numeric(precision=20, scale=4))
+    low = Column(Numeric(precision=20, scale=4))
+    close = Column(Numeric(precision=20, scale=4))
+    volume = Column(Integer)
 
     def __repr__(self):
         return (
@@ -312,29 +321,29 @@ class Asset(CRUDMixin, Base):  # type: ignore
     }
 
     type = Column(Enum(*asset_types, name="asset_type"))
-    name = Column(db.String)
+    name = Column(String)
     # FIXME: Rename this as `symbol` or rename `get_by_symbol` -> `get_by_code`
-    code = Column(db.String, unique=True)
-    isin = Column(db.String)
-    description = Column(db.Text)
+    code = Column(String, unique=True)
+    isin = Column(String)
+    description = Column(Text)
 
     #: Arbitrary data
     data = Column(JsonType)
 
-    asset_values = db.relationship(
+    asset_values = relationship(
         "AssetValue",
         backref="asset",
         foreign_keys=[AssetValue.asset_id],
         lazy="dynamic",
         cascade="all,delete-orphan",
     )
-    base_asset_values = db.relationship(
+    base_asset_values = relationship(
         "AssetValue",
         foreign_keys=[AssetValue.base_asset_id],
         lazy="dynamic",
         cascade="all,delete-orphan",
     )
-    records = db.relationship(
+    records = relationship(
         "Record", backref="asset", lazy="dynamic", cascade="all,delete-orphan"
     )
 
@@ -486,23 +495,23 @@ class Account(CRUDMixin, Base):  # type: ignore
     in different foreign currencies."""
 
     __tablename__ = "account"
-    __table_args__ = (db.UniqueConstraint("institution", "number"), {})  # type: Any
+    __table_args__ = (UniqueConstraint("institution", "number"), {})  # type: Any
 
-    user_id = Column(db.BigInteger, db.ForeignKey("user.id"))
-    portfolio_id = Column(db.BigInteger, db.ForeignKey("portfolio.id"))
+    user_id = Column(BigInteger, ForeignKey("user.id"))
+    portfolio_id = Column(BigInteger, ForeignKey("portfolio.id"))
     type = Column(Enum(*account_types, name="account_type"))
-    name = Column(db.String)
-    institution = Column(db.String)  # Could be a routing number (US)
-    number = Column(db.String)  # Account number
-    description = Column(db.Text)
+    name = Column(String)
+    institution = Column(String)  # Could be a routing number (US)
+    number = Column(String)  # Account number
+    description = Column(Text)
 
     #: Arbitrary data
     data = Column(JsonType)
 
     # NOTE: Transaction-Account relationship is many-to-many
-    # transactions = db.relationship('Transaction', backref='account',
+    # transactions = relationship('Transaction', backref='account',
     #                                lazy='dynamic')
-    records = db.relationship("Record", backref="account", lazy="dynamic")
+    records = relationship("Record", backref="account", lazy="dynamic")
 
     def __repr__(self):
         return "Account <{} ({})>".format(self.name, self.type)
@@ -621,12 +630,12 @@ class Portfolio(CRUDMixin, Base):  # type: ignore
     """A collection of accounts (= a collection of assets)."""
 
     __tablename__ = "portfolio"
-    __table_args__ = (db.ForeignKeyConstraint(["base_asset_id"], ["asset.id"]),)
-    name = Column(db.String)
-    description = Column(db.String)
-    accounts = db.relationship("Account", backref="portfolio", lazy="dynamic")
-    base_asset_id = Column(db.BigInteger)
-    base_asset = db.relationship("Asset", uselist=False, foreign_keys=[base_asset_id])
+    __table_args__ = (ForeignKeyConstraint(["base_asset_id"], ["asset.id"]),)
+    name = Column(String)
+    description = Column(String)
+    accounts = relationship("Account", backref="portfolio", lazy="dynamic")
+    base_asset_id = Column(BigInteger)
+    base_asset = relationship("Asset", uselist=False, foreign_keys=[base_asset_id])
 
     def add_accounts(self, *accounts, commit=True):
         self.accounts.extend(accounts)
@@ -697,11 +706,11 @@ class Transaction(CRUDMixin, Base):  # type: ignore
 
     __tablename__ = "transaction"
 
-    initiated_at = Column(db.DateTime(timezone=False))
-    closed_at = Column(db.DateTime(timezone=False))
+    initiated_at = Column(DateTime(timezone=False))
+    closed_at = Column(DateTime(timezone=False))
     state = Column(Enum(*transaction_states, name="transaction_state"))
     #: Individual record
-    records = db.relationship("Record", backref="transaction", lazy="dynamic")
+    records = relationship("Record", backref="transaction", lazy="dynamic")
 
     def __init__(self, initiated_at=None, *args, **kwargs):
         if initiated_at:
@@ -752,19 +761,19 @@ class Record(CRUDMixin, Base):  # type: ignore
 
     # NOTE: Is this okay to do this?
     __table_args__ = (
-        db.UniqueConstraint("account_id", "asset_id", "created_at", "quantity"),
+        UniqueConstraint("account_id", "asset_id", "created_at", "quantity"),
         {},
     )  # type: Any
 
-    account_id = Column(db.BigInteger, db.ForeignKey("account.id"))
-    asset_id = Column(db.BigInteger, db.ForeignKey("asset.id"))
-    # asset = db.relationship(Asset, uselist=False)
-    transaction_id = Column(db.BigInteger, db.ForeignKey("transaction.id"))
+    account_id = Column(BigInteger, ForeignKey("account.id"))
+    asset_id = Column(BigInteger, ForeignKey("asset.id"))
+    # asset = relationship(Asset, uselist=False)
+    transaction_id = Column(BigInteger, ForeignKey("transaction.id"))
     type = Column(Enum(*record_types, name="record_type"))
     # NOTE: We'll always use the UTC time
-    created_at = Column(db.DateTime(timezone=False))
-    category = Column(db.String)
-    quantity = Column(db.Numeric(precision=20, scale=4))
+    created_at = Column(DateTime(timezone=False))
+    category = Column(String)
+    quantity = Column(Numeric(precision=20, scale=4))
 
     def __init__(self, *args, **kwargs):
         # Record.type could be 'balance_adjustment'
@@ -781,9 +790,9 @@ class DartReport(CRUDMixin, Base):  # type: ignore
 
     __tablename__ = "dart_report"
 
-    registered_at = Column(db.DateTime(timezone=False))
-    title = Column(db.String)
-    entity_id = Column(db.Integer)
-    entity = Column(db.String)
-    reporter = Column(db.String)
-    content = Column(db.Text)
+    registered_at = Column(DateTime(timezone=False))
+    title = Column(String)
+    entity_id = Column(Integer)
+    entity = Column(String)
+    reporter = Column(String)
+    content = Column(Text)

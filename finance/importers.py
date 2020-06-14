@@ -5,7 +5,7 @@ import io
 from sqlalchemy.exc import IntegrityError
 
 from finance import log
-from finance.models import Asset, AssetValue, Granularity, Transaction, db, deposit
+from finance.models import Asset, AssetValue, Granularity, Transaction, deposit, session
 
 
 # NOTE: A verb 'import' means local structured data -> database
@@ -29,7 +29,7 @@ def import_stock_values(fin: io.TextIOWrapper, code: str, base_asset=None):
             )
         except IntegrityError:
             log.warn("AssetValue for {0} on {1} already exist", code, date)
-            db.session.rollback()
+            session.rollback()
 
 
 def make_double_record_transaction(

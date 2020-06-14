@@ -277,17 +277,6 @@ def request_import_stock_values(
 
 
 def insert_stock_record(data: dict, stock_account: object, bank_account: object):
-    """
-    account_id = db.Column(db.BigInteger, db.ForeignKey('account.id'))
-    asset_id = db.Column(db.BigInteger, db.ForeignKey('asset.id'))
-    # asset = db.relationship(Asset, uselist=False)
-    transaction_id = db.Column(db.BigInteger, db.ForeignKey('transaction.id'))
-    type = db.Column(db.Enum(*record_types, name='record_type'))
-    # NOTE: We'll always use the UTC time
-    created_at = db.Column(db.DateTime(timezone=False))
-    category = db.Column(db.String)
-    quantity = db.Column(db.Numeric(precision=20, scale=4))
-    """
     if data["category2"] in ["매도", "매수"]:
         return insert_stock_trading_record(data, stock_account)
     elif data["category2"] in ["제휴입금", "매매대금출금"]:
