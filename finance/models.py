@@ -31,7 +31,7 @@ JsonType = db.String().with_variant(JSON(), "postgresql")
 Base = declarative_base()
 
 is_testing = bool(os.environ.get("TESTING", ""))
-db_url = os.environ.get("DB_URL" if is_testing else "TEST_DB_URL")
+db_url = os.environ["DB_URL" if is_testing else "TEST_DB_URL"]
 engine = create_engine(db_url, echo=False)
 Session = sessionmaker(bind=engine)
 
