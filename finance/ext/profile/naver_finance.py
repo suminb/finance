@@ -25,7 +25,7 @@ class NaverProfile(BaseProfile):
         """This could easily break along the way. We need a more robust way
         to parse the raw HTML.
         """
-        self.soup = BeautifulSoup(raw)
+        self.soup = BeautifulSoup(raw, features="lxml")
 
         self.name = self.soup.select("div.wrap_company h2 a")[0].text
 
