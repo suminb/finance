@@ -28,11 +28,19 @@ class PaginatedResult:
 
         self.max_page = max(int(p.text) for p in self.soup.select("div.paging a"))
 
-        for element in self.soup.select("td.tit a"):
-            url = base_url + element.attrs["href"]
+        for table_row in self.soup.select("table.tbl_search tbody tr"):
+            table_cols = table_row.select("td")
+            anchor = table_row.find("a")
+            price_col = table_cols[1]
+            volume_col = table_cols[6]
+
+            url = base_url + anchor.attrs["href"]
             symbol = url[-6:]
-            name = element.text
-            yield Listing(symbol, name, url)
+            name = anchor.text
+            price = int(price_col.text.replace(",", ""))
+            volume = int(volume_col.text.replace(",", ""))
+
+            yield Listing(symbol, name, url, price, volume)
 
 
 class NaverSearch:
