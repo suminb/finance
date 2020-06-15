@@ -64,7 +64,7 @@ resource "aws_lambda_function" "request_import_stock_values" {
     variables = {
       SQS_REGION = "us-west-2"
       REQUEST_IMPORT_STOCK_VALUES_QUEUE_URL = "${aws_sqs_queue.request_import_stock_values.id}"
-      DB_URL = "${var.db_url}"
+      SBF_DB_URL = "${var.db_url}"
     }
   }
 }
@@ -85,7 +85,7 @@ resource "aws_lambda_function" "fetch_asset_values" {
     variables = {
       SQS_REGION = "us-west-2"
       REQUEST_IMPORT_STOCK_VALUES_QUEUE_URL = "${aws_sqs_queue.request_import_stock_values.id}"
-      DB_URL = "${var.db_url}"
+      SBF_DB_URL = "${var.db_url}"
     }
   }
 }

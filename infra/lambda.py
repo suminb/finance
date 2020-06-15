@@ -35,7 +35,7 @@ def request_import_stock_values_handler(event, context):
 
 
 def fetch_asset_values_handler(event, context):
-    config = {"SQLALCHEMY_DATABASE_URI": os.environ["DB_URL"]}
+    config = {"SQLALCHEMY_DATABASE_URI": os.environ["SBF_DB_URL"]}
     sqs_region = os.environ["SQS_REGION"]
     queue_url = os.environ["REQUEST_IMPORT_STOCK_VALUES_QUEUE_URL"]
 
