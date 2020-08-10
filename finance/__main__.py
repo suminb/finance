@@ -32,7 +32,6 @@ from finance.utils import (
     insert_stock_record,
     parse_date,
     parse_stock_records,
-    request_import_stock_values as request_import_stock_values_,
     serialize_datetime,
 )
 
@@ -276,16 +275,6 @@ def import_stock_records(filename):
     with open(filename) as fin:
         for parsed in parse_stock_records(fin):
             insert_stock_record(parsed, account_stock, account_bank)
-
-
-@cli.command()
-@click.argument("code")
-def request_import_stock_values(code):
-    """Enqueue a request to import stock values."""
-    start_time = date_to_datetime(parse_date(-3))
-    end_time = date_to_datetime(parse_date(0))
-
-    request_import_stock_values_(code, start_time, end_time)
 
 
 if __name__ == "__main__":

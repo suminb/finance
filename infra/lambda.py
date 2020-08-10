@@ -12,8 +12,6 @@ from finance.providers import Yahoo
 from finance.utils import (
     date_to_datetime,
     parse_date,
-    poll_import_stock_values_requests,
-    request_import_stock_values,
 )
 
 
@@ -21,32 +19,6 @@ log = Logger("finance")
 
 
 # TODO: Write logs to CloudWatch
-
-
-def request_import_stock_values_handler(event, context):
-    codes = ["AMD", "AMZN", "BRK-A", "BRK-B", "ESRT", "NVDA", "SBUX", "SPY"]
-    start_time = date_to_datetime(parse_date(-3))
-    end_time = date_to_datetime(parse_date(0))
-
-    for code in codes:
-        request_import_stock_values(code, start_time, end_time)
-
-    log.info("Requested to import stock values: {0}", ", ".join(codes))
-
-
-def fetch_asset_values_handler(event, context):
-    config = {"SQLALCHEMY_DATABASE_URI": os.environ["SBF_DB_URL"]}
-    sqs_region = os.environ["SQS_REGION"]
-    queue_url = os.environ["REQUEST_IMPORT_STOCK_VALUES_QUEUE_URL"]
-
-    app = create_app(__name__, config=config)
-    with app.app_context():
-        requests = poll_import_stock_values_requests(sqs_region, queue_url)
-        for request in requests:
-            code = request["code"]
-            start_time = datetime.fromtimestamp(request["start_time"])
-            end_time = datetime.fromtimestamp(request["end_time"])
-            fetch_asset_values(code, start_time, end_time)
 
 
 def fetch_asset_values(code, start_time, end_time):
@@ -100,4 +72,3 @@ def insert_asset_value(
 
 if __name__ == "__main__":
     request_import_stock_values_handler({}, None)
-    # fetch_asset_values_handler({}, None)

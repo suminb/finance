@@ -231,36 +231,6 @@ def parse_stock_records(stream):
         }
 
 
-def poll_import_stock_values_requests(sqs_region, queue_url):
-    client = boto3.client("sqs", region_name=sqs_region)
-    resp = client.receive_message(**{"QueueUrl": queue_url, "VisibilityTimeout": 180})
-    messages = resp["Messages"] if "Messages" in resp else []
-
-    for message in messages:
-        yield json.loads(message["Body"])
-        client.delete_message(
-            **{"QueueUrl": queue_url, "ReceiptHandle": message["ReceiptHandle"]}
-        )
-
-
-def request_import_stock_values(
-    code,
-    start_time,
-    end_time,
-    sqs_region=os.environ.get("SQS_REGION", ""),
-    queue_url=os.environ.get("REQUEST_IMPORT_STOCK_VALUES_QUEUE_URL", ""),
-):
-    message = make_request_import_stock_values_message(code, start_time, end_time)
-
-    client = boto3.client("sqs", region_name=sqs_region)
-    resp = client.send_message(
-        **{"QueueUrl": queue_url, "MessageBody": json.dumps(message),}
-    )
-
-    if resp["ResponseMetadata"]["HTTPStatusCode"] != 200:
-        log.error("Something went wrong: {0}", resp)
-
-
 def insert_stock_record(data: dict, stock_account: object, bank_account: object):
     if data["category2"] in ["매도", "매수"]:
         return insert_stock_trading_record(data, stock_account)

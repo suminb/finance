@@ -9,5 +9,4 @@ export AWS_DEFAULT_REGION="us-west-2"
 export GSPREAD_KEY_FILE_PATH="keyfile.json"
 export GSPREAD_DOC_KEY=""
 
-export SQS_REGION="us-west-2"
 export REQUEST_IMPORT_STOCK_VALUES_QUEUE_URL=""
