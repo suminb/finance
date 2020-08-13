@@ -18,7 +18,9 @@ dart_access_key = os.environ.get("SBF_DART_KEY")
 def load_corporation_list(file_path="data/dart_corporation_codes.json"):
     with open(file_path) as fin:
         for r in json.loads(fin.read())["result"]["list"]:
-            yield CorporationInfo(r["corp_code"], r["stock_code"], r["corp_name"], r["modify_date"])
+            yield CorporationInfo(
+                r["corp_code"], r["stock_code"], r["corp_name"], r["modify_date"]
+            )
 
 
 def search_corporations(query):
@@ -137,7 +139,9 @@ class FinancialStatementItem:
 class FinancialStatementRequest:
     url = "https://opendart.fss.or.kr/api/fnlttSinglAcntAll.json"
 
-    def fetch(self, corporation_code: str, business_year: int, report_code: str, fs: str):
+    def fetch(
+        self, corporation_code: str, business_year: int, report_code: str, fs: str
+    ):
         """
         :param report_code: 1분기보고서: 11013, 반기보고서 : 11012, 3분기보고서: 11014, 사업보고서: 11011
         :param fs: CFS:연결재무제표, OFS:재무제표
