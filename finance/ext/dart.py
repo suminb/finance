@@ -3,7 +3,9 @@
 # I want to make this module clean and neat but I honestly don't know where to
 # start...
 
+import itertools
 import json
+from operator import attrgetter
 import os
 
 # TODO: We need a separate layer for making RESTful requests...
@@ -136,32 +138,21 @@ class FinancialStatementItem:
         return f"{self.corporation_code}, {self.business_year}, {self.fs_name}, {self.account_name}: {self.amount}"
 
 
-class FinancialStatementRequest:
-    url = "https://opendart.fss.or.kr/api/fnlttSinglAcntAll.json"
-
-    def fetch(
-        self, corporation_code: str, business_year: int, report_code: str, fs: str
+class FinancialStatementParser:
+    def __init__(
+        self,
+        json_object,
+        corporation_code,
+        business_year,
+        categorization_key: str = "fs_type",
     ):
         """
-        :param report_code: 1분기보고서: 11013, 반기보고서 : 11012, 3분기보고서: 11014, 사업보고서: 11011
-        :param fs: CFS:연결재무제표, OFS:재무제표
+        :param categorization_key: fs_type | fs_name
         """
-        resp = requests.get(
-            self.url,
-            params={
-                "crtfc_key": dart_access_key,
-                "corp_code": corporation_code,
-                "bsns_year": business_year,
-                "reprt_code": report_code,
-                "fs_div": fs,
-            },
-        )
-        data = json.loads(resp.text)
-
         # FIXME: Replace with a proper error handling logic
-        assert data["status"] == "000"
+        assert json_object["status"] == "000"
 
-        return [
+        self.items = [
             FinancialStatementItem(
                 corporation_code,
                 business_year,
@@ -174,5 +165,43 @@ class FinancialStatementRequest:
                 item_dict["thstrm_amount"],
                 int(item_dict["ord"]),
             )
-            for item_dict in data["list"]
+            for item_dict in json_object["list"]
         ]
+
+        self.statements = {
+            k: list(v)
+            for k, v in itertools.groupby(self.items, attrgetter(categorization_key))
+        }
+
+
+class FinancialStatementRequest:
+    url = "https://opendart.fss.or.kr/api/fnlttSinglAcntAll.json"
+
+    def fetch(
+        self,
+        corporation_code: str,
+        business_year: int,
+        report_code: str,
+        fs: str,
+        categorization_key: str = "fs_type",
+    ):
+        """
+        :param report_code: 1분기보고서: 11013, 반기보고서 : 11012, 3분기보고서: 11014, 사업보고서: 11011
+        :param fs: CFS:연결재무제표, OFS:재무제표
+        :param categorization_key: fs_type | fs_name
+        """
+        resp = requests.get(
+            self.url,
+            params={
+                "crtfc_key": dart_access_key,
+                "corp_code": corporation_code,
+                "bsns_year": business_year,
+                "reprt_code": report_code,
+                "fs_div": fs,
+            },
+        )
+        parser = FinancialStatementParser(
+            json.loads(resp.text), corporation_code, business_year, categorization_key
+        )
+
+        return parser.statements

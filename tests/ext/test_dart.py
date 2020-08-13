@@ -1,5 +1,10 @@
+import json
+
+import pytest
+
 from finance.ext.dart import (
     FinancialStatementItem,
+    FinancialStatementParser,
     FinancialStatementRequest,
     OfficialFiling,
     OfficialFilingRequest,
@@ -17,7 +22,8 @@ def test_search_corporations():
     assert "096530" == corp.stock_code
 
 
-def test_financial_statement():
+@pytest.mark.skip
+def test_financial_statement_request():
     req = FinancialStatementRequest()
     results = req.fetch("00788773", 2020, "11012", "OFS")
 
@@ -31,7 +37,43 @@ def test_financial_statement():
     )
 
 
-def test_official_filing():
+def test_financial_statement_parser():
+    with open("tests/samples/dart_financial_statement.json") as fin:
+        json_object = json.loads(fin.read())
+    parser = FinancialStatementParser(json_object, "00266961", 2020)
+
+    assert dict == type(parser.statements)
+    assert {"BS", "CIS", "CF", "SCE"} == set(parser.statements.keys())
+
+    bs_items = parser.statements["BS"]
+    cis_items = parser.statements["CIS"]
+    cf_items = parser.statements["CF"]
+    sce_items = parser.statements["SCE"]
+
+    for item in bs_items:
+        assert FinancialStatementItem == type(item)
+        assert "00266961" == item.corporation_code
+        assert 2020 == item.business_year
+        assert "재무상태표" == item.fs_name
+    for item in cis_items:
+        assert FinancialStatementItem == type(item)
+        assert "00266961" == item.corporation_code
+        assert 2020 == item.business_year
+        assert "포괄손익계산서" == item.fs_name
+    for item in cf_items:
+        assert FinancialStatementItem == type(item)
+        assert "00266961" == item.corporation_code
+        assert 2020 == item.business_year
+        assert "현금흐름표" == item.fs_name
+    for item in sce_items:
+        assert FinancialStatementItem == type(item)
+        assert "00266961" == item.corporation_code
+        assert 2020 == item.business_year
+        assert "자본변동표" == item.fs_name
+
+
+@pytest.mark.skip
+def test_official_filing_request():
     req = OfficialFilingRequest()
     filings = req.fetch("00266961", "20200101", "20200814")
 
