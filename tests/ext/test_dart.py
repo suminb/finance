@@ -39,7 +39,7 @@ def test_financial_statement_request():
 
 
 def test_financial_statement_parser():
-    with open("tests/samples/dart_financial_statement.json") as fin:
+    with open("tests/samples/dart_financial_statements.json") as fin:
         json_object = json.loads(fin.read())
     parser = FinancialStatementParser(json_object, "00266961", 2020)
 
