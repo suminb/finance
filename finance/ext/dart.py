@@ -15,8 +15,26 @@ dart_access_key = os.environ.get("SBF_DART_KEY")
 # TODO: Company vs. corporation?
 
 
-def search_company(query):
-    pass
+def load_corporation_list(file_path="data/dart_corporation_codes.json"):
+    with open(file_path) as fin:
+        for r in json.loads(fin.read())["result"]["list"]:
+            yield CorporationInfo(r["corp_code"], r["stock_code"], r["corp_name"], r["modify_date"])
+
+
+def search_corporations(query):
+    """FIXME: This is a very inefficient linear search."""
+    return [c for c in load_corporation_list() if query in c.name]
+
+
+class CorporationInfo:
+    def __init__(self, dart_code, stock_code, name, updated_at):
+        self.dart_code = dart_code
+        self.stock_code = stock_code
+        self.name = name
+        self.updated_at = updated_at
+
+    def __repr__(self):
+        return f"{self.name} ({self.stock_code})"
 
 
 class OfficialFiling:
