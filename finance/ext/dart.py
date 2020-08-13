@@ -67,12 +67,12 @@ class OfficialFiling:
 class OfficialFilingRequest:
     url = "https://opendart.fss.or.kr/api/list.json"
 
-    def fetch(self, company_code: str, start_datetime: str, end_datetime: str):
+    def fetch(self, corporation_code: str, start_datetime: str, end_datetime: str):
         resp = requests.get(
             self.url,
             params={
                 "crtfc_key": dart_access_key,
-                "corp_code": company_code,
+                "corp_code": corporation_code,
                 "bgn_de": start_datetime,
                 "end_de": end_datetime,
                 "page_count": 100,
@@ -105,7 +105,7 @@ class OfficialFilingRequest:
 class FinancialStatementItem:
     def __init__(
         self,
-        company_code: str,
+        corporation_code: str,
         business_year: int,
         fs_type: str,
         fs_name: str,
@@ -119,7 +119,7 @@ class FinancialStatementItem:
         """
         :param fs_type: 재무제표구분 (BS : 재무상태표, IS: 손익계산서, CIS: 포괄손익계산서, CF: 현금흐름표, SCE: 자본변동표)
         """
-        self.company_code = company_code
+        self.corporation_code = corporation_code
         self.business_year = business_year
         self.fs_type = fs_type
         self.fs_name = fs_name
@@ -131,13 +131,13 @@ class FinancialStatementItem:
         self.order = order
 
     def __repr__(self):
-        return f"{self.company_code}, {self.business_year}, {self.fs_name}, {self.account_name}: {self.amount}"
+        return f"{self.corporation_code}, {self.business_year}, {self.fs_name}, {self.account_name}: {self.amount}"
 
 
 class FinancialStatementRequest:
     url = "https://opendart.fss.or.kr/api/fnlttSinglAcntAll.json"
 
-    def fetch(self, company_code: str, business_year: int, report_code: str, fs: str):
+    def fetch(self, corporation_code: str, business_year: int, report_code: str, fs: str):
         """
         :param report_code: 1분기보고서: 11013, 반기보고서 : 11012, 3분기보고서: 11014, 사업보고서: 11011
         :param fs: CFS:연결재무제표, OFS:재무제표
@@ -146,7 +146,7 @@ class FinancialStatementRequest:
             self.url,
             params={
                 "crtfc_key": dart_access_key,
-                "corp_code": company_code,
+                "corp_code": corporation_code,
                 "bsns_year": business_year,
                 "reprt_code": report_code,
                 "fs_div": fs,
@@ -159,7 +159,7 @@ class FinancialStatementRequest:
 
         return [
             FinancialStatementItem(
-                company_code,
+                corporation_code,
                 business_year,
                 item_dict["sj_div"],
                 item_dict["sj_nm"],
