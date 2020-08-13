@@ -36,7 +36,7 @@ class CorporationInfo:
         self.updated_at = updated_at
 
     def __repr__(self):
-        return f"{self.name} ({self.stock_code})"
+        return f"{self.name} ({self.dart_code}, {self.stock_code})"
 
 
 class OfficialFiling:
