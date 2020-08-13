@@ -29,7 +29,6 @@ from finance.providers import Dart, Kofia, Yahoo
 from finance.utils import (
     date_to_datetime,
     extract_numbers,
-    get_dart_code,
     insert_stock_record,
     parse_date,
     parse_stock_records,
@@ -124,42 +123,6 @@ def insert_test_data():
     portfolio = Portfolio()
     portfolio.base_asset = asset_krw
     portfolio.add_accounts(account_checking, account_stock)
-
-
-@cli.command()
-@click.argument("entity_name")
-def fetch_dart(entity_name):
-    """Fetch all reports from DART (전자공시)."""
-
-    entity_code = get_dart_code(entity_name)
-    provider = Dart()
-
-    log.info("Fetching DART reports for {}", entity_name)
-    reports = provider.fetch_reports(entity_name, entity_code)
-
-    # Apparently generators are not JSON serializable
-    print(json.dumps([dict(r) for r in reports], default=serialize_datetime))
-
-
-# TODO: Load data from stdin
-@cli.command()
-@click.argument("fin", type=click.File("r"))
-def import_dart(fin):
-    """Import DART (전자공시) data."""
-
-    try:
-        data = json.loads(fin.read())
-    except json.decoder.JSONDecodeError as e:
-        log.error("Valid JSON data expected: {}", e)
-
-    for row in data:
-        try:
-            report = DartReport.create(**row)
-        except IntegrityError:
-            log.info("DartReport-{} already exists", row["id"])
-            session.rollback()
-        else:
-            log.info("Fetched report: {}", report)
 
 
 @cli.command()

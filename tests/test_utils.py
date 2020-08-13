@@ -10,8 +10,6 @@ from finance.utils import (
     date_range,
     date_to_datetime,
     extract_numbers,
-    get_dart_code,
-    get_dart_codes,
     insert_stock_record,
     parse_date,
     parse_datetime,
@@ -97,21 +95,6 @@ def test_extract_numbers():
 
     with pytest.raises(TypeError):
         extract_numbers(b"\x00")
-
-
-def test_get_dart_code():
-    codes = get_dart_codes()
-    assert list(codes) == [
-        ["삼성전자", "00126380"],
-        ["우리은행", "00254045"],
-        ["SK", "00181712"],
-        ["넷마블게임즈", "00904672"],
-    ]
-
-    assert get_dart_code("SK") == "00181712"
-
-    with pytest.raises(ValueError):
-        get_dart_code("Non-exist")
 
 
 def test_insert_stock_record(session, account_stock, account_checking):
