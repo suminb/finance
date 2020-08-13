@@ -1,4 +1,10 @@
-from finance.ext.dart import FinancialStatementItem, FinancialStatementRequest, search_corporations
+from finance.ext.dart import (
+    FinancialStatementItem,
+    FinancialStatementRequest,
+    OfficialFiling,
+    OfficialFilingRequest,
+    search_corporations,
+)
 
 
 def test_search_corporations():
@@ -12,11 +18,24 @@ def test_search_corporations():
 
 
 def test_financial_statement():
-    fs = FinancialStatementRequest()
-    results = fs.fetch("00788773", 2020, "11012", "OFS")
+    req = FinancialStatementRequest()
+    results = req.fetch("00788773", 2020, "11012", "OFS")
 
     for item in results:
         assert FinancialStatementItem == type(item)
         assert "00788773" == item.corporation_code
+        assert 2020 == item.business_year
 
-    assert {"재무상태표", "포괄손익계산서", "현금흐름표", "자본변동표"} == set(item.account_name for item in results)
+    assert {"재무상태표", "포괄손익계산서", "현금흐름표", "자본변동표"} == set(
+        item.fs_name for item in results
+    )
+
+
+def test_official_filing():
+    req = OfficialFilingRequest()
+    filings = req.fetch("00266961", "20200101", "20200814")
+
+    for filing in filings:
+        assert OfficialFiling == type(filing)
+        assert "00266961" == filing.corporation_code
+        assert "NAVER" == filing.corporation_name
