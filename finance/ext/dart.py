@@ -68,6 +68,28 @@ class OfficialFiling:
         return f"{self.corporation_name}({self.corporation_class}), {self.title}"
 
 
+class OfficialFilingParser:
+    def __init__(self, json_object):
+        # FIXME: Replace with a proper error handling logic
+        assert json_object["status"] == "000"
+
+        # TODO: Handle pagination
+        self.filings = [
+            OfficialFiling(
+                d["corp_cls"],
+                d["corp_name"],
+                d["corp_code"],
+                d["stock_code"],
+                d["report_nm"],
+                d["rcept_no"],
+                d["rcept_dt"],
+                d["flr_nm"],
+                d["rm"],
+            )
+            for d in json_object["list"]
+        ]
+
+
 class OfficialFilingRequest:
     url = "https://opendart.fss.or.kr/api/list.json"
 
@@ -82,28 +104,9 @@ class OfficialFilingRequest:
                 "page_count": 100,
             },
         )
-        data = json.loads(resp.text)
+        parser = OfficialFilingParser(json.loads(resp.text))
 
-        # FIXME: Replace with a proper error handling logic
-        assert data["status"] == "000"
-
-        # TODO: Handle pagination
-        return [
-            OfficialFiling(
-                d["corp_cls"],
-                d["corp_name"],
-                d["corp_code"],
-                d["stock_code"],
-                d["report_nm"],
-                d["rcept_no"],
-                d["rcept_dt"],
-                d["flr_nm"],
-                d["rm"],
-            )
-            for d in data["list"]
-        ]
-
-        # {"status":"000","message":"정상","page_no":1,"page_count":10,"total_count":223,"total_page":23,"list":[{"corp_code":"00120182","corp_name":"NH투자증권","stock_code":"005940","corp_cls":"Y","report_nm":"[첨부추가]일괄신고추가서류(파생결합증권-주가연계증권)","rcept_no":"20200117000559","flr_nm":"NH투자증권","rcept_dt":"20200117","rm":""},{"corp_code":"00120182","corp_name":"NH투자증권","stock_code":"005940","corp_cls":"Y","report_nm":"[첨부추가]일괄신고추가서류(파생결합증권-주가연계증권)","rcept_no":"20200117000486","flr_nm":"NH투자증권","rcept_dt":"20200117","rm":""},{"corp_code":"00120182","corp_name":"NH투자증권","stock_code":"005940","corp_cls":"Y","report_nm":"[첨부추가]일괄신고추가서류(파생결합증권-주가연계증권)","rcept_no":"20200117000375","flr_nm":"NH투자증권","rcept_dt":"20200117","rm":""},{"corp_code":"00120182","corp_name":"NH투자증권","stock_code":"005940","corp_cls":"Y","report_nm":"[첨부추가]일괄신고추가서류(파생결합증권-주가연계증권)","rcept_no":"20200117000341","flr_nm":"NH투자증권","rcept_dt":"20200117","rm":""},{"corp_code":"00120182","corp_name":"NH투자증권","stock_code":"005940","corp_cls":"Y","report_nm":"[첨부추
+        return parser.filings
 
 
 class FinancialStatementItem:

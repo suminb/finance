@@ -7,6 +7,7 @@ from finance.ext.dart import (
     FinancialStatementParser,
     FinancialStatementRequest,
     OfficialFiling,
+    OfficialFilingParser,
     OfficialFilingRequest,
     search_corporations,
 )
@@ -78,6 +79,17 @@ def test_official_filing_request():
     filings = req.fetch("00266961", "20200101", "20200814")
 
     for filing in filings:
+        assert OfficialFiling == type(filing)
+        assert "00266961" == filing.corporation_code
+        assert "NAVER" == filing.corporation_name
+
+
+def test_official_filing_parser():
+    with open("tests/samples/dart_official_filings.json") as fin:
+        json_object = json.loads(fin.read())
+    parser = OfficialFilingParser(json_object)
+
+    for filing in parser.filings:
         assert OfficialFiling == type(filing)
         assert "00266961" == filing.corporation_code
         assert "NAVER" == filing.corporation_name
