@@ -46,27 +46,27 @@ def test_financial_statement_parser():
     assert dict == type(parser.statements)
     assert {"BS", "CIS", "CF", "SCE"} == set(parser.statements.keys())
 
-    bs_items = parser.statements["BS"]
-    cis_items = parser.statements["CIS"]
-    cf_items = parser.statements["CF"]
-    sce_items = parser.statements["SCE"]
+    bs = parser.statements["BS"]
+    cis = parser.statements["CIS"]
+    cf = parser.statements["CF"]
+    sce = parser.statements["SCE"]
 
-    for item in bs_items:
+    for _, item in bs.items():
         assert FinancialStatementItem == type(item)
         assert "00266961" == item.corporation_code
         assert 2020 == item.business_year
         assert "재무상태표" == item.fs_name
-    for item in cis_items:
+    for _, item in cis.items():
         assert FinancialStatementItem == type(item)
         assert "00266961" == item.corporation_code
         assert 2020 == item.business_year
         assert "포괄손익계산서" == item.fs_name
-    for item in cf_items:
+    for _, item in cf.items():
         assert FinancialStatementItem == type(item)
         assert "00266961" == item.corporation_code
         assert 2020 == item.business_year
         assert "현금흐름표" == item.fs_name
-    for item in sce_items:
+    for _, item in sce.items():
         assert FinancialStatementItem == type(item)
         assert "00266961" == item.corporation_code
         assert 2020 == item.business_year
