@@ -6,6 +6,7 @@ from finance.ext.dart import (
     FinancialStatementItem,
     FinancialStatementParser,
     FinancialStatementRequest,
+    get_listed_corporations,
     OfficialFiling,
     OfficialFilingParser,
     OfficialFilingRequest,
@@ -21,6 +22,14 @@ def test_search_corporations():
     assert "씨젠" == corp.name
     assert "00788773" == corp.dart_code
     assert "096530" == corp.stock_code
+
+
+def test_get_listed_corporations():
+    results = get_listed_corporations()
+    assert len(results) > 0
+    for corp in results:
+        assert corp.dart_code is not None
+        assert corp.stock_code is not None
 
 
 @pytest.mark.skip

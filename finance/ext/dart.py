@@ -32,6 +32,11 @@ def search_corporations(query):
     return [c for c in load_corporation_list() if query in c.name]
 
 
+def get_listed_corporations():
+    """Returns a list of listed corporations."""
+    return [c for c in load_corporation_list() if c.stock_code is not None]
+
+
 class CorporationInfo:
     def __init__(self, dart_code, stock_code, name, updated_at):
         self.dart_code = dart_code

@@ -141,6 +141,13 @@ Fetch Financial Statements From DART (전자공시)
    balance_sheet = statements["재무상태표"]
    debt_ratio = balance_sheet["부채총계"].amount / balance_sheet["자본총계"].amount
 
+.. code::
+
+   from finance.ext.dart import get_listed_corporations, search_corporations
+
+   get_listed_corporations()
+   search_corporations("NAVER")
+
 Some Technical Details
 ----------------------
 
