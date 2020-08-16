@@ -123,6 +123,24 @@ Fetch Company Profiles From Naver Finance
    >>> profile.bps
    4290
 
+Fetch Financial Statements From DART (전자공시)
+*********************************************
+
+.. code::
+
+   from finance.ext.dart import FinancialStatementRequest
+
+   fs = FinancialStatementRequest()
+   statements = fs.fetch(
+       "00788773", 2020, "11012", "OFS",
+       categorization_level1_key="fs_name",
+       categorization_level2_key="account_name")
+
+   statements["포괄손익계산서"]["당기순이익"].amount
+
+   balance_sheet = statements["재무상태표"]
+   debt_ratio = balance_sheet["부채총계"].amount / balance_sheet["자본총계"].amount
+
 Some Technical Details
 ----------------------
 
