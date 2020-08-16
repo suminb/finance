@@ -11,6 +11,8 @@ import os
 # TODO: We need a separate layer for making RESTful requests...
 import requests
 
+from finance.utils import int_or_nan
+
 
 dart_access_key = os.environ.get("SBF_DART_KEY")
 
@@ -166,7 +168,7 @@ class FinancialStatementParser:
                 item_dict["account_nm"],
                 item_dict["account_detail"],
                 item_dict["thstrm_nm"],
-                item_dict["thstrm_amount"],
+                int_or_nan(item_dict["thstrm_amount"]),
                 int(item_dict["ord"]),
             )
             for item_dict in json_object["list"]
