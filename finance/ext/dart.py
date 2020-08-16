@@ -147,7 +147,8 @@ class FinancialStatementParser:
         json_object,
         corporation_code,
         business_year,
-        categorization_key: str = "fs_type",
+        categorization_level1_key: str = "fs_type",
+        categorization_level2_key: str = "account_id",
     ):
         """
         :param categorization_key: fs_type | fs_name
@@ -172,8 +173,10 @@ class FinancialStatementParser:
         ]
 
         self.statements = {
-            k: list(v)
-            for k, v in itertools.groupby(self.items, attrgetter(categorization_key))
+            key: {getattr(v, categorization_level2_key): v for v in value}
+            for key, value in itertools.groupby(
+                self.items, attrgetter(categorization_level1_key)
+            )
         }
 
 
@@ -186,7 +189,8 @@ class FinancialStatementRequest:
         business_year: int,
         report_code: str,
         fs: str,
-        categorization_key: str = "fs_type",
+        categorization_level1_key: str = "fs_type",
+        categorization_level2_key: str = "account_id",
     ):
         """
         :param report_code: 1분기보고서: 11013, 반기보고서 : 11012, 3분기보고서: 11014, 사업보고서: 11011
@@ -204,7 +208,11 @@ class FinancialStatementRequest:
             },
         )
         parser = FinancialStatementParser(
-            json.loads(resp.text), corporation_code, business_year, categorization_key
+            json.loads(resp.text),
+            corporation_code,
+            business_year,
+            categorization_level1_key,
+            categorization_level2_key,
         )
 
         return parser.statements
