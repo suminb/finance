@@ -210,6 +210,10 @@ class Record(object):
         for k, v in self:
             if k == "created_at":
                 yield v.strftime(DATE_OUTPUT_FORMAT)
+            elif k == "unit_price":
+                yield float(v)
+            elif isinstance(v, (int, float)):
+                yield v
             else:
                 yield str(v)
 
