@@ -122,14 +122,3 @@ def test_yahoo_provider_with_invalid_symbol():
 
     with pytest.raises(ValueError):
         provider.asset_values(symbol, start_time, end_time, Granularity.day)
-
-
-def test_miraeasset_records():
-    """Test with miraeasset_records.csv. Note that the .csv file is encoded
-    in euc-kr.
-    """
-    filename = os.path.join(BASE_PATH, "samples", "miraeasset_records_euckr.csv")
-    provider = Miraeasset()
-    records = list(provider.read_records(filename))
-    # TODO: We need more comprehensive test cases
-    assert len(records) == 6
