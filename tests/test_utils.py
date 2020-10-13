@@ -37,7 +37,13 @@ def test_date_range():
 
 @pytest.mark.parametrize(
     "start, end, count",
-    [(0, 0, 0), (-1, 0, 1), (-10, 0, 10), (-1, -1, 0), (-10, -5, 5),],
+    [
+        (0, 0, 0),
+        (-1, 0, 1),
+        (-10, 0, 10),
+        (-1, -1, 0),
+        (-10, -5, 5),
+    ],
 )
 def test_date_range_relative(start, end, count):
     r = date_range(start, end)
@@ -56,7 +62,13 @@ def test_date_range_relative(start, end, count):
     assert n == count
 
 
-@pytest.mark.parametrize("start, end", [("2016-01-01", "2015-01-01"), (0, -1),])
+@pytest.mark.parametrize(
+    "start, end",
+    [
+        ("2016-01-01", "2015-01-01"),
+        (0, -1),
+    ],
+)
 def test_date_range_exceptions(start, end):
     with pytest.raises(ValueError):
         list(date_range(start, end))
@@ -157,7 +169,12 @@ def test_parse_int():
 
 
 @pytest.mark.parametrize(
-    "code, result", [("A145210", "145210"), ("051500", "051500"), ("", None),]
+    "code, result",
+    [
+        ("A145210", "145210"),
+        ("051500", "051500"),
+        ("", None),
+    ],
 )
 def test_parse_stock_code(code, result):
     assert parse_stock_code(code) == result

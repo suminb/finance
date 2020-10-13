@@ -268,8 +268,7 @@ def insert_stock_trading_record(data: dict, stock_account: object):
 
 
 def insert_stock_transfer_record(data: dict, bank_account: object):
-    """Inserts a transfer record between a bank account and a stock account.
-    """
+    """Inserts a transfer record between a bank account and a stock account."""
     from finance.models import Asset, deposit
 
     # FIXME: Not a good idea to use a hard coded value

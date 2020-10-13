@@ -190,7 +190,7 @@ class Record(object):
     def __iter__(self):
         """Allows an Record object to become a dictionary as:
 
-            dict(record)
+        dict(record)
         """
         for attr in self.attributes:
             yield attr, getattr(self, attr)

@@ -134,8 +134,7 @@ def import_sp500_asset_values():
 
 @cli.command()
 def import_sp500_records():
-    """Import S&P500 fund sample data. Expects a tab seprated value document.
-    """
+    """Import S&P500 fund sample data. Expects a tab seprated value document."""
     account_checking = Account.get(id=1001)
     account_sp500 = Account.get(id=7001)
     asset_krw = Asset.query.filter_by(name="KRW").first()
