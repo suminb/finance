@@ -1,6 +1,7 @@
 import csv
 from datetime import datetime, time, timedelta
 import json
+from math import nan
 import os
 
 import boto3
@@ -75,6 +76,13 @@ def extract_numbers(value, type=str):
                 yield v
 
     return type("".join(extract(value)))
+
+
+def int_or_nan(v):
+    try:
+        return int(v)
+    except ValueError:
+        return nan
 
 
 def load_stock_codes(fin):
