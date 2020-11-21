@@ -62,9 +62,7 @@ resource "aws_lambda_function" "request_import_stock_values" {
 
   environment {
     variables = {
-      SQS_REGION = "us-west-2"
-      REQUEST_IMPORT_STOCK_VALUES_QUEUE_URL = "${aws_sqs_queue.request_import_stock_values.id}"
-      DB_URL = "${var.db_url}"
+      SBF_DB_URL = "${var.db_url}"
     }
   }
 }
@@ -83,9 +81,7 @@ resource "aws_lambda_function" "fetch_asset_values" {
 
   environment {
     variables = {
-      SQS_REGION = "us-west-2"
-      REQUEST_IMPORT_STOCK_VALUES_QUEUE_URL = "${aws_sqs_queue.request_import_stock_values.id}"
-      DB_URL = "${var.db_url}"
+      SBF_DB_URL = "${var.db_url}"
     }
   }
 }
@@ -130,13 +126,6 @@ resource "aws_cloudwatch_event_rule" "event_rule_every_minute" {
   name                = "event_rule_every_minute"
   description         = "Periodic event"
   schedule_expression = "cron(* * * * ? *)"
-}
-
-resource "aws_sqs_queue" "request_import_stock_values" {
-  name                      = "finance-request-import-stock-values"
-  delay_seconds             = 0
-  max_message_size          = 262144
-  message_retention_seconds = 345600
 }
 
 # NOTE: Could we launch a Lambda to install packages via pip and zip them up?

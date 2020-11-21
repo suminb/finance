@@ -56,9 +56,9 @@ def run_migrations_online():
     """
     # Loads database URL from an environment variable
     if bool(config.get_main_option("pytest.istest")):
-        config.set_main_option("sqlalchemy.url", os.environ["TEST_DB_URL"])
+        config.set_main_option("sqlalchemy.url", os.environ["SBF_TEST_DB_URL"])
     else:
-        config.set_main_option("sqlalchemy.url", os.environ["DB_URL"])
+        config.set_main_option("sqlalchemy.url", os.environ["SBF_DB_URL"])
 
     connectable = engine_from_config(
         config.get_section(config.config_ini_section),

@@ -1,6 +1,7 @@
 import csv
 from datetime import datetime, time, timedelta
 import json
+from math import nan
 import os
 
 import boto3
@@ -77,18 +78,11 @@ def extract_numbers(value, type=str):
     return type("".join(extract(value)))
 
 
-def get_dart_codes():
-    """Returns all DART codes."""
-    with open("data/dart_codes.csv") as fin:
-        for line in fin.readlines():
-            yield [x.strip() for x in line.split(",")]
-
-
-def get_dart_code(entity_name):
-    for name, code in get_dart_codes():
-        if name == entity_name:
-            return code
-    raise ValueError("CRP code for {} is not found".format(entity_name))
+def int_or_nan(v):
+    try:
+        return int(v)
+    except ValueError:
+        return nan
 
 
 def load_stock_codes(fin):
@@ -245,36 +239,6 @@ def parse_stock_records(stream):
         }
 
 
-def poll_import_stock_values_requests(sqs_region, queue_url):
-    client = boto3.client("sqs", region_name=sqs_region)
-    resp = client.receive_message(**{"QueueUrl": queue_url, "VisibilityTimeout": 180})
-    messages = resp["Messages"] if "Messages" in resp else []
-
-    for message in messages:
-        yield json.loads(message["Body"])
-        client.delete_message(
-            **{"QueueUrl": queue_url, "ReceiptHandle": message["ReceiptHandle"]}
-        )
-
-
-def request_import_stock_values(
-    code,
-    start_time,
-    end_time,
-    sqs_region=os.environ.get("SQS_REGION", ""),
-    queue_url=os.environ.get("REQUEST_IMPORT_STOCK_VALUES_QUEUE_URL", ""),
-):
-    message = make_request_import_stock_values_message(code, start_time, end_time)
-
-    client = boto3.client("sqs", region_name=sqs_region)
-    resp = client.send_message(
-        **{"QueueUrl": queue_url, "MessageBody": json.dumps(message),}
-    )
-
-    if resp["ResponseMetadata"]["HTTPStatusCode"] != 200:
-        log.error("Something went wrong: {0}", resp)
-
-
 def insert_stock_record(data: dict, stock_account: object, bank_account: object):
     if data["category2"] in ["매도", "매수"]:
         return insert_stock_trading_record(data, stock_account)
@@ -312,8 +276,7 @@ def insert_stock_trading_record(data: dict, stock_account: object):
 
 
 def insert_stock_transfer_record(data: dict, bank_account: object):
-    """Inserts a transfer record between a bank account and a stock account.
-    """
+    """Inserts a transfer record between a bank account and a stock account."""
     from finance.models import Asset, deposit
 
     # FIXME: Not a good idea to use a hard coded value

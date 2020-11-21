@@ -29,11 +29,9 @@ from finance.providers import Dart, Kofia, Yahoo
 from finance.utils import (
     date_to_datetime,
     extract_numbers,
-    get_dart_code,
     insert_stock_record,
     parse_date,
     parse_stock_records,
-    request_import_stock_values as request_import_stock_values_,
     serialize_datetime,
 )
 
@@ -127,42 +125,6 @@ def insert_test_data():
 
 
 @cli.command()
-@click.argument("entity_name")
-def fetch_dart(entity_name):
-    """Fetch all reports from DART (전자공시)."""
-
-    entity_code = get_dart_code(entity_name)
-    provider = Dart()
-
-    log.info("Fetching DART reports for {}", entity_name)
-    reports = provider.fetch_reports(entity_name, entity_code)
-
-    # Apparently generators are not JSON serializable
-    print(json.dumps([dict(r) for r in reports], default=serialize_datetime))
-
-
-# TODO: Load data from stdin
-@cli.command()
-@click.argument("fin", type=click.File("r"))
-def import_dart(fin):
-    """Import DART (전자공시) data."""
-
-    try:
-        data = json.loads(fin.read())
-    except json.decoder.JSONDecodeError as e:
-        log.error("Valid JSON data expected: {}", e)
-
-    for row in data:
-        try:
-            report = DartReport.create(**row)
-        except IntegrityError:
-            log.info("DartReport-{} already exists", row["id"])
-            session.rollback()
-        else:
-            log.info("Fetched report: {}", report)
-
-
-@cli.command()
 def import_sp500_asset_values():
     runner = CliRunner()
     runner.invoke(
@@ -172,8 +134,7 @@ def import_sp500_asset_values():
 
 @cli.command()
 def import_sp500_records():
-    """Import S&P500 fund sample data. Expects a tab seprated value document.
-    """
+    """Import S&P500 fund sample data. Expects a tab seprated value document."""
     account_checking = Account.get(id=1001)
     account_sp500 = Account.get(id=7001)
     asset_krw = Asset.query.filter_by(name="KRW").first()
@@ -313,16 +274,6 @@ def import_stock_records(filename):
     with open(filename) as fin:
         for parsed in parse_stock_records(fin):
             insert_stock_record(parsed, account_stock, account_bank)
-
-
-@cli.command()
-@click.argument("code")
-def request_import_stock_values(code):
-    """Enqueue a request to import stock values."""
-    start_time = date_to_datetime(parse_date(-3))
-    end_time = date_to_datetime(parse_date(0))
-
-    request_import_stock_values_(code, start_time, end_time)
 
 
 if __name__ == "__main__":

@@ -22,23 +22,33 @@ name_code_mappings = {
     "보잉": "BA",
     "Credit Suisse High Y": "DHY",
     "CREDIT SUISSE HIGH YIELD BOND FU": "DHY",
+    "ISHARES MSCI HONG KONG FUND": "EWH",
     "Empire State Realty Trust  Inc.": "ESRT",
     "Empire State Realty": "ESRT",
     "EMPIRE ST RLTY TR INC": "ESRT",
+    "CLOUDFLARE INC": "NET",
     "Direxion Daily Gold": "NUGT",
     "엔비디아": "NVDA",
     "OXFORD LANE CAPITAL": "OXLC",
     "옥스포드 래인 캐피탈": "OXLC",
     "스타벅스": "SBUX",
     "SPDR S&P 500": "SPY",
+    "SCHWAB US BROAD MARKET ETF": "SCHB",
+    "PROETF ULTRA S&P 500": "SSO",
     "테슬라 모터스": "TSLA",
     "VANGUARD TAX-EXEMPT BOND ETF": "VTEB",
     "ISHARES 20+Y TREASURY BOND ETF": "TLT",
     "ISHARES IBOXX $ INVESTMENT GRADE": "LQD",
+    "UNITED STATES OIL FUND": "USO",
     "VANGUARD EMERGING MARKETS GOVERN": "VWOB",
     "VANGUARD SHORT-TERM INFLATION-PR": "VTIP",
     "넥슨 일본": "3659.T",
+    "NH-Amundi HANARO 글로벌럭셔리S&P 증권상장지": "354350.KS",
+    "대신밸런스제8호기업인수목적": "336570.KQ",
     "삼성전자보통주": "005930.KS",
+    "이마트보통주": "139480.KS",
+    "이베스트기업인수목적5호": "349720.KQ",
+    "하나금융9호기업인수목적": "261200.KQ",
 }
 
 
@@ -190,7 +200,7 @@ class Record(object):
     def __iter__(self):
         """Allows an Record object to become a dictionary as:
 
-            dict(record)
+        dict(record)
         """
         for attr in self.attributes:
             yield attr, getattr(self, attr)
@@ -200,6 +210,10 @@ class Record(object):
         for k, v in self:
             if k == "created_at":
                 yield v.strftime(DATE_OUTPUT_FORMAT)
+            elif k == "unit_price":
+                yield float(v)
+            elif isinstance(v, (int, float)):
+                yield v
             else:
                 yield str(v)
 

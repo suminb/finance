@@ -104,8 +104,14 @@ def upgrade():
         sa.Column("low", sa.Numeric(precision=20, scale=4), nullable=True),
         sa.Column("close", sa.Numeric(precision=20, scale=4), nullable=True),
         sa.Column("volume", sa.Integer(), nullable=True),
-        sa.ForeignKeyConstraint(["asset_id"], ["asset.id"],),
-        sa.ForeignKeyConstraint(["base_asset_id"], ["asset.id"],),
+        sa.ForeignKeyConstraint(
+            ["asset_id"],
+            ["asset.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["base_asset_id"],
+            ["asset.id"],
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("asset_id", "evaluated_at", "granularity"),
     )
@@ -115,7 +121,10 @@ def upgrade():
         sa.Column("name", sa.String(), nullable=True),
         sa.Column("description", sa.String(), nullable=True),
         sa.Column("base_asset_id", sa.BigInteger(), nullable=True),
-        sa.ForeignKeyConstraint(["base_asset_id"], ["asset.id"],),
+        sa.ForeignKeyConstraint(
+            ["base_asset_id"],
+            ["asset.id"],
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
@@ -139,8 +148,14 @@ def upgrade():
         sa.Column("number", sa.String(), nullable=True),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("data", JsonType, nullable=True),
-        sa.ForeignKeyConstraint(["portfolio_id"], ["portfolio.id"],),
-        sa.ForeignKeyConstraint(["user_id"], ["user.id"],),
+        sa.ForeignKeyConstraint(
+            ["portfolio_id"],
+            ["portfolio.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["user_id"],
+            ["user.id"],
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
@@ -157,9 +172,18 @@ def upgrade():
         sa.Column("created_at", sa.DateTime(), nullable=True),
         sa.Column("category", sa.String(), nullable=True),
         sa.Column("quantity", sa.Numeric(precision=20, scale=4), nullable=True),
-        sa.ForeignKeyConstraint(["account_id"], ["account.id"],),
-        sa.ForeignKeyConstraint(["asset_id"], ["asset.id"],),
-        sa.ForeignKeyConstraint(["transaction_id"], ["transaction.id"],),
+        sa.ForeignKeyConstraint(
+            ["account_id"],
+            ["account.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["asset_id"],
+            ["asset.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["transaction_id"],
+            ["transaction.id"],
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("account_id", "asset_id", "created_at", "quantity"),
     )

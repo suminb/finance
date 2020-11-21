@@ -91,8 +91,24 @@ Usage
 
 (TODO: 사용법 계속 채워넣기)
 
-Company Profiles from Naver Finance
-***********************************
+Search For Listings On Naver Finance
+************************************
+
+.. code::
+
+   >>> from finance.ext.search import search_listings
+   >>> results = search_listings("naver", "KODEX")
+   >>> next(results)
+   Listing(069500, KODEX 200, https://finance.naver.com/item/main.nhn?code=069500)
+   >>> next(results)
+   Listing(091160, KODEX 반도체, https://finance.naver.com/item/main.nhn?code=091160)
+   >>> next(results)
+   Listing(091170, KODEX 은행, https://finance.naver.com/item/main.nhn?code=091170)
+   >>> # Or, we could make it as a list
+   >>> listings = list(results)
+
+Fetch Company Profiles From Naver Finance
+*****************************************
 
 .. code::
 
@@ -106,6 +122,31 @@ Company Profiles from Naver Finance
    -494
    >>> profile.bps
    4290
+
+Fetch Financial Statements From DART (전자공시)
+*********************************************
+
+.. code::
+
+   from finance.ext.dart import FinancialStatementRequest
+
+   fs = FinancialStatementRequest()
+   statements = fs.fetch(
+       "00788773", 2020, "11012", "OFS",
+       categorization_level1_key="fs_name",
+       categorization_level2_key="account_name")
+
+   statements["포괄손익계산서"]["당기순이익"].amount
+
+   balance_sheet = statements["재무상태표"]
+   debt_ratio = balance_sheet["부채총계"].amount / balance_sheet["자본총계"].amount
+
+.. code::
+
+   from finance.ext.dart import get_listed_corporations, search_corporations
+
+   get_listed_corporations()
+   search_corporations("NAVER")
 
 Some Technical Details
 ----------------------

@@ -40,7 +40,7 @@ JsonType = String().with_variant(JSON(), "postgresql")
 Base = declarative_base()
 
 is_testing = bool(os.environ.get("TESTING", ""))
-db_url = os.environ["DB_URL" if is_testing else "TEST_DB_URL"]
+db_url = os.environ["SBF_DB_URL" if is_testing else "SBF_TEST_DB_URL"]
 engine = create_engine(db_url, echo=False)
 Session = sessionmaker(bind=engine)
 
@@ -118,8 +118,7 @@ def classproperty(func):
 
 
 class CRUDMixin(object):
-    """Copied from https://realpython.com/blog/python/python-web-applications-with-flask-part-ii/
-    """  # noqa
+    """Copied from https://realpython.com/blog/python/python-web-applications-with-flask-part-ii/"""  # noqa
 
     __table_args__ = {"extend_existing": True}  # type: Any
 
@@ -643,8 +642,7 @@ class Portfolio(CRUDMixin, Base):  # type: ignore
             session.commit()
 
     def assets(self):
-        """Returns all assets contained by the accounts under this portfolio.
-        """
+        """Returns all assets contained by the accounts under this portfolio."""
         assets = []
         for account in self.accounts:
             assets.append(account.assets())
@@ -662,8 +660,7 @@ class Portfolio(CRUDMixin, Base):  # type: ignore
         return functools.reduce(operator.add, map(collections.Counter, bs))
 
     def net_worth(self, evaluated_at=None, granularity=Granularity.day):
-        """Calculates the net worth of the portfolio on a particular datetime.
-        """
+        """Calculates the net worth of the portfolio on a particular datetime."""
         net = 0
         for account in self.accounts:
             net += account.net_worth(evaluated_at, granularity, True, self.base_asset)
