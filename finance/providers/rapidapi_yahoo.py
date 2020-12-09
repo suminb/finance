@@ -1,9 +1,10 @@
 import json
+import os
 
 import requests
 
 headers = {
-    "x-rapidapi-key": "1b841396edmsh439c6dd95ffc7f2p18d9c6jsn023007e21f30",
+    "x-rapidapi-key": os.environ.get("SBF_RAPIDAPI_KEY"),
     "x-rapidapi-host": "apidojo-yahoo-finance-v1.p.rapidapi.com",
 }
 
