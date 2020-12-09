@@ -3,9 +3,10 @@ import json
 import requests
 
 headers = {
-    'x-rapidapi-key': "1b841396edmsh439c6dd95ffc7f2p18d9c6jsn023007e21f30",
-    'x-rapidapi-host': "apidojo-yahoo-finance-v1.p.rapidapi.com"
+    "x-rapidapi-key": "1b841396edmsh439c6dd95ffc7f2p18d9c6jsn023007e21f30",
+    "x-rapidapi-host": "apidojo-yahoo-finance-v1.p.rapidapi.com",
 }
+
 
 def get_financials(symbol: str, region="US"):
     url = "https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/v2/get-financials"
