@@ -156,14 +156,22 @@ Fetch Financials With RapidAPI
    >>> from from finance.providers.rapidapi_yahoo import *
 
    >>> financials = get_financials("NET")
-   >>> get_market_cap(financials)
+   >>> financials.market_cap
    25674999808
 
-   >>> get_most_recent_yearly_earnings(financials)
+   >>> financials.most_recent_yearly_earnings
    {'date': 2019, 'revenue': {'raw': 287022000, 'fmt': '287.02M', 'longFmt': '287,022,000'}, 'earnings': {'raw': -105828000, 'fmt': '-105.83M', 'longFmt': '-105,828,000'}}
 
-   >>> get_most_recent_quarterly_earnings(financials)
+   >>> financials.most_recent_quarterly_earnings
    {'date': '3Q2020', 'revenue': {'raw': 114162000, 'fmt': '114.16M', 'longFmt': '114,162,000'}, 'earnings': {'raw': -26468000, 'fmt': '-26.47M', 'longFmt': '-26,468,000'}}
+
+   >>> historical_data = get_historical_data("MSFT")
+   >>> historical_data.first_trade_date
+   datetime.datetime(1986, 3, 13, 14, 30)
+
+   >>> profile = get_profile("TSLA")
+   >>> profile.sector
+   'Consumer Cyclical'
 
 Some Technical Details
 ----------------------
