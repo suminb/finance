@@ -75,8 +75,14 @@ def get_profile(symbol: str, region="US"):
     params = {"symbol": symbol, "region": region}
     resp = requests.get(url, headers=headers, params=params)
 
-    return json.loads(resp.text)
+    return Profile(json.loads(resp.text))
 
 
-def get_sector(profile: dict):
-    return profile["assetProfile"]["sector"]
+# TODO: Move this elsewhere
+class Profile:
+    def __init__(self, data: dict):
+        self.data = data
+
+    @property
+    def sector(self):
+        return self.data["assetProfile"]["sector"]
