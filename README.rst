@@ -153,7 +153,7 @@ Fetch Financials With RapidAPI
 
 .. code::
 
-   >>> from from finance.providers.rapidapi_yahoo import *
+   >>> from from finance.ext.rapidapi.yahoo import *
 
    >>> financials = get_financials("NET")
    >>> financials.market_cap
