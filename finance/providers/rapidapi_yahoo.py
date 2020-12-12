@@ -59,6 +59,17 @@ def get_financials(symbol: str, region="US"):
     return Financials(json.loads(resp.text))
 
 
+# TODO: Move thie elsewhere
+class HistoricalData:
+    def __init__(self, data: dict):
+        self.data = data
+
+    @property
+    def first_trade_date(self):
+        timestamp = self.data["firstTradeDate"]
+        return datetime.utcfromtimestamp(timestamp)
+
+
 def get_historical_data(symbol: str, region="US"):
     """See https://rapidapi.com/apidojo/api/yahoo-finance1?endpoint=apiendpoint_2c81ebb5-60ab-41e4-8cd2-2056b26e93c2 for more details.
     """
@@ -66,12 +77,7 @@ def get_historical_data(symbol: str, region="US"):
     params = {"symbol": symbol, "region": region}
     resp = requests.get(url, headers=headers, params=params)
 
-    return json.loads(resp.text)
-
-
-def get_first_trade_date(historical_data: dict):
-    timestamp = historical_data["firstTradeDate"]
-    return datetime.utcfromtimestamp(timestamp)
+    return HistoricalData(json.loads(resp.text))
 
 
 def get_profile(symbol: str, region="US"):

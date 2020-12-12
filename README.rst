@@ -166,7 +166,7 @@ Fetch Financials With RapidAPI
    {'date': '3Q2020', 'revenue': {'raw': 114162000, 'fmt': '114.16M', 'longFmt': '114,162,000'}, 'earnings': {'raw': -26468000, 'fmt': '-26.47M', 'longFmt': '-26,468,000'}}
 
    >>> historical_data = get_historical_data("MSFT")
-   >>> get_first_trade_date(historical_data)
+   >>> historical_data.first_trade_date
    datetime.datetime(1986, 3, 13, 14, 30)
 
    >>> profile = get_profile("TSLA")
