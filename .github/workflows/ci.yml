@@ -15,10 +15,12 @@ jobs:
       # Label used to access the service container
       postgres:
         # Docker Hub image
-        image: postgres
+        image: postgres:10
         # Provide the password for postgres
-        #env:
-        #  POSTGRES_PASSWORD: postgres
+        env:
+         POSTGRES_USER: postgres
+         POSTGRES_PASSWORD: postgres
+         POSTGRES_DB: finance_test
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -40,6 +42,6 @@ jobs:
       run: |
         py.test -v tests --cov finance --cov-report term-missing
       env:
-        SBF_DB_URL: "postgres:///finance"
-        SBF_TEST_DB_URL: "postgres:///finance"
+        SBF_DB_URL: "postgres://postgres:postgres@localhost/finance"
+        SBF_TEST_DB_URL: "postgres://postgres:postgres@localhost/finance_test"
         PYTHONPATH: . 
