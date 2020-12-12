@@ -169,6 +169,10 @@ Fetch Financials With RapidAPI
    >>> get_first_trade_date(historical_data)
    datetime.datetime(1986, 3, 13, 14, 30)
 
+   >>> profile = get_profile("TSLA")
+   >>> get_sector(profile)
+   'Consumer Cyclical'
+
 Some Technical Details
 ----------------------
 

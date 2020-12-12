@@ -66,3 +66,17 @@ def get_historical_data(symbol: str, region="US"):
 def get_first_trade_date(historical_data: dict):
     timestamp = historical_data["firstTradeDate"]
     return datetime.utcfromtimestamp(timestamp)
+
+
+def get_profile(symbol: str, region="US"):
+    """See https://rapidapi.com/apidojo/api/yahoo-finance1?endpoint=apiendpoint_f787ce0f-17f7-40cf-a731-f141fd61cc08 for more details.
+    """
+    url = f"https://{API_HOST}/stock/v2/get-profile"
+    params = {"symbol": symbol, "region": region}
+    resp = requests.get(url, headers=headers, params=params)
+
+    return json.loads(resp.text)
+
+
+def get_sector(profile: dict):
+    return profile["assetProfile"]["sector"]
