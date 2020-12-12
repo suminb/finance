@@ -4,14 +4,16 @@ import os
 
 import requests
 
+API_HOST = "apidojo-yahoo-finance-v1.p.rapidapi.com"
+
 headers = {
     "x-rapidapi-key": os.environ.get("SBF_RAPIDAPI_KEY"),
-    "x-rapidapi-host": "apidojo-yahoo-finance-v1.p.rapidapi.com",
+    "x-rapidapi-host": API_HOST,
 }
 
 
 def get_financials(symbol: str, region="US"):
-    url = "https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/v2/get-financials"
+    url = f"https://{API_HOST}/stock/v2/get-financials"
     params = {"symbol": symbol, "region": region}
     resp = requests.get(url, headers=headers, params=params)
 
@@ -54,7 +56,7 @@ def get_most_recent_quarterly_earnings(financials: dict):
 def get_historical_data(symbol: str, region="US"):
     """See https://rapidapi.com/apidojo/api/yahoo-finance1?endpoint=apiendpoint_2c81ebb5-60ab-41e4-8cd2-2056b26e93c2 for more details.
     """
-    url = "https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/v2/get-historical-data"
+    url = f"https://{API_HOST}/stock/v2/get-historical-data"
     params = {"symbol": symbol, "region": region}
     resp = requests.get(url, headers=headers, params=params)
 
