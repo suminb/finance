@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import os
 
@@ -48,3 +49,18 @@ def get_most_recent_quarterly_earnings(financials: dict):
     assert recent_earnings["date"] == recent_quarter
 
     return recent_earnings
+
+
+def get_historical_data(symbol: str, region="US"):
+    """See https://rapidapi.com/apidojo/api/yahoo-finance1?endpoint=apiendpoint_2c81ebb5-60ab-41e4-8cd2-2056b26e93c2 for more details.
+    """
+    url = "https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/v2/get-historical-data"
+    params = {"symbol": symbol, "region": region}
+    resp = requests.get(url, headers=headers, params=params)
+
+    return json.loads(resp.text)
+
+
+def get_first_trade_date(historical_data: dict):
+    timestamp = historical_data["firstTradeDate"]
+    return datetime.utcfromtimestamp(timestamp)
