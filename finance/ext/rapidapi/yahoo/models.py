@@ -21,7 +21,11 @@ class Financials:
         recent_earnings = earnings[-1]
         assert recent_earnings["date"] == recent_year
 
-        return recent_earnings
+        return {
+            "date": recent_earnings["date"],
+            "revenue": recent_earnings["revenue"]["raw"],
+            "earnings": recent_earnings["earnings"]["raw"],
+        }
 
     @property
     def most_recent_quarterly_earnings(self):
@@ -36,7 +40,11 @@ class Financials:
         recent_earnings = earnings[-1]
         assert recent_earnings["date"] == recent_quarter
 
-        return recent_earnings
+        return {
+            "date": recent_earnings["date"],
+            "revenue": recent_earnings["revenue"]["raw"],
+            "earnings": recent_earnings["earnings"]["raw"],
+        }
 
 
 class HistoricalData:
