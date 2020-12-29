@@ -1,5 +1,6 @@
 import json
 import os
+from typing import Callable
 
 import requests
 
@@ -13,6 +14,35 @@ headers = {
 }
 
 
+def get_cache_filename(topic, symbol, region):
+    return f".cache/{topic}_{symbol}_{region}.json"
+
+
+def cache_exists(topic, symbol, region):
+    path = get_cache_filename(topic, symbol, region)
+    return os.path.exists(path)
+
+
+def load_cache(topic, symbol, region):
+    path = get_cache_filename(topic, symbol, region)
+    with open(path, "r") as fin:
+        return json.loads(fin.read())
+
+
+def save_cache(topic, symbol, region, data):
+    path = get_cache_filename(topic, symbol, region)
+    with open(path, "w") as fout:
+        fout.write(json.dumps(data))
+
+
+def fetch_or_load_cache(topic, symbol, region, fetch: Callable, use_cache=True):
+    if use_cache and cache_exists(topic, symbol, region):
+        data = load_cache(topic, symbol, region)
+    else:
+        data = fetch(symbol, region)
+        save_cache(topic, symbol, region, data)
+
+
 def fetch_financials(symbol: str, region="US"):
     """See https://rapidapi.com/apidojo/api/yahoo-finance1?endpoint=apiendpoint_2e0b16d4-a66b-469e-bc18-b60cec60661b for more details."""
     url = f"https://{API_HOST}/stock/v2/get-financials"
@@ -22,8 +52,11 @@ def fetch_financials(symbol: str, region="US"):
     return json.loads(resp.text)
 
 
-def get_financials(symbol: str, region="US", fetch=fetch_financials):
-    return Financials(fetch(symbol, region))
+# TODO: Introduce a common layer for cache
+def get_financials(symbol: str, region="US", fetch=fetch_financials, use_cache=True):
+    topic = "financials"
+    data = fetch_or_load_cache(topic, symbol, region, fetch, use_cache)
+    return Financials(data)
 
 
 def fetch_historical_data(symbol: str, region="US"):
@@ -35,8 +68,12 @@ def fetch_historical_data(symbol: str, region="US"):
     return json.loads(resp.text)
 
 
-def get_historical_data(symbol: str, region="US", fetch=fetch_historical_data):
-    return HistoricalData(fetch_historical_data(symbol, region))
+def get_historical_data(
+    symbol: str, region="US", fetch=fetch_historical_data, use_cache=True
+):
+    topic = "historical_data"
+    data = fetch_or_load_cache(topic, symbol, region, fetch, use_cache)
+    return HistoricalData(data)
 
 
 def fetch_profile(symbol: str, region="US"):
@@ -48,5 +85,7 @@ def fetch_profile(symbol: str, region="US"):
     return json.loads(resp.text)
 
 
-def get_profile(symbol: str, region="US", fetch=fetch_profile):
-    return Profile(fetch(symbol, region))
+def get_profile(symbol: str, region="US", fetch=fetch_profile, use_cache=True):
+    topic = "profile"
+    data = fetch_or_load_cache(topic, symbol, region, fetch, use_cache)
+    return Profile(data)
