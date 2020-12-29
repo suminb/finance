@@ -63,7 +63,9 @@ def fetch_historical_data(symbol: str, region="US"):
     return json.loads(resp.text)
 
 
-def get_historical_data(symbol: str, region="US", fetch=fetch_historical_data, cached=True):
+def get_historical_data(
+    symbol: str, region="US", fetch=fetch_historical_data, cached=True
+):
     topic = "historical_data"
     if cached and cache_exists(topic, symbol, region):
         data = load_cache(topic, symbol, region)
