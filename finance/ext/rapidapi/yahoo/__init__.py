@@ -1,5 +1,6 @@
 import json
 import os
+from typing import Callable
 
 import requests
 
@@ -34,6 +35,14 @@ def save_cache(topic, symbol, region, data):
         fout.write(json.dumps(data))
 
 
+def fetch_or_load_cache(topic, symbol, region, fetch: Callable, use_cache=True):
+    if use_cache and cache_exists(topic, symbol, region):
+        data = load_cache(topic, symbol, region)
+    else:
+        data = fetch(symbol, region)
+        save_cache(topic, symbol, region, data)
+
+
 def fetch_financials(symbol: str, region="US"):
     """See https://rapidapi.com/apidojo/api/yahoo-finance1?endpoint=apiendpoint_2e0b16d4-a66b-469e-bc18-b60cec60661b for more details."""
     url = f"https://{API_HOST}/stock/v2/get-financials"
@@ -44,13 +53,9 @@ def fetch_financials(symbol: str, region="US"):
 
 
 # TODO: Introduce a common layer for cache
-def get_financials(symbol: str, region="US", fetch=fetch_financials, cached=True):
+def get_financials(symbol: str, region="US", fetch=fetch_financials, use_cache=True):
     topic = "financials"
-    if cached and cache_exists(topic, symbol, region):
-        data = load_cache(topic, symbol, region)
-    else:
-        data = fetch(symbol, region)
-        save_cache(topic, symbol, region, data)
+    data = fetch_or_load_cache(topic, symbol, region, fetch, use_cache)
     return Financials(data)
 
 
@@ -64,14 +69,10 @@ def fetch_historical_data(symbol: str, region="US"):
 
 
 def get_historical_data(
-    symbol: str, region="US", fetch=fetch_historical_data, cached=True
+    symbol: str, region="US", fetch=fetch_historical_data, use_cache=True
 ):
     topic = "historical_data"
-    if cached and cache_exists(topic, symbol, region):
-        data = load_cache(topic, symbol, region)
-    else:
-        data = fetch(symbol, region)
-        save_cache(topic, symbol, region, data)
+    data = fetch_or_load_cache(topic, symbol, region, fetch, use_cache)
     return HistoricalData(data)
 
 
@@ -84,11 +85,7 @@ def fetch_profile(symbol: str, region="US"):
     return json.loads(resp.text)
 
 
-def get_profile(symbol: str, region="US", fetch=fetch_profile, cached=True):
+def get_profile(symbol: str, region="US", fetch=fetch_profile, use_cache=True):
     topic = "profile"
-    if cached and cache_exists(topic, symbol, region):
-        data = load_cache(topic, symbol, region)
-    else:
-        data = fetch(symbol, region)
-        save_cache(topic, symbol, region, data)
+    data = fetch_or_load_cache(topic, symbol, region, fetch, use_cache)
     return Profile(data)
