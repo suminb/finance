@@ -56,9 +56,31 @@ class HistoricalData:
         timestamp = self.data["firstTradeDate"]
         return datetime.utcfromtimestamp(timestamp)
 
+    def is_price_record(self, record):
+        keys = ["date", "open", "high", "low", "close", "adjclose", "volume"]
+        contains_key = [(k in record) for k in keys]
+        return all(contains_key)
+
     @property
     def prices(self):
-        return self.data["prices"]
+        """NOTE: The `prices` records contain different types of information
+        such as dividend, and this method returns price records only.
+        """
+        return [
+            {
+                'date': d["date"],
+                'open': round(d["open"], 2),
+                'high': round(d["high"], 2),
+                'low': round(d["low"], 2),
+                'close': round(d["close"], 2),
+                'adjclose': round(d["adjclose"], 2),
+                'volume': d["volume"],
+            } for d in self.data["prices"] if self.is_price_record(d)
+        ]
+
+    @property
+    def most_recent_price(self):
+        return self.prices[0]["close"]
 
 
 class Profile:
