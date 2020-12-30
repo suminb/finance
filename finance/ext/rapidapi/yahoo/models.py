@@ -56,6 +56,10 @@ class HistoricalData:
         timestamp = self.data["firstTradeDate"]
         return datetime.utcfromtimestamp(timestamp)
 
+    @property
+    def prices(self):
+        return self.data["prices"]
+
 
 class Profile:
     def __init__(self, data: dict):
