@@ -41,6 +41,7 @@ def fetch_or_load_cache(topic, symbol, region, fetch: Callable, use_cache=True):
     else:
         data = fetch(symbol, region)
         save_cache(topic, symbol, region, data)
+    return data
 
 
 def fetch_financials(symbol: str, region="US"):
