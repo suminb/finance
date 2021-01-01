@@ -59,6 +59,15 @@ class Financials:
 
         return recent_earnings
 
+    @property
+    def yearly_growth_rates(self, key="revenue"):
+        """Calculates annual growth rates."""
+        assert key in ["revenue", "earnings"]
+        return [
+            (y[key] - x[key]) / x[key]
+            for x, y in zip(self.yearly_earnings[:-1], self.yearly_earnings[1:])
+        ]
+
 
 class HistoricalData:
     def __init__(self, data: dict):
