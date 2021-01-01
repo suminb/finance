@@ -1,12 +1,21 @@
 from datetime import datetime
+from finance.ext.rapidapi.yahoo import cache_exists
 import json
+import os
 
 from finance.ext.rapidapi.yahoo.models import Financials, Profile, HistoricalData
+
+
+BASE_PATH = os.path.abspath(os.path.dirname(__file__))
 
 
 def load_test_data(filename):
     with open(f"tests/ext/rapidapi/yahoo/{filename}") as fin:
         return json.loads(fin.read())
+
+
+def test_cache():
+    assert cache_exists("profile", "NET", "US", BASE_PATH + "/rapidapi/yahoo")
 
 
 def test_financials():

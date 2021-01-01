@@ -8,6 +8,7 @@ import requests
 from finance.ext.rapidapi.yahoo.models import Financials, HistoricalData, Profile
 
 API_HOST = "apidojo-yahoo-finance-v1.p.rapidapi.com"
+DEFAULT_CACHE_DIR=".cache"
 
 headers = {
     "x-rapidapi-key": os.environ.get("SBF_RAPIDAPI_KEY"),
@@ -17,23 +18,23 @@ headers = {
 log = Logger(__name__)
 
 
-def get_cache_filename(topic, symbol, region):
-    return f".cache/{topic}_{symbol}_{region}.json"
+def get_cache_filename(topic, symbol, region, cache_dir=DEFAULT_CACHE_DIR):
+    return f"{cache_dir}/{topic}_{symbol}_{region}.json"
 
 
-def cache_exists(topic, symbol, region):
-    path = get_cache_filename(topic, symbol, region)
+def cache_exists(topic, symbol, region, cache_dir=DEFAULT_CACHE_DIR):
+    path = get_cache_filename(topic, symbol, region, cache_dir)
     return os.path.exists(path)
 
 
-def load_cache(topic, symbol, region):
-    path = get_cache_filename(topic, symbol, region)
+def load_cache(topic, symbol, region, cache_dir=DEFAULT_CACHE_DIR):
+    path = get_cache_filename(topic, symbol, region, cache_dir)
     with open(path, "r") as fin:
         return json.loads(fin.read())
 
 
-def save_cache(topic, symbol, region, data):
-    path = get_cache_filename(topic, symbol, region)
+def save_cache(topic, symbol, region, data, cache_dir=DEFAULT_CACHE_DIR):
+    path = get_cache_filename(topic, symbol, region, cache_dir)
     with open(path, "w") as fout:
         fout.write(json.dumps(data))
 
