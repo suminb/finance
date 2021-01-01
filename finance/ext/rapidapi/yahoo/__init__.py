@@ -8,6 +8,7 @@ import requests
 from finance.ext.rapidapi.yahoo.models import Financials, HistoricalData, Profile
 
 API_HOST = "apidojo-yahoo-finance-v1.p.rapidapi.com"
+DEFAULT_CACHE_DIR = ".cache"
 
 headers = {
     "x-rapidapi-key": os.environ.get("SBF_RAPIDAPI_KEY"),
@@ -17,33 +18,35 @@ headers = {
 log = Logger(__name__)
 
 
-def get_cache_filename(topic, symbol, region):
-    return f".cache/{topic}_{symbol}_{region}.json"
+def get_cache_filename(topic, symbol, region, cache_dir=DEFAULT_CACHE_DIR):
+    return f"{cache_dir}/{topic}_{symbol}_{region}.json"
 
 
-def cache_exists(topic, symbol, region):
-    path = get_cache_filename(topic, symbol, region)
+def cache_exists(topic, symbol, region, cache_dir=DEFAULT_CACHE_DIR):
+    path = get_cache_filename(topic, symbol, region, cache_dir)
     return os.path.exists(path)
 
 
-def load_cache(topic, symbol, region):
-    path = get_cache_filename(topic, symbol, region)
+def load_cache(topic, symbol, region, cache_dir=DEFAULT_CACHE_DIR):
+    path = get_cache_filename(topic, symbol, region, cache_dir)
     with open(path, "r") as fin:
         return json.loads(fin.read())
 
 
-def save_cache(topic, symbol, region, data):
-    path = get_cache_filename(topic, symbol, region)
+def save_cache(topic, symbol, region, data, cache_dir=DEFAULT_CACHE_DIR):
+    path = get_cache_filename(topic, symbol, region, cache_dir)
     with open(path, "w") as fout:
         fout.write(json.dumps(data))
 
 
-def fetch_or_load_cache(topic, symbol, region, fetch: Callable, use_cache=True):
-    if use_cache and cache_exists(topic, symbol, region):
-        data = load_cache(topic, symbol, region)
+def fetch_or_load_cache(
+    topic, symbol, region, fetch: Callable, use_cache=True, cache_dir=DEFAULT_CACHE_DIR
+):
+    if use_cache and cache_exists(topic, symbol, region, cache_dir):
+        data = load_cache(topic, symbol, region, cache_dir)
     else:
         data = fetch(symbol, region)
-        save_cache(topic, symbol, region, data)
+        save_cache(topic, symbol, region, data, cache_dir)
     return data
 
 
@@ -58,9 +61,15 @@ def fetch_financials(symbol: str, region="US"):
 
 
 # TODO: Introduce a common layer for cache
-def get_financials(symbol: str, region="US", fetch=fetch_financials, use_cache=True):
+def get_financials(
+    symbol: str,
+    region="US",
+    fetch=fetch_financials,
+    use_cache=True,
+    cache_dir=DEFAULT_CACHE_DIR,
+):
     topic = "financials"
-    data = fetch_or_load_cache(topic, symbol, region, fetch, use_cache)
+    data = fetch_or_load_cache(topic, symbol, region, fetch, use_cache, cache_dir)
     return Financials(data)
 
 
@@ -75,10 +84,14 @@ def fetch_historical_data(symbol: str, region="US"):
 
 
 def get_historical_data(
-    symbol: str, region="US", fetch=fetch_historical_data, use_cache=True
+    symbol: str,
+    region="US",
+    fetch=fetch_historical_data,
+    use_cache=True,
+    cache_dir=DEFAULT_CACHE_DIR,
 ):
     topic = "historical_data"
-    data = fetch_or_load_cache(topic, symbol, region, fetch, use_cache)
+    data = fetch_or_load_cache(topic, symbol, region, fetch, use_cache, cache_dir)
     return HistoricalData(data)
 
 
@@ -92,7 +105,13 @@ def fetch_profile(symbol: str, region="US"):
     return json.loads(resp.text)
 
 
-def get_profile(symbol: str, region="US", fetch=fetch_profile, use_cache=True):
+def get_profile(
+    symbol: str,
+    region="US",
+    fetch=fetch_profile,
+    use_cache=True,
+    cache_dir=DEFAULT_CACHE_DIR,
+):
     topic = "profile"
-    data = fetch_or_load_cache(topic, symbol, region, fetch, use_cache)
+    data = fetch_or_load_cache(topic, symbol, region, fetch, use_cache, cache_dir)
     return Profile(data)
