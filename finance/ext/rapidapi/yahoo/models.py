@@ -9,6 +9,27 @@ class Financials:
     def market_cap(self):
         return self.data["price"]["marketCap"]["raw"]
 
+    def _extract_raw_values_for_earnings(self, earnings: dict):
+        return {
+            "date": earnings["date"],
+            "revenue": earnings["revenue"]["raw"],
+            "earnings": earnings["earnings"]["raw"],
+        }
+
+    @property
+    def yearly_earnings(self):
+        return [
+            self._extract_raw_values_for_earnings(earnings)
+            for earnings in self.data["earnings"]["financialsChart"]["yearly"]
+        ]
+
+    @property
+    def quarterly_earnings(self):
+        return [
+            self._extract_raw_values_for_earnings(earnings)
+            for earnings in self.data["earnings"]["financialsChart"]["quarterly"]
+        ]
+
     @property
     def most_recent_yearly_earnings(self):
         earnings = self.data["earnings"]["financialsChart"]["yearly"]
@@ -21,11 +42,7 @@ class Financials:
         recent_earnings = earnings[-1]
         assert recent_earnings["date"] == recent_year
 
-        return {
-            "date": recent_earnings["date"],
-            "revenue": recent_earnings["revenue"]["raw"],
-            "earnings": recent_earnings["earnings"]["raw"],
-        }
+        return self._extract_raw_values_for_earnings(recent_earnings)
 
     @property
     def most_recent_quarterly_earnings(self):
@@ -40,11 +57,7 @@ class Financials:
         recent_earnings = earnings[-1]
         assert recent_earnings["date"] == recent_quarter
 
-        return {
-            "date": recent_earnings["date"],
-            "revenue": recent_earnings["revenue"]["raw"],
-            "earnings": recent_earnings["earnings"]["raw"],
-        }
+        return self._extract_raw_values_for_earnings(recent_earnings)
 
 
 class HistoricalData:
