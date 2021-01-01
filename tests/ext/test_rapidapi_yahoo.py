@@ -30,3 +30,4 @@ def test_profile():
 def test_historical_data():
     historical_data = HistoricalData(load_test_data("historical_data-MSFT.json"))
     assert historical_data.first_trade_date == datetime(1986, 3, 13, 14, 30)
+    assert historical_data.most_recent_price == 213.26

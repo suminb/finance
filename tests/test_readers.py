@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 
 import pandas
@@ -20,7 +20,7 @@ def test_load_schema():
 @pytest.mark.parametrize("force_fetch", [False, True])
 def test_read_asset_values(force_fetch):
     end = datetime.now()
-    start = datetime(end.year, end.month - 1, end.day)
+    start = end - timedelta(days=30)
     asset_values = read_asset_values("SPY", "yahoo", start, end, force_fetch)
 
     assert isinstance(asset_values, pandas.core.frame.DataFrame)
