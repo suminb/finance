@@ -32,7 +32,7 @@ class Financials:
 
     @property
     def most_recent_yearly_earnings(self):
-        earnings = self.data["earnings"]["financialsChart"]["yearly"]
+        earnings = self.yearly_earnings
 
         # As a matter of fact, `date` is actually year
         recent_year = max(x["date"] for x in earnings)
@@ -42,11 +42,11 @@ class Financials:
         recent_earnings = earnings[-1]
         assert recent_earnings["date"] == recent_year
 
-        return self._extract_raw_values_for_earnings(recent_earnings)
+        return recent_earnings
 
     @property
     def most_recent_quarterly_earnings(self):
-        earnings = self.data["earnings"]["financialsChart"]["quarterly"]
+        earnings = self.quarterly_earnings
 
         # 'quarter' looks like "1Q2020", "4Q2019", etc.
         recent_quarter = max(x["date"].split("Q")[::-1] for x in earnings)
@@ -57,7 +57,7 @@ class Financials:
         recent_earnings = earnings[-1]
         assert recent_earnings["date"] == recent_quarter
 
-        return self._extract_raw_values_for_earnings(recent_earnings)
+        return recent_earnings
 
 
 class HistoricalData:
