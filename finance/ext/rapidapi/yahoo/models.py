@@ -68,14 +68,16 @@ class HistoricalData:
         """
         return [
             {
-                'date': d["date"],
-                'open': round(d["open"], 2),
-                'high': round(d["high"], 2),
-                'low': round(d["low"], 2),
-                'close': round(d["close"], 2),
-                'adjclose': round(d["adjclose"], 2),
-                'volume': d["volume"],
-            } for d in self.data["prices"] if self.is_price_record(d)
+                "date": d["date"],
+                "open": round(d["open"], 2),
+                "high": round(d["high"], 2),
+                "low": round(d["low"], 2),
+                "close": round(d["close"], 2),
+                "adjclose": round(d["adjclose"], 2),
+                "volume": d["volume"],
+            }
+            for d in self.data["prices"]
+            if self.is_price_record(d)
         ]
 
     @property
