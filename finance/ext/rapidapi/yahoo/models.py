@@ -1,4 +1,5 @@
 from datetime import datetime
+from math import nan
 
 
 class Financials:
@@ -63,8 +64,15 @@ class Financials:
     def yearly_growth_rates(self, key="revenue"):
         """Calculates annual growth rates."""
         assert key in ["revenue", "earnings"]
+
+        def growth_rate(x, y):
+            try:
+                return y[key] - x[key] / x[key]
+            except ZeroDivisionError:
+                return nan
+
         return [
-            (y[key] - x[key]) / x[key]
+            growth_rate(x, y)
             for x, y in zip(self.yearly_earnings[:-1], self.yearly_earnings[1:])
         ]
 
