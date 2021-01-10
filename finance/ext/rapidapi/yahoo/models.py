@@ -1,6 +1,11 @@
 from datetime import datetime
 from math import nan
 
+from logbook import Logger
+
+
+log = Logger(__name__)
+
 
 class Financials:
     def __init__(self, data: dict):
@@ -8,6 +13,8 @@ class Financials:
 
     @property
     def market_cap(self):
+        if "raw" not in self.data["price"]["marketCap"]:
+            return nan
         return self.data["price"]["marketCap"]["raw"]
 
     def _extract_raw_values_for_earnings(self, earnings: dict):
@@ -19,6 +26,10 @@ class Financials:
 
     @property
     def yearly_earnings(self):
+        if "financialsChart" not in self.data["earnings"]:
+            symbol = self.data["symbol"]
+            log.warn(f"financialsChart does not exist ({symbol})")
+            return []
         return [
             self._extract_raw_values_for_earnings(earnings)
             for earnings in self.data["earnings"]["financialsChart"]["yearly"]
@@ -123,4 +134,6 @@ class Profile:
 
     @property
     def sector(self):
+        if "sector" not in self.data["assetProfile"]:
+            return "Unknown"
         return self.data["assetProfile"]["sector"]
