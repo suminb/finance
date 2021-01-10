@@ -75,6 +75,8 @@ class HistoricalData:
 
     @property
     def first_trade_date(self):
+        if "firstTradeDate" not in self.data:
+            return None
         timestamp = self.data["firstTradeDate"]
         return datetime.utcfromtimestamp(timestamp)
 
