@@ -643,7 +643,7 @@ class Financial(CRUDMixin, Base):  # type: ignore
     # NOTE: 'quarterly' can be both an adjective and an adverb.
     granularity = Column(
         Enum(
-            "querterly",
+            "quarterly",
             "annual",
             name="financial_granularity",
         )
