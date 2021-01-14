@@ -121,6 +121,7 @@ class CRUDMixin(object):
     """Copied from https://realpython.com/blog/python/python-web-applications-with-flask-part-ii/"""  # noqa
 
     __table_args__ = {"extend_existing": True}  # type: Any
+    unique_key = ["id"]
 
     id = Column(
         BigInteger, primary_key=True, autoincrement=False, default=uuid64.issue()
@@ -144,7 +145,7 @@ class CRUDMixin(object):
         except (IntegrityError, InvalidRequestError):
             if ignore_if_exists:
                 session.rollback()
-                return cls.find(**kwargs)
+                return cls.find(**{k: kwargs[k] for k in cls.unique_key})
             else:
                 raise
 
@@ -249,6 +250,7 @@ class AssetValue(CRUDMixin, Base):  # type: ignore
         UniqueConstraint("asset_id", "evaluated_at", "granularity"),
         {},
     )  # type: Any
+    unique_key = ["asset_id", "evaluated_at", "granularity"]
 
     asset_id = Column(BigInteger, ForeignKey("asset.id"))
     base_asset_id = Column(BigInteger, ForeignKey("asset.id"))
