@@ -628,7 +628,7 @@ class Account(CRUDMixin, Base):  # type: ignore
             raise NotImplementedError
 
 
-class Financial(CRUDMixin, Base):
+class Financial(CRUDMixin, Base):  # type: ignore
     """A financial record."""
     __tablename__ = "financial"
     __table_args__ = (
