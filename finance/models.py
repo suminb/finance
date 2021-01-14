@@ -23,6 +23,7 @@ from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.indexable import index_property
 from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.sql.sqltypes import SmallInteger
 import uuid64
 
 from finance.exceptions import (
@@ -625,6 +626,29 @@ class Account(CRUDMixin, Base):  # type: ignore
                 return lower_bound, upper_bound
         else:
             raise NotImplementedError
+
+
+class Financial(CRUDMixin, Base):
+    """A financial record."""
+    __tablename__ = "financial"
+    __table_args__ = (
+        UniqueConstraint("key", "granularity", "year", "quarter"),
+        {},
+    )  # type: Any
+
+    asset_id = Column(BigInteger, ForeignKey("asset.id"))
+    key = Column(String)
+    # NOTE: 'quarterly' can be both an adjective and an adverb.
+    granularity = Column(
+        Enum(
+            "querterly",
+            "annual",
+            name="financial_granularity",
+        )
+    )
+    year = Column(Integer)
+    quarter = Column(SmallInteger)
+    value = Column(Numeric(precision=20, scale=4))
 
 
 class Portfolio(CRUDMixin, Base):  # type: ignore
