@@ -121,7 +121,7 @@ class CRUDMixin(object):
     """Copied from https://realpython.com/blog/python/python-web-applications-with-flask-part-ii/"""  # noqa
 
     __table_args__ = {"extend_existing": True}  # type: Any
-    unique_key = ("id",)
+    unique_key = ["id"]
 
     id = Column(
         BigInteger, primary_key=True, autoincrement=False, default=uuid64.issue()
@@ -250,7 +250,7 @@ class AssetValue(CRUDMixin, Base):  # type: ignore
         UniqueConstraint("asset_id", "evaluated_at", "granularity"),
         {},
     )  # type: Any
-    unique_key = ("asset_id", "evaluated_at", "granularity")
+    unique_key = ["asset_id", "evaluated_at", "granularity"]
 
     asset_id = Column(BigInteger, ForeignKey("asset.id"))
     base_asset_id = Column(BigInteger, ForeignKey("asset.id"))
