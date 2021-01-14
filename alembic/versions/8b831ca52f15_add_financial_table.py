@@ -32,7 +32,7 @@ def upgrade():
         sa.Column("quarter", sa.SmallInteger(), nullable=False),
         sa.Column("value", sa.Numeric(precision=20, scale=4), nullable=False),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("key", "granularity", "year", "quarter"),
+        sa.UniqueConstraint("asset_id", "key", "granularity", "year", "quarter"),
         sa.ForeignKeyConstraint(
             ["asset_id"],
             ["asset.id"],
