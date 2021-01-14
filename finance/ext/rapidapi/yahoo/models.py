@@ -111,7 +111,7 @@ class HistoricalData:
         """
         return [
             {
-                "date": d["date"],
+                "date": datetime.utcfromtimestamp(d["date"]),
                 "open": round(d["open"], 2),
                 "high": round(d["high"], 2),
                 "low": round(d["low"], 2),
