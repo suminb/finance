@@ -1,4 +1,10 @@
 from datetime import datetime
+from math import nan
+
+from logbook import Logger
+
+
+log = Logger(__name__)
 
 
 class Financials:
@@ -7,11 +13,38 @@ class Financials:
 
     @property
     def market_cap(self):
+        if "raw" not in self.data["price"]["marketCap"]:
+            return nan
         return self.data["price"]["marketCap"]["raw"]
+
+    def _extract_raw_values_for_earnings(self, earnings: dict):
+        return {
+            "date": earnings["date"],
+            "revenue": earnings["revenue"]["raw"],
+            "earnings": earnings["earnings"]["raw"],
+        }
+
+    @property
+    def yearly_earnings(self):
+        if "financialsChart" not in self.data["earnings"]:
+            symbol = self.data["symbol"]
+            log.warn(f"financialsChart does not exist ({symbol})")
+            return []
+        return [
+            self._extract_raw_values_for_earnings(earnings)
+            for earnings in self.data["earnings"]["financialsChart"]["yearly"]
+        ]
+
+    @property
+    def quarterly_earnings(self):
+        return [
+            self._extract_raw_values_for_earnings(earnings)
+            for earnings in self.data["earnings"]["financialsChart"]["quarterly"]
+        ]
 
     @property
     def most_recent_yearly_earnings(self):
-        earnings = self.data["earnings"]["financialsChart"]["yearly"]
+        earnings = self.yearly_earnings
 
         # As a matter of fact, `date` is actually year
         recent_year = max(x["date"] for x in earnings)
@@ -21,15 +54,11 @@ class Financials:
         recent_earnings = earnings[-1]
         assert recent_earnings["date"] == recent_year
 
-        return {
-            "date": recent_earnings["date"],
-            "revenue": recent_earnings["revenue"]["raw"],
-            "earnings": recent_earnings["earnings"]["raw"],
-        }
+        return recent_earnings
 
     @property
     def most_recent_quarterly_earnings(self):
-        earnings = self.data["earnings"]["financialsChart"]["quarterly"]
+        earnings = self.quarterly_earnings
 
         # 'quarter' looks like "1Q2020", "4Q2019", etc.
         recent_quarter = max(x["date"].split("Q")[::-1] for x in earnings)
@@ -40,11 +69,23 @@ class Financials:
         recent_earnings = earnings[-1]
         assert recent_earnings["date"] == recent_quarter
 
-        return {
-            "date": recent_earnings["date"],
-            "revenue": recent_earnings["revenue"]["raw"],
-            "earnings": recent_earnings["earnings"]["raw"],
-        }
+        return recent_earnings
+
+    @property
+    def yearly_growth_rates(self, key="revenue"):
+        """Calculates annual growth rates."""
+        assert key in ["revenue", "earnings"]
+
+        def growth_rate(x, y):
+            try:
+                return y[key] - x[key] / x[key]
+            except ZeroDivisionError:
+                return nan
+
+        return [
+            growth_rate(x, y)
+            for x, y in zip(self.yearly_earnings[:-1], self.yearly_earnings[1:])
+        ]
 
 
 class HistoricalData:
@@ -53,6 +94,8 @@ class HistoricalData:
 
     @property
     def first_trade_date(self):
+        if "firstTradeDate" not in self.data:
+            return None
         timestamp = self.data["firstTradeDate"]
         return datetime.utcfromtimestamp(timestamp)
 
@@ -91,4 +134,6 @@ class Profile:
 
     @property
     def sector(self):
+        if "sector" not in self.data["assetProfile"]:
+            return "Unknown"
         return self.data["assetProfile"]["sector"]
