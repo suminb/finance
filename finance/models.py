@@ -39,7 +39,7 @@ JsonType = String().with_variant(JSON(), "postgresql")
 
 Base = declarative_base()
 
-is_testing = bool(os.environ.get("TESTING", ""))
+is_testing = bool(os.environ.get("SBF_TESTING", ""))
 db_url = os.environ["SBF_DB_URL" if not is_testing else "SBF_TEST_DB_URL"]
 engine = create_engine(db_url, echo=False)
 Session = sessionmaker(bind=engine)
