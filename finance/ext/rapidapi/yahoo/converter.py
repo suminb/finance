@@ -2,7 +2,7 @@ from finance.models import AssetValue, Financial, Granularity
 from finance.ext.rapidapi.yahoo.models import Financials
 
 
-def convert_prices_to_asset_values(asset_id, base_asset_id, prices):
+def convert_historical_data_prices(asset_id, base_asset_id, prices):
     """HistoricalData.prices -> list(AssetValue)"""
     for price in prices:
         yield AssetValue.create(
