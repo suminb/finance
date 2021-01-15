@@ -46,4 +46,5 @@ jobs:
       env:
         SBF_DB_URL: "postgres://postgres:postgres@localhost/finance"
         SBF_TEST_DB_URL: "postgres://postgres:postgres@localhost/finance_test"
-        PYTHONPATH: . 
+        SBF_TESTING: true
+        PYTHONPATH: .

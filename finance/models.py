@@ -23,6 +23,7 @@ from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.indexable import index_property
 from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.sql.sqltypes import SmallInteger
 import uuid64
 
 from finance.exceptions import (
@@ -39,8 +40,8 @@ JsonType = String().with_variant(JSON(), "postgresql")
 
 Base = declarative_base()
 
-is_testing = bool(os.environ.get("TESTING", ""))
-db_url = os.environ["SBF_DB_URL" if is_testing else "SBF_TEST_DB_URL"]
+is_testing = bool(os.environ.get("SBF_TESTING", ""))
+db_url = os.environ["SBF_DB_URL" if not is_testing else "SBF_TEST_DB_URL"]
 engine = create_engine(db_url, echo=False)
 Session = sessionmaker(bind=engine)
 
@@ -625,6 +626,37 @@ class Account(CRUDMixin, Base):  # type: ignore
                 return lower_bound, upper_bound
         else:
             raise NotImplementedError
+
+
+class FinancialGranularity:
+    quarterly = "quarterly"
+    annual = "annual"
+
+
+class Financial(CRUDMixin, Base):  # type: ignore
+    """A financial record."""
+
+    unique_key = ["asset_id", "key", "granularity", "year", "quarter"]
+
+    __tablename__ = "financial"
+    __table_args__ = (
+        UniqueConstraint(*unique_key),
+        {},
+    )  # type: Any
+
+    asset_id = Column(BigInteger, ForeignKey("asset.id"))
+    key = Column(String)
+    # NOTE: 'quarterly' can be both an adjective and an adverb.
+    granularity = Column(
+        Enum(
+            "quarterly",
+            "annual",
+            name="financial_granularity",
+        )
+    )
+    year = Column(Integer)
+    quarter = Column(SmallInteger)
+    value = Column(Numeric(precision=20, scale=4))
 
 
 class Portfolio(CRUDMixin, Base):  # type: ignore
