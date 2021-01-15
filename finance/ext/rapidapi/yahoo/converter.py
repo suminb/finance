@@ -1,4 +1,4 @@
-from finance.models import AssetValue, Financial, Granularity
+from finance.models import AssetValue, Financial, FinancialGranularity, Granularity
 from finance.ext.rapidapi.yahoo.models import Financials
 
 
@@ -28,7 +28,7 @@ def convert_financials(asset_id, financials: Financials):
             yield Financial.create(
                 asset_id=asset_id,
                 key=key,
-                granularity="quarterly",
+                granularity=FinancialGranularity.quarterly,
                 year=int(year),
                 quarter=int(quarter),
                 value=earning[key],
@@ -40,7 +40,7 @@ def convert_financials(asset_id, financials: Financials):
             yield Financial.create(
                 asset_id=asset_id,
                 key=key,
-                granularity="annual",
+                granularity=FinancialGranularity.annual,
                 year=int(earning["date"]),
                 quarter=0,
                 value=earning[key],

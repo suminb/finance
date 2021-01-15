@@ -628,8 +628,14 @@ class Account(CRUDMixin, Base):  # type: ignore
             raise NotImplementedError
 
 
+class FinancialGranularity:
+    quarterly = "quarterly"
+    annual = "annual"
+
+
 class Financial(CRUDMixin, Base):  # type: ignore
     """A financial record."""
+
     unique_key = ["asset_id", "key", "granularity", "year", "quarter"]
 
     __tablename__ = "financial"
