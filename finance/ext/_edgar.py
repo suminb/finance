@@ -30,12 +30,13 @@ class EdgarIndexRow:
 
 class Investment:
     def __init__(self, xml_node: Element):
+        nodew = XmlNodeWrapper(xml_node)
         ns = EDGAR_XML_NAMESPACE
-        self.name = xml_node.find("d:name", ns).text
+        self.name = nodew.text("d:name")
 
         # NOTE: Not sure what these are...
-        self.lei = xml_node.find("d:lei").text
-        self.cusip = xml_node.find("d:cusip").text
+        self.lei = nodew.text("d:lei")
+        self.cusip = nodew.text("d:cusip")
 
         isin_tag = xml_node.find("d:identifiers/d:isin", ns)
         if isin_tag is not None:
@@ -44,9 +45,9 @@ class Investment:
             self.isin = None
         # NOTE: Sometimes <identifiers> contains <ticker>
 
-        self.units = float(xml_node.find("d:valUSD", ns).text)
-        self.value_usd = float(xml_node.find("d:valUSD", ns).text)
-        self.percentage = float(xml_node.find("d:pctVal", ns).text)
+        self.units = float(nodew.text("d:valUSD", ns))
+        self.value_usd = float(nodew.text("d:valUSD", ns))
+        self.percentage = float(nodew.text("d:pctVal", ns))
 
         currency = xml_node.find("d:curCd", ns)
         if currency is not None:
@@ -55,20 +56,34 @@ class Investment:
             currency = xml_node.find("d:currencyConditional", ns)
             self.currency = currency.attrib["curCd"]
 
-        self.payoff_profile = xml_node.find("d:payoffProfile").text
-        self.asset_category = xml_node.find("d:assetCat").text
-        self.issuer_category = xml_node.find("d:issuerCat").text
-        self.invested_country = xml_node.find("d:invCountry").text
-        self.is_restricted_security = xml_node.find("d:isRestrictedSec").text
+        self.payoff_profile = nodew.text("d:payoffProfile")
+        self.asset_category = nodew.text("d:assetCat")
+        self.issuer_category = nodew.text("d:issuerCat")
+        self.invested_country = nodew.text("d:invCountry")
+        self.is_restricted_security = nodew.text("d:isRestrictedSec")
 
         # NOTE: Not sure what these are...
-        self.fair_value_level = xml_node.find("d:fairValLevel").text
-        self.is_cash_collateral = xml_node.find("d:securityLending/d:isCashCollateral").text
-        self.is_non_cash_collateral = xml_node.find("d:securityLending/d:isNonCashCollateral").text
-        self.is_loan_by_fund = xml_node.find("d:securityLending/d:isLoanByFund").text
+        self.fair_value_level = nodew.text("d:fairValLevel")
+        self.is_cash_collateral = nodew.text("d:securityLending/d:isCashCollateral")
+        self.is_non_cash_collateral = nodew.text(
+            "d:securityLending/d:isNonCashCollateral"
+        )
+        self.is_loan_by_fund = nodew.text("d:securityLending/d:isLoanByFund")
 
     def __repr__(self):
         return f"{self.name}, {self.isin}, {self.value_usd}, {self.percentage}"
+
+
+class XmlNodeWrapper:
+    def __init__(self, xml_node: Element):
+        self.xml_node = xml_node
+
+    def text(self, node_name: str, ns=EDGAR_XML_NAMESPACE):
+        node = self.xml_node.find(node_name, ns)
+        if node is None:
+            return None
+        else:
+            return node.text
 
 
 def fetch_indexes():
