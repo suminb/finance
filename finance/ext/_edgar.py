@@ -2,7 +2,7 @@ import csv
 from datetime import datetime
 from glob import glob
 import sys
-from typing import List, TextIO
+from typing import Callable, List, Optional, TextIO
 from xml.etree.ElementTree import Element, ElementTree, fromstring
 
 import edgar
@@ -41,7 +41,7 @@ class Investment:
 
         isin_tag = xml_node.find("d:identifiers/d:isin", ns)
         if isin_tag is not None:
-            self.isin = isin_tag.attrib["value"]
+            self.isin = isin_tag.attrib["value"]  # type: Optional[str]
         else:
             self.isin = None
         # NOTE: Sometimes <identifiers> contains <ticker>
@@ -55,7 +55,10 @@ class Investment:
             self.currency = currency.text
         else:
             currency = xml_node.find("d:currencyConditional", ns)
-            self.currency = currency.attrib["curCd"]
+            if currency is not None:
+                self.currency = currency.attrib["curCd"]
+            else:
+                self.currency = None
 
         self.payoff_profile = nodew.text("d:payoffProfile")
         self.asset_category = nodew.text("d:assetCat")
@@ -118,14 +121,14 @@ def extract_xml(text: str):
     return text[start + 5 : end].strip()
 
 
-def search(predicate: callable):
+def search(predicate: Callable):
     for filename in glob("/tmp/edgar/*.tsv"):
         with open(filename) as fin:
             rows = csv.reader(fin, delimiter="|")
             for row in rows:
-                row = EdgarIndexRow(row)
-                if predicate(row):
-                    yield row
+                index_row = EdgarIndexRow(row)
+                if predicate(index_row):
+                    yield index_row
 
 
 def extract_investments(rows: List[EdgarIndexRow]):
