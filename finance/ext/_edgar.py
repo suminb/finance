@@ -2,6 +2,7 @@ import csv
 from datetime import datetime
 from glob import glob
 import sys
+from typing import List
 from xml.etree.ElementTree import Element, ElementTree, fromstring
 
 import edgar
@@ -125,12 +126,10 @@ def search(predicate: callable):
                     yield row
 
 
-if __name__ == "__main__":
-    writer = csv.writer(sys.stdout)
-    for row in search(lambda row: row.type == "NPORT-P" and "BLACKROCK" in row.title):
-        # print(row)
+def export_as_csv(rows: List[EdgarIndexRow], fout):
+    writer = csv.writer(fout)
+    for row in rows:
         text_report = fetch_report(row.txt_path)
-        # text_report = fetch_report("edgar/data/1005942/0000869392-20-002228.txt")
         for investment in extract_investments(text_report):
             if investment.currency == "USD":
                 writer.writerow(
@@ -141,3 +140,8 @@ if __name__ == "__main__":
                         investment.percentage,
                     ]
                 )
+
+
+if __name__ == "__main__":
+    rows = search(lambda row: row.type == "NPORT-P" and "BLACKROCK" in row.title)
+    export_as_csv(rows, sys.stdout)
