@@ -2,7 +2,7 @@ import csv
 from datetime import datetime
 from glob import glob
 import sys
-from typing import List
+from typing import List, TextIO
 from xml.etree.ElementTree import Element, ElementTree, fromstring
 
 import edgar
@@ -98,8 +98,10 @@ def fetch_report(txt_path: str):
     return resp.text
 
 
-def extract_investments(text_report: str):
+def parse_as_investments(text_report: str):
     """
+    Parses an EDGAR report as a list of Investment objects
+
     :param text_report: Report in text format
     """
     xml = extract_xml(text_report)
@@ -126,22 +128,28 @@ def search(predicate: callable):
                     yield row
 
 
-def export_as_csv(rows: List[EdgarIndexRow], fout):
-    writer = csv.writer(fout)
+def extract_investments(rows: List[EdgarIndexRow]):
     for row in rows:
         text_report = fetch_report(row.txt_path)
-        for investment in extract_investments(text_report):
-            if investment.currency == "USD":
-                writer.writerow(
-                    [
-                        investment.name,
-                        investment.isin,
-                        investment.value_usd,
-                        investment.percentage,
-                    ]
-                )
+        for investment in parse_as_investments(text_report):
+            yield investment
+
+
+def export_as_csv(rows: List[Investment], fout: TextIO):
+    writer = csv.writer(fout)
+    for investment in rows:
+        if investment.currency == "USD":
+            writer.writerow(
+                [
+                    investment.name,
+                    investment.isin,
+                    investment.value_usd,
+                    investment.percentage,
+                ]
+            )
 
 
 if __name__ == "__main__":
     rows = search(lambda row: row.type == "NPORT-P" and "BLACKROCK" in row.title)
-    export_as_csv(rows, sys.stdout)
+    investments = extract_investments(rows)
+    export_as_csv(investments, sys.stdout)
