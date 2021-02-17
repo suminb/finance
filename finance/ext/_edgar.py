@@ -33,6 +33,10 @@ class Investment:
         ns = EDGAR_XML_NAMESPACE
         self.name = xml_node.find("d:name", ns).text
 
+        # NOTE: Not sure what these are...
+        self.lei = xml_node.find("d:lei").text
+        self.cusip = xml_node.find("d:cusip").text
+
         isin_tag = xml_node.find("d:identifiers/d:isin", ns)
         if isin_tag is not None:
             self.isin = isin_tag.attrib["value"]
@@ -40,6 +44,7 @@ class Investment:
             self.isin = None
         # NOTE: Sometimes <identifiers> contains <ticker>
 
+        self.units = float(xml_node.find("d:valUSD", ns).text)
         self.value_usd = float(xml_node.find("d:valUSD", ns).text)
         self.percentage = float(xml_node.find("d:pctVal", ns).text)
 
@@ -49,6 +54,18 @@ class Investment:
         else:
             currency = xml_node.find("d:currencyConditional", ns)
             self.currency = currency.attrib["curCd"]
+
+        self.payoff_profile = xml_node.find("d:payoffProfile").text
+        self.asset_category = xml_node.find("d:assetCat").text
+        self.issuer_category = xml_node.find("d:issuerCat").text
+        self.invested_country = xml_node.find("d:invCountry").text
+        self.is_restricted_security = xml_node.find("d:isRestrictedSec").text
+
+        # NOTE: Not sure what these are...
+        self.fair_value_level = xml_node.find("d:fairValLevel").text
+        self.is_cash_collateral = xml_node.find("d:securityLending/d:isCashCollateral").text
+        self.is_non_cash_collateral = xml_node.find("d:securityLending/d:isNonCashCollateral").text
+        self.is_loan_by_fund = xml_node.find("d:securityLending/d:isLoanByFund").text
 
     def __repr__(self):
         return f"{self.name}, {self.isin}, {self.value_usd}, {self.percentage}"
