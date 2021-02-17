@@ -71,7 +71,6 @@ class Financials:
 
         return recent_earnings
 
-    @property
     def yearly_growth_rates(self, key="revenue"):
         """Calculates annual growth rates."""
         assert key in ["revenue", "earnings"]
@@ -86,6 +85,14 @@ class Financials:
             growth_rate(x, y)
             for x, y in zip(self.yearly_earnings[:-1], self.yearly_earnings[1:])
         ]
+
+    @property
+    def yearly_growth_rates_by_revenue(self):
+        return self.yearly_growth_rates("revenue")
+
+    @property
+    def yearly_growth_rates_by_earnings(self):
+        return self.yearly_growth_rates("earnings")
 
 
 class HistoricalData:

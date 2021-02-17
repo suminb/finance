@@ -25,25 +25,26 @@ class NaverProfile(BaseProfile):
         """This could easily break along the way. We need a more robust way
         to parse the raw HTML.
         """
-        self.soup = BeautifulSoup(raw, features="lxml")
+        soup = BeautifulSoup(raw, features="lxml")
+        self.soup = soup
 
-        self.name = self.soup.select("div.wrap_company h2 a")[0].text
+        self.name = soup.select("div.wrap_company h2 a")[0].text
 
-        current_price_raw = self.soup.select("div.today p.no_today span.blind")[0].text
+        current_price_raw = soup.select("div.today p.no_today span.blind")[0].text
         self.current_price = int(current_price_raw.replace(",", ""))
 
-        rows = self.soup.select("table[summary='시가총액 정보'] tr")
+        rows = soup.select("table[summary='시가총액 정보'] tr")
         assert len(rows) == 4, f"Expected rows: 4, actual: {len(rows)}"
 
         outstanding_shares_raw = rows[2].select("td")[0].text
         self.outstanding_shares = int(outstanding_shares_raw.replace(",", ""))
 
-        eps_tag = self.soup.find(id="_eps")
+        eps_tag = soup.find(id="_eps")
         self.eps = int(eps_tag.text.replace(",", ""))
 
         # For some reason they provide `#_pbr` tag but do not provide `#_bps`,
         # we have to find the value by exploring siblings of `#_pbr`.
-        pbr_tag = self.soup.find(id="_pbr")
+        pbr_tag = soup.find(id="_pbr")
         siblings = pbr_tag.next_siblings
         # This could break at any moment. We need to find a more robust way to
         # handle this.
