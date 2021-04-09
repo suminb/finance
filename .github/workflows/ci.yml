@@ -44,7 +44,7 @@ jobs:
       run: |
         py.test -v tests --cov finance --cov-report term-missing
       env:
-        SBF_DB_URL: "postgres://postgres:postgres@localhost/finance"
-        SBF_TEST_DB_URL: "postgres://postgres:postgres@localhost/finance_test"
+        SBF_DB_URL: "postgresql://postgres:postgres@localhost/finance"
+        SBF_TEST_DB_URL: "postgresql://postgres:postgres@localhost/finance_test"
         SBF_TESTING: true
         PYTHONPATH: .
