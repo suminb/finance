@@ -34,6 +34,9 @@ def load_cache(topic, symbol, region, cache_dir=DEFAULT_CACHE_DIR):
 
 
 def save_cache(topic, symbol, region, data, cache_dir=DEFAULT_CACHE_DIR):
+    if not os.path.exists(cache_dir):
+        log.info(f"Cache directory {cache_dir} does not exist. Creating one...")
+        os.makedirs(cache_dir)
     path = get_cache_filename(topic, symbol, region, cache_dir)
     with open(path, "w") as fout:
         fout.write(json.dumps(data))
