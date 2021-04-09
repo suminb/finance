@@ -7,15 +7,21 @@ import requests
 
 from finance.ext.rapidapi.yahoo.models import Financials, HistoricalData, Profile
 
+log = Logger(__name__)
+
 API_HOST = "apidojo-yahoo-finance-v1.p.rapidapi.com"
 DEFAULT_CACHE_DIR = ".cache"
+SBF_RAPIDAPI_KEY = ""
+
+if "SBF_RAPIDAPI_KEY" in os.environ:
+    SBF_RAPIDAPI_KEY = os.environ["SBF_RAPIDAPI_KEY"]
+else:
+    log.warn("SBF_RAPIDAPI_KEY is not set")
 
 headers = {
     "x-rapidapi-key": os.environ.get("SBF_RAPIDAPI_KEY"),
     "x-rapidapi-host": API_HOST,
 }
-
-log = Logger(__name__)
 
 
 def get_cache_filename(topic, symbol, region, cache_dir=DEFAULT_CACHE_DIR):
