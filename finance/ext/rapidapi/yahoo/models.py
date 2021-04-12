@@ -108,7 +108,7 @@ class HistoricalData:
 
     def is_price_record(self, record):
         keys = ["date", "open", "high", "low", "close", "adjclose", "volume"]
-        contains_key = [(k in record) for k in keys]
+        contains_key = [(k in record) and (record[k] is not None) for k in keys]
         return all(contains_key)
 
     @property

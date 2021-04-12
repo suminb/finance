@@ -41,3 +41,11 @@ def test_historical_data():
     historical_data = get_historical_data("MSFT", cache_dir=CACHE_DIR)
     assert historical_data.first_trade_date == datetime(1986, 3, 13, 14, 30)
     assert historical_data.most_recent_price == 213.26
+
+
+def test_malformed_historical_data():
+    """We have noticed historical data of PS contains malformed data. Some of
+    the price information, such as close, open, low, high, close, adjclose,
+    and volume, is None."""
+    historical_data = get_historical_data("PS", cache_dir=CACHE_DIR)
+    [x for x in historical_data.prices]
