@@ -51,7 +51,12 @@ if __name__ == "__main__":
             Asset.create(
                 type=AssetType.currency,
                 name=r["english_name"],
-                code=currency)
+                code=currency,
+            )
         except IntegrityError:
             session.rollback()
-
+    Asset.create(
+        type=AssetType.currency,
+        name="Korean Won",
+        code="KRW",
+    )
