@@ -257,26 +257,29 @@ class AssetValue(CRUDMixin, Base):  # type: ignore
     base_asset_id = Column(BigInteger, ForeignKey("asset.id"))
     base_asset = relationship("Asset", uselist=False, foreign_keys=[base_asset_id])
     evaluated_at = Column(DateTime(timezone=False))
-    source = Column(Enum("yahoo", "google", "kofia", "test", name="asset_value_source"))
+    source = Column(Enum("yahoo", "google", "kofia", "upbit", "test", name="asset_value_source"))
     granularity = Column(
         Enum(
             "1sec",
             "1min",
+            "3min",
             "5min",
+            "15min",
             "1hour",
+            "4hour",
             "1day",
             "1week",
             "1month",
             "1year",
-            name="granularity",
+            name="ticker_granularity",
         )
     )
     # NOTE: Should we also store `fetched_at`?
-    open = Column(Numeric(precision=20, scale=4))
-    high = Column(Numeric(precision=20, scale=4))
-    low = Column(Numeric(precision=20, scale=4))
-    close = Column(Numeric(precision=20, scale=4))
-    volume = Column(Integer)
+    open = Column(Numeric(precision=18, scale=10))
+    high = Column(Numeric(precision=18, scale=10))
+    low = Column(Numeric(precision=18, scale=10))
+    close = Column(Numeric(precision=18, scale=10))
+    volume = Column(Numeric(precision=18, scale=10))
 
     def __repr__(self):
         return (

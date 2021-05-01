@@ -2,12 +2,43 @@
 # FIXME: This module is under incubation. Will be go on a separate way later on...
 #
 
+from datetime import datetime
 import json
 
 import requests
 from sqlalchemy.exc import IntegrityError
 
-from finance.models import Asset, AssetType, session
+from finance.models import Asset, AssetType, AssetValue, session
+
+
+#
+# Example:
+# {'market': 'KRW-BTC', 'korean_name': '비트코인', 'english_name': 'Bitcoin'}
+#
+def fetch_supported_markets():
+    url = "https://api.upbit.com/v1/market/all"
+    resp = requests.get(url)
+    data = json.loads(resp.text)
+    return data
+
+
+def insert_supported_currencies():
+    records = fetch_supported_markets()
+    for r in records:
+        (base_currency, currency) = r["market"].split("-")
+        try:
+            Asset.create(
+                type=AssetType.currency,
+                name=r["english_name"],
+                code=currency,
+            )
+        except IntegrityError:
+            session.rollback()
+    Asset.create(
+        type=AssetType.currency,
+        name="Korean Won",
+        code="KRW",
+    )
 
 
 #
@@ -29,34 +60,40 @@ from finance.models import Asset, AssetType, session
 #   ...
 # ]
 #
-
-
-#
-# Example:
-# {'market': 'KRW-BTC', 'korean_name': '비트코인', 'english_name': 'Bitcoin'}
-#
-def fetch_supported_markets():
-    url = "https://api.upbit.com/v1/market/all"
-    resp = requests.get(url)
-
+def fetch_tickers(currency, base_currency="KRW", minutes=3):
+    url = f"https://api.upbit.com/v1/candles/minutes/{minutes}"
+    params = {
+        "market": f"{base_currency}-{currency}",
+        "count": 200,
+    }
+    resp = requests.get(url, params=params)
     data = json.loads(resp.text)
     return data
 
 
-if __name__ == "__main__":
-    records = fetch_supported_markets()
+def insert_tickers():
+    currency = "ETH"
+    base_asset = Asset.get_by_symbol("KRW")
+    asset = Asset.get_by_symbol(currency)
+    records = fetch_tickers(currency)
     for r in records:
-        (base_currency, currency) = r["market"].split("-")
+        evaluated_at = datetime.strptime(r["candle_date_time_utc"], "%Y-%m-%dT%H:%M:%S")
         try:
-            Asset.create(
-                type=AssetType.currency,
-                name=r["english_name"],
-                code=currency,
+            AssetValue.create(
+                asset=asset,
+                base_asset=base_asset,
+                evaluated_at=evaluated_at,
+                # What a bunch of weird-ass names...
+                open=r["opening_price"],
+                close=r["trade_price"],
+                low=r["low_price"],
+                high=r["high_price"],
+                volume=r["candle_acc_trade_volume"],
+                source="upbit",
             )
         except IntegrityError:
             session.rollback()
-    Asset.create(
-        type=AssetType.currency,
-        name="Korean Won",
-        code="KRW",
-    )
+
+
+if __name__ == "__main__":
+    insert_tickers()
