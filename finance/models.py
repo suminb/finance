@@ -1,5 +1,4 @@
 import collections
-import enum
 import functools
 import operator
 from datetime import datetime, timedelta
@@ -217,7 +216,7 @@ class User(CRUDMixin, Base):  # type: ignore
 # conversion, stock evaluation, etc.)
 
 
-class Granularity(enum.Enum):
+class Granularity:
     sec = "1sec"
     min = "1min"
     three_min = "3min"
@@ -265,7 +264,22 @@ class AssetValue(CRUDMixin, Base):  # type: ignore
     base_asset = relationship("Asset", uselist=False, foreign_keys=[base_asset_id])
     evaluated_at = Column(DateTime(timezone=False))
     source = Column(Enum("yahoo", "google", "kofia", "upbit", "test", name="asset_value_source"))
-    granularity = Column(Enum(Granularity))
+    granularity = Column(
+        Enum(
+            "1sec",
+            "1min",
+            "3min",
+            "5min",
+            "15min"
+            "1hour",
+            "4hour",
+            "1day",
+            "1week",
+            "1month",
+            "1year",
+            name="ticker_granularity",
+        )
+    )
     # NOTE: Should we also store `fetched_at`?
     open = Column(Numeric(precision=18, scale=10))
     high = Column(Numeric(precision=18, scale=10))
