@@ -8,7 +8,7 @@ import json
 import requests
 from sqlalchemy.exc import IntegrityError
 
-from finance.models import Asset, AssetType, AssetValue, session
+from finance.models import Asset, AssetType, AssetValue, Granularity, session
 
 
 #
@@ -60,7 +60,7 @@ def insert_supported_currencies():
 #   ...
 # ]
 #
-def fetch_tickers(currency, base_currency="KRW", minutes=3):
+def fetch_tickers(currency, base_currency="KRW", minutes=15):
     url = f"https://api.upbit.com/v1/candles/minutes/{minutes}"
     params = {
         "market": f"{base_currency}-{currency}",
@@ -71,7 +71,9 @@ def fetch_tickers(currency, base_currency="KRW", minutes=3):
     return data
 
 
-def insert_tickers():
+def insert_tickers(
+        granularity: Granularity = Granularity.fifteen_min
+):
     currency = "ETH"
     base_asset = Asset.get_by_symbol("KRW")
     asset = Asset.get_by_symbol(currency)
@@ -89,11 +91,8 @@ def insert_tickers():
                 low=r["low_price"],
                 high=r["high_price"],
                 volume=r["candle_acc_trade_volume"],
+                granularity=granularity,
                 source="upbit",
             )
         except IntegrityError:
             session.rollback()
-
-
-if __name__ == "__main__":
-    insert_tickers()
