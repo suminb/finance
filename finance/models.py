@@ -270,7 +270,7 @@ class AssetValue(CRUDMixin, Base):  # type: ignore
             "1min",
             "3min",
             "5min",
-            "15min"
+            "15min",
             "1hour",
             "4hour",
             "1day",

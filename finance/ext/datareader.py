@@ -24,11 +24,10 @@ def make_asset_value_tuple(
 
 def read_asset_values(
         symbol: str,
-        granularity: Granularity = Granularity.three_min,
         from_date: datetime = datetime.now() - timedelta(days=365),
         to_date: datetime = datetime.now(),
         source: str = "upbit",
-        ticker_granularity: Granularity = Granularity.three_min,
+        ticker_granularity: str = Granularity.three_min,
 ) -> pd.DataFrame:
     columns = [
         "id",
@@ -48,7 +47,7 @@ def read_asset_values(
     rows = AssetValue.query \
         .filter(AssetValue.asset == asset) \
         .filter(AssetValue.source == source) \
-        .filter(AssetValue.granularity == granularity)
+        .filter(AssetValue.granularity == ticker_granularity)
     return pd.DataFrame.from_records(
         [make_asset_value_tuple(r, asset, base_asset, columns) for r in rows],
         columns=columns)

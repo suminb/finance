@@ -72,7 +72,7 @@ def fetch_tickers(currency, base_currency="KRW", minutes=15):
 
 
 def insert_tickers(
-        granularity: Granularity = Granularity.fifteen_min
+        granularity: str = Granularity.fifteen_min
 ):
     currency = "ETH"
     base_asset = Asset.get_by_symbol("KRW")
