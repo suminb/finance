@@ -301,8 +301,9 @@ class AssetValue(CRUDMixin, Base):  # type: ignore
         )
 
 
-class AssetType(object):
-    currency = "currency"
+class AssetType:
+    fiat_currency = "fiat_currency"
+    crypto_currency = "crypto_currency"
     stock = "stock"
     bond = "bond"
     p2p_bond = "p2p_bond"
@@ -312,7 +313,8 @@ class AssetType(object):
 
 
 asset_types = (
-    AssetType.currency,
+    AssetType.fiat_currency,
+    AssetType.crypto_currency,
     AssetType.stock,
     AssetType.bond,
     AssetType.p2p_bond,
@@ -414,12 +416,21 @@ class CommodityAsset(Asset):
     }
 
 
-class CurrencyAsset(Asset):
+class FiatCurrencyAsset(Asset):
 
     __tablename__ = "asset"
 
     __mapper_args__ = {
-        "polymorphic_identity": "currency",
+        "polymorphic_identity": "fiat_currency",
+    }
+
+
+class CryptoCurrencyAsset(Asset):
+
+    __tablename__ = "asset"
+
+    __mapper_args__ = {
+        "polymorphic_identity": "crypto_currency",
     }
 
 
