@@ -27,7 +27,7 @@ def read_asset_values(
         from_date: datetime = datetime.now() - timedelta(days=365),
         to_date: datetime = datetime.now(),
         source: str = "upbit",
-        ticker_granularity: str = Granularity.three_min,
+        ticker_granularity: str = Granularity.fifteen_min,
 ) -> pd.DataFrame:
     columns = [
         "id",
