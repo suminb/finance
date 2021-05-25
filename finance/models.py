@@ -216,11 +216,14 @@ class User(CRUDMixin, Base):  # type: ignore
 # conversion, stock evaluation, etc.)
 
 
-class Granularity(object):
+class Granularity:
     sec = "1sec"
     min = "1min"
+    three_min = "3min"
     five_min = "5min"
+    fifteen_min = "15min"
     hour = "1hour"
+    four_hour = "4hour"
     day = "1day"
     week = "1week"
     month = "1month"
@@ -231,8 +234,11 @@ class Granularity(object):
         return value in (
             cls.sec,
             cls.min,
+            cls.three_min,
             cls.five_min,
+            cls.fifteen_min,
             cls.hour,
+            cls.four_hour,
             cls.day,
             cls.week,
             cls.month,
@@ -257,26 +263,29 @@ class AssetValue(CRUDMixin, Base):  # type: ignore
     base_asset_id = Column(BigInteger, ForeignKey("asset.id"))
     base_asset = relationship("Asset", uselist=False, foreign_keys=[base_asset_id])
     evaluated_at = Column(DateTime(timezone=False))
-    source = Column(Enum("yahoo", "google", "kofia", "test", name="asset_value_source"))
+    source = Column(Enum("yahoo", "google", "kofia", "upbit", "test", name="asset_value_source"))
     granularity = Column(
         Enum(
             "1sec",
             "1min",
+            "3min",
             "5min",
+            "15min",
             "1hour",
+            "4hour",
             "1day",
             "1week",
             "1month",
             "1year",
-            name="granularity",
+            name="ticker_granularity",
         )
     )
     # NOTE: Should we also store `fetched_at`?
-    open = Column(Numeric(precision=20, scale=4))
-    high = Column(Numeric(precision=20, scale=4))
-    low = Column(Numeric(precision=20, scale=4))
-    close = Column(Numeric(precision=20, scale=4))
-    volume = Column(Integer)
+    open = Column(Numeric(precision=18, scale=10))
+    high = Column(Numeric(precision=18, scale=10))
+    low = Column(Numeric(precision=18, scale=10))
+    close = Column(Numeric(precision=18, scale=10))
+    volume = Column(Numeric(precision=18, scale=10))
 
     def __repr__(self):
         return (
@@ -292,8 +301,9 @@ class AssetValue(CRUDMixin, Base):  # type: ignore
         )
 
 
-class AssetType(object):
-    currency = "currency"
+class AssetType:
+    fiat_currency = "fiat_currency"
+    crypto_currency = "crypto_currency"
     stock = "stock"
     bond = "bond"
     p2p_bond = "p2p_bond"
@@ -303,7 +313,8 @@ class AssetType(object):
 
 
 asset_types = (
-    AssetType.currency,
+    AssetType.fiat_currency,
+    AssetType.crypto_currency,
     AssetType.stock,
     AssetType.bond,
     AssetType.p2p_bond,
@@ -405,12 +416,21 @@ class CommodityAsset(Asset):
     }
 
 
-class CurrencyAsset(Asset):
+class FiatCurrencyAsset(Asset):
 
     __tablename__ = "asset"
 
     __mapper_args__ = {
-        "polymorphic_identity": "currency",
+        "polymorphic_identity": "fiat_currency",
+    }
+
+
+class CryptoCurrencyAsset(Asset):
+
+    __tablename__ = "asset"
+
+    __mapper_args__ = {
+        "polymorphic_identity": "crypto_currency",
     }
 
 

@@ -14,7 +14,7 @@ from finance.models import (
     Asset,
     AssetType,
     Base,
-    CurrencyAsset,
+    FiatCurrencyAsset,
     FundAsset,
     P2PBondAsset,
     Portfolio,
@@ -114,7 +114,7 @@ def asset_hf1(request):
 
 @pytest.fixture(scope="function")
 def asset_krw(request):
-    asset = CurrencyAsset.create(code="KRW", description="Korean Won")
+    asset = FiatCurrencyAsset.create(code="KRW", description="Korean Won")
     request.addfinalizer(partial(teardown, record=asset))
     return asset
 
@@ -130,7 +130,7 @@ def asset_sp500(request):
 
 @pytest.fixture(scope="function")
 def asset_usd(request):
-    asset = CurrencyAsset.create(code="USD", description="United States Dollar")
+    asset = FiatCurrencyAsset.create(code="USD", description="United States Dollar")
     request.addfinalizer(partial(teardown, record=asset))
     return asset
 
