@@ -47,7 +47,10 @@ def read_asset_values(
     rows = AssetValue.query \
         .filter(AssetValue.asset == asset) \
         .filter(AssetValue.source == source) \
-        .filter(AssetValue.granularity == ticker_granularity)
+        .filter(AssetValue.granularity == ticker_granularity) \
+        .filter(AssetValue.evaluated_at >= from_date) \
+        .filter(AssetValue.evaluated_at <= to_date) \
+        .order_by(AssetValue.evaluated_at)
     return pd.DataFrame.from_records(
         [make_asset_value_tuple(r, asset, base_asset, columns) for r in rows],
         columns=columns)
