@@ -57,7 +57,7 @@ def read_asset_values(
 
 
 def attach_indicators(data_frame: pd.DataFrame, base_column="close") -> pd.DataFrame:
-    rolling_periods = [7, 15, 50, 120, 240, 360]
+    rolling_periods = [7, 15, 20, 50, 120, 240, 360]
     for rp in rolling_periods:
         data_frame[f"ma{rp}"] = data_frame[base_column].rolling(rp).mean()
 
