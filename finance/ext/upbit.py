@@ -96,7 +96,40 @@ granularity_to_minutes = {
 }
 
 
+def insert_ticker(asset, base_asset, granularity, record):
+    evaluated_at = datetime.strptime(record["candle_date_time_utc"], "%Y-%m-%dT%H:%M:%S")
+    try:
+        AssetValue.create(
+            asset=asset,
+            base_asset=base_asset,
+            evaluated_at=evaluated_at,
+            # What a bunch of weird-ass names...
+            open=record["opening_price"],
+            close=record["trade_price"],
+            low=record["low_price"],
+            high=record["high_price"],
+            volume=record["candle_acc_trade_volume"],
+            granularity=granularity,
+            source="upbit",
+        )
+    except IntegrityError:
+        session.rollback()
+
+
 def insert_tickers(
+        currency: str,
+        base_currency="KRW",
+        granularity: str = Granularity.fifteen_min,
+        until=datetime.utcnow(),
+):
+    base_asset = Asset.get_by_symbol(base_currency)
+    asset = Asset.get_by_symbol(currency)
+    records = fetch_tickers(currency, base_currency, granularity_to_minutes[granularity], until)
+    for r in records:
+        insert_ticker(asset, base_asset, granularity, r)
+
+
+def insert_tickers_continuously(
         currency: str,
         base_currency="KRW",
         granularity: str = Granularity.fifteen_min,
@@ -106,20 +139,4 @@ def insert_tickers(
     asset = Asset.get_by_symbol(currency)
     records = fetch_tickers_continuously(currency, base_currency, granularity_to_minutes[granularity], until)
     for r in records:
-        evaluated_at = datetime.strptime(r["candle_date_time_utc"], "%Y-%m-%dT%H:%M:%S")
-        try:
-            AssetValue.create(
-                asset=asset,
-                base_asset=base_asset,
-                evaluated_at=evaluated_at,
-                # What a bunch of weird-ass names...
-                open=r["opening_price"],
-                close=r["trade_price"],
-                low=r["low_price"],
-                high=r["high_price"],
-                volume=r["candle_acc_trade_volume"],
-                granularity=granularity,
-                source="upbit",
-            )
-        except IntegrityError:
-            session.rollback()
+        insert_ticker(asset, base_asset, granularity, r)
