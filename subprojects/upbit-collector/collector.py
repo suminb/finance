@@ -12,7 +12,8 @@ from typing import Union
 
 
 BASE_PATH = os.path.dirname(__file__)
-LOG_PATH = os.path.join(BASE_PATH, "logs")
+DEFAULT_LOG_PATH = os.path.join(BASE_PATH, "logs")
+LOG_PATH = os.environ.get("LOG_PATH", DEFAULT_LOG_PATH)
 
 
 def parse_currency_pair(value: str):
