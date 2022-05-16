@@ -60,7 +60,7 @@ def fetch_or_load_cache(
 
 
 def fetch_financials(symbol: str, region="US"):
-    """See https://rapidapi.com/apidojo/api/yahoo-finance1?endpoint=apiendpoint_2e0b16d4-a66b-469e-bc18-b60cec60661b for more details."""
+    """See https://rapidapi.com/apidojo/api/yh-finance/ for more details."""
     log.info(f"Fetching financials for {symbol}")
     url = f"https://{API_HOST}/stock/v2/get-financials"
     params = {"symbol": symbol, "region": region}
@@ -83,9 +83,9 @@ def get_financials(
 
 
 def fetch_historical_data(symbol: str, region="US"):
-    """See https://rapidapi.com/apidojo/api/yahoo-finance1?endpoint=apiendpoint_2c81ebb5-60ab-41e4-8cd2-2056b26e93c2 for more details."""
+    """See https://rapidapi.com/apidojo/api/yh-finance/ for more details."""
     log.info(f"Fetching historical data for {symbol}")
-    url = f"https://{API_HOST}/stock/v2/get-historical-data"
+    url = f"https://{API_HOST}/stock/v3/get-historical-data"
     params = {"symbol": symbol, "region": region}
     resp = requests.get(url, headers=headers, params=params)
 
