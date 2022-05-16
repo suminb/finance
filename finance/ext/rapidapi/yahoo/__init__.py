@@ -9,7 +9,7 @@ from finance.ext.rapidapi.yahoo.models import Financials, HistoricalData, Profil
 
 log = Logger(__name__)
 
-API_HOST = "apidojo-yahoo-finance-v1.p.rapidapi.com"
+API_HOST = "yh-finance.p.rapidapi.com"
 DEFAULT_CACHE_DIR = ".cache"
 SBF_RAPIDAPI_KEY = ""
 
