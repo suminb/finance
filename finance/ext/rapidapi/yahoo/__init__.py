@@ -19,7 +19,7 @@ else:
     log.warn("SBF_RAPIDAPI_KEY is not set")
 
 headers = {
-    "x-rapidapi-key": os.environ.get("SBF_RAPIDAPI_KEY"),
+    "x-rapidapi-key": SBF_RAPIDAPI_KEY,
     "x-rapidapi-host": API_HOST,
 }
 

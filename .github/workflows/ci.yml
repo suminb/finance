@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.7, 3.8]
 
     # Service containers to run with `container-job`
     services:
@@ -39,7 +39,7 @@ jobs:
       run: |
         # Disable black for now...
         # black --check .
-        mypy --ignore-missing-imports finance
+        mypy --install-types --non-interactive --ignore-missing-imports finance
     - name: Test with pytest
       run: |
         py.test -v tests --cov finance --cov-report term-missing
