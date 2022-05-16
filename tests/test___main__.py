@@ -51,7 +51,8 @@ def test_import_sp500_records():
     assert result.exit_code == 0
 
 
-def test_import_fund(asset_sp500):
+@pytest.mark.skip(reason="It appears Kofia API has been changed.")
+def test_import_fund(asset_krw, asset_sp500):
     runner = CliRunner()
     result = runner.invoke(import_fund, ["KR5223941018", "2016-01-01", "2016-01-31"])
     assert result.exit_code == 0
@@ -63,6 +64,7 @@ def test_import_non_existing_fund():
     assert isinstance(result.exception, AssetNotFoundException)
 
 
+@pytest.mark.skip(reason="Yahoo Finance provider is scheduled to be deprecated.")
 def test_fetch_stock_values():
     runner = CliRunner()
     result = runner.invoke(

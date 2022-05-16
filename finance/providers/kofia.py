@@ -69,6 +69,7 @@ class Kofia(AssetValueProvider):
             to_date=to_date.strftime(DATE_FORMAT),
         )
 
+    # TODO: An empty XML body is returned. This needs to be fixed.
     def fetch_data(self, code, from_date, to_date):
         """Fetch data from the provider.
 

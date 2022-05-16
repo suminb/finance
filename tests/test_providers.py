@@ -68,6 +68,7 @@ def test_kofia_get_request_body():
     assert "20160603" in body
 
 
+@pytest.mark.skip(reason="Kofia API needs to be investigated.")
 def test_kofia_fetch_data():
     provider = Kofia()
     from_date, to_date = parse_date("2016-05-01"), parse_date("2016-05-30")
