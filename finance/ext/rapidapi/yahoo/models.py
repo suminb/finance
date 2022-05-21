@@ -77,7 +77,7 @@ class Financials:
 
         def growth_rate(x, y):
             try:
-                return y[key] - x[key] / x[key]
+                return (y[key] - x[key]) / x[key]
             except ZeroDivisionError:
                 return nan
 
