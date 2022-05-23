@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import os
 from typing import Callable
@@ -59,14 +60,25 @@ def fetch_or_load_cache(
     return data
 
 
+def handle_http_request(symbol: str, url, headers, params):
+    resp = requests.get(url, headers=headers, params=params)
+    if resp.status_code == 200:
+        return json.loads(resp.text)
+    else:
+        return {
+            "symbol": symbol,
+            "status_code": resp.status_code,
+            "message": resp.text,
+            "fetched_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+
+
 def fetch_financials(symbol: str, region="US"):
     """See https://rapidapi.com/apidojo/api/yh-finance/ for more details."""
     log.info(f"Fetching financials for {symbol}")
     url = f"https://{API_HOST}/stock/v2/get-financials"
     params = {"symbol": symbol, "region": region}
-    resp = requests.get(url, headers=headers, params=params)
-
-    return json.loads(resp.text)
+    return handle_http_request(symbol, url, headers, params)
 
 
 # TODO: Introduce a common layer for cache
@@ -87,9 +99,7 @@ def fetch_historical_data(symbol: str, region="US"):
     log.info(f"Fetching historical data for {symbol}")
     url = f"https://{API_HOST}/stock/v3/get-historical-data"
     params = {"symbol": symbol, "region": region}
-    resp = requests.get(url, headers=headers, params=params)
-
-    return json.loads(resp.text)
+    return handle_http_request(symbol, url, headers, params)
 
 
 def get_historical_data(
@@ -109,9 +119,7 @@ def fetch_profile(symbol: str, region="US"):
     log.info(f"Fetching profile for {symbol}")
     url = f"https://{API_HOST}/stock/v2/get-profile"
     params = {"symbol": symbol, "region": region}
-    resp = requests.get(url, headers=headers, params=params)
-
-    return json.loads(resp.text)
+    return handle_http_request(symbol, url, headers, params)
 
 
 def get_profile(
