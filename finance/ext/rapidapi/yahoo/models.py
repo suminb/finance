@@ -21,6 +21,9 @@ class Financials:
         if "price" not in self.data:
             log.warn(f"Missing key 'price' {self.symbol} financials")
             return nan
+        elif "marketCap" not in self.data["price"]:
+            log.warn(f"Missing key 'price.marketCap' for {self.symbol} financials")
+            return nan
         elif "raw" not in self.data["price"]["marketCap"]:
             log.warn(f"Missing key 'price.marketCap.raw' for {self.symbol} financials")
             return nan
