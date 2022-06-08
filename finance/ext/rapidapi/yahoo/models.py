@@ -173,3 +173,19 @@ class Profile:
         if "sector" not in self.data["assetProfile"]:
             return "Unknown"
         return self.data["assetProfile"]["sector"]
+
+
+class Statistics:
+    def __init__(self, data: dict):
+        self.data = data
+        if "symbol" in data:
+            self.symbol = data["symbol"]
+        else:
+            self.symbol = "(unknown)"
+
+    @property
+    def forward_eps(self):
+        if "defaultKeyStatistics" in self.data and \
+                "forwardEps" in self.data["defaultKeyStatistics"] and \
+                "raw" in self.data["defaultKeyStatistics"]["forwardEps"]:
+            return self.data["defaultKeyStatistics"]["forwardEps"]["raw"]

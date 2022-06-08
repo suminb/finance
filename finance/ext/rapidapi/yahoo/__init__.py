@@ -6,7 +6,7 @@ from typing import Callable
 from logbook import Logger
 import requests
 
-from finance.ext.rapidapi.yahoo.models import Financials, HistoricalData, Profile
+from finance.ext.rapidapi.yahoo.models import Financials, HistoricalData, Profile, Statistics
 
 log = Logger(__name__)
 
@@ -132,3 +132,23 @@ def get_profile(
     topic = "profile"
     data = fetch_or_load_cache(topic, symbol, region, fetch, use_cache, cache_dir)
     return Profile(data)
+
+
+
+def fetch_statistics(symbol: str, region="US"):
+    log.info(f"Fetching statistics for {symbol}")
+    url = f"https://{API_HOST}/stock/v3/get-statistics"
+    params = {"symbol": symbol}
+    return handle_http_request(symbol, url, headers, params)
+
+
+def get_statistics(
+    symbol: str,
+    region="US",
+    fetch=fetch_statistics,
+    use_cache=True,
+    cache_dir=DEFAULT_CACHE_DIR,
+):
+    topic = "statistics"
+    data = fetch_or_load_cache(topic, symbol, region, fetch, use_cache, cache_dir)
+    return Statistics(data)
