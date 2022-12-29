@@ -84,6 +84,13 @@ func downloadAndSave(client *http.Client, file *drive.File) {
 	io.Copy(fout, resp.Body)
 }
 
+func deleteFile(service *drive.Service, id string) {
+	err := service.Files.Delete(id).Do()
+	if err != nil {
+		log.Fatalf("Unable to delete: %v", err)
+	}
+}
+
 func main() {
 	ctx := context.Background()
 	b, err := os.ReadFile("credentials.json")
@@ -109,18 +116,34 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to retrieve files: %v", err)
 	}
-	fmt.Println("Files:")
-	if len(resp.Items) == 0 {
-		fmt.Println("No files found.")
-	} else {
-		for _, i := range resp.Items {
-			fmt.Printf("%v (%vs)\n", i.Title, i.DownloadUrl)
-			downloadAndSave(client, i)
 
-			err := srv.Files.Delete(i.Id).Do()
-			if err != nil {
-				log.Fatalf("Unable to delete: %v", err)
+	// Create a task channel and a result channel
+	count := len(resp.Items)
+	fileChan := make(chan *drive.File, count)
+	resultChan := make(chan string, count)
+
+	for i := 0; i < 8; i++ {
+		go func() {
+			for file := range fileChan {
+				fmt.Printf("%v (%v)\n", file.Title, file.DownloadUrl)
+				downloadAndSave(client, file)
+				deleteFile(srv, file.Id)
+
+				resultChan <- file.Title
 			}
-		}
+		}()
+	}
+
+	fmt.Println("Files:")
+	if count == 0 {
+		fmt.Println("No files found.")
+	}
+	for _, file := range resp.Items {
+		fileChan <- file
+	}
+	close(fileChan)
+
+	for i := 0; i < count; i++ {
+		<-resultChan
 	}
 }
