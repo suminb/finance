@@ -42,7 +42,7 @@ jobs:
         mypy --install-types --non-interactive --ignore-missing-imports finance
     - name: Test with pytest
       run: |
-        py.test -v tests --cov finance --cov-report term-missing
+        pytest -v tests --cov finance --cov-report term-missing
       env:
         SBF_DB_URL: "postgresql://postgres:postgres@localhost/finance"
         SBF_TEST_DB_URL: "postgresql://postgres:postgres@localhost/finance_test"
