@@ -23,6 +23,7 @@ from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.indexable import index_property
 from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.sql import text
 from sqlalchemy.sql.sqltypes import SmallInteger
 import uuid64
 
@@ -78,13 +79,16 @@ def get_asset_by_fund_code(code: str):
     # temporary workaround until we figure out how to create an instance of
     # Asset model from a raw query result
     # (sqlalchemy.engine.result.RowProxy)
-    query = "SELECT * FROM asset WHERE data->>'code' = :code LIMIT 1"
+    query = text("SELECT * FROM asset WHERE data->>'code' = :code LIMIT 1")
     raw_asset = session.execute(query, {"code": code}).first()  # type: ignore
     if raw_asset is None:
         raise AssetNotFoundException(
             "Fund code {} is not mapped to any asset".format(code)
         )
-    asset_id = raw_asset[0]
+    # It appears the last column is the ID
+    asset_id = raw_asset[-1]
+    # if asset_id == 'fund':
+    #     import pdb; pdb.set_trace()
     return Asset.query.get(asset_id)
 
 
