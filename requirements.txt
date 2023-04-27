@@ -1,6 +1,6 @@
 Logbook>=0.12.5
 SQLAlchemy>=1.0.12
-click>=6.3,<7.0
+click>=8.0,<9.0
 psycopg2-binary>=2.7.5
 temporaluuid64>=0.1.1
 requests>=2.9.1

@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.7, 3.8]
+        python-version: ['3.11', '3.10', '3.9']
 
     # Service containers to run with `container-job`
     services:
@@ -42,7 +42,7 @@ jobs:
         mypy --install-types --non-interactive --ignore-missing-imports finance
     - name: Test with pytest
       run: |
-        py.test -v tests --cov finance --cov-report term-missing
+        pytest -v tests --cov finance --cov-report term-missing
       env:
         SBF_DB_URL: "postgresql://postgres:postgres@localhost/finance"
         SBF_TEST_DB_URL: "postgresql://postgres:postgres@localhost/finance_test"
