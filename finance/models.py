@@ -79,7 +79,7 @@ def get_asset_by_fund_code(code: str):
     # Asset model from a raw query result
     # (sqlalchemy.engine.result.RowProxy)
     query = "SELECT * FROM asset WHERE data->>'code' = :code LIMIT 1"
-    raw_asset = session.execute(query, {"code": code}).first()
+    raw_asset = session.execute(query, {"code": code}).first()  # type: ignore
     if raw_asset is None:
         raise AssetNotFoundException(
             "Fund code {} is not mapped to any asset".format(code)
@@ -263,8 +263,8 @@ class AssetValue(CRUDMixin, Base):  # type: ignore
     base_asset_id = Column(BigInteger, ForeignKey("asset.id"))
     base_asset = relationship("Asset", uselist=False, foreign_keys=[base_asset_id])
     evaluated_at = Column(DateTime(timezone=False))
-    source = Column(Enum("yahoo", "google", "kofia", "upbit", "test", name="asset_value_source"))
-    granularity = Column(
+    source: Column = Column(Enum("yahoo", "google", "kofia", "upbit", "test", name="asset_value_source"))
+    granularity: Column = Column(
         Enum(
             "1sec",
             "1min",
@@ -333,7 +333,7 @@ class Asset(CRUDMixin, Base):  # type: ignore
         "polymorphic_on": "type",
     }
 
-    type = Column(Enum(*asset_types, name="asset_type"))
+    type: Column = Column(Enum(*asset_types, name="asset_type"))
     name = Column(String)
     # FIXME: Rename this as `symbol` or rename `get_by_symbol` -> `get_by_code`
     code = Column(String, unique=True)
@@ -521,7 +521,7 @@ class Account(CRUDMixin, Base):  # type: ignore
 
     user_id = Column(BigInteger, ForeignKey("user.id"))
     portfolio_id = Column(BigInteger, ForeignKey("portfolio.id"))
-    type = Column(Enum(*account_types, name="account_type"))
+    type: Column = Column(Enum(*account_types, name="account_type"))
     name = Column(String)
     institution = Column(String)  # Could be a routing number (US)
     number = Column(String)  # Account number
@@ -667,7 +667,7 @@ class Financial(CRUDMixin, Base):  # type: ignore
     asset_id = Column(BigInteger, ForeignKey("asset.id"))
     key = Column(String)
     # NOTE: 'quarterly' can be both an adjective and an adverb.
-    granularity = Column(
+    granularity: Column = Column(
         Enum(
             "quarterly",
             "annual",
@@ -759,7 +759,7 @@ class Transaction(CRUDMixin, Base):  # type: ignore
 
     initiated_at = Column(DateTime(timezone=False))
     closed_at = Column(DateTime(timezone=False))
-    state = Column(Enum(*transaction_states, name="transaction_state"))
+    state: Column = Column(Enum(*transaction_states, name="transaction_state"))
     #: Individual record
     records = relationship("Record", backref="transaction", lazy="dynamic")
 
@@ -820,7 +820,7 @@ class Record(CRUDMixin, Base):  # type: ignore
     asset_id = Column(BigInteger, ForeignKey("asset.id"))
     # asset = relationship(Asset, uselist=False)
     transaction_id = Column(BigInteger, ForeignKey("transaction.id"))
-    type = Column(Enum(*record_types, name="record_type"))
+    type: Column = Column(Enum(*record_types, name="record_type"))
     # NOTE: We'll always use the UTC time
     created_at = Column(DateTime(timezone=False))
     category = Column(String)
