@@ -1,3 +1,4 @@
+// Download feed data from Google Drive
 package main
 
 import (
@@ -32,6 +33,7 @@ func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
 	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 	fmt.Printf("Go to the following link in your browser then type the "+
 		"authorization code: \n%v\n", authURL)
+	fmt.Print("And paste your token here: ")
 
 	var authCode string
 	if _, err := fmt.Scan(&authCode); err != nil {

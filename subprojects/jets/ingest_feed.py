@@ -18,10 +18,13 @@ from pyspark.sql.window import Window
 #
 
 BASE_PATH = "s3a://standard/datasets/jets"
+# .master("local[*]") \
 
 spark = SparkSession.builder \
-    .appName("m3bot") \
-    .master("local[*]") \
+    .appName("ingest_flights") \
+    .master("spark://aria.shortbread.io:7077") \
+    .config("spark.executor.cores", "4") \
+    .config("spark.executor.memory", "1G") \
     .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
     .config("spark.hadoop.fs.s3a.endpoint", "hyperion.shortbread.io:8000") \
     .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
@@ -100,16 +103,15 @@ def parse_datetime(datetime_str, format_="%Y-%m-%d %H:%M:%S"):
 def main():
     columns = ["key", "latitude", "longitude", "timestamp", "departure", "arrival", "flight_number", "operator"]
     feed = spark.sparkContext \
-        .wholeTextFiles(f"{BASE_PATH}/") \
+        .wholeTextFiles(f"{BASE_PATH}/feeds/") \
         .flatMap(parse)
     feed = feed.toDF()
     feed.printSchema()
 
     delta_flights = feed \
-        .filter(feed.flight_number.startswith("DL")) \
-        .filter(feed.timestamp >= parse_datetime("2022-01-01 00:00:00")) \
+        .filter(feed.timestamp >= parse_datetime("2020-01-01 00:00:00")) \
         .filter(feed.timestamp < parse_datetime("2023-01-01 00:00:00"))
-    delta_flights.select("flight_number").distinct().write.mode("overwrite").csv("/tmp/delta.csv")
+    delta_flights.select("flight_number").distinct().write.mode("overwrite").csv(f"{BASE_PATH}/all_flight_numbers.csv")
 
     # df2 = feed.groupBy("key").count().sort(f.desc("count"))
     # df2.show()

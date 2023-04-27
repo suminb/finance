@@ -5,15 +5,18 @@ import time
 import sys
 
 import requests
+from requests.adapters import HTTPAdapter, Retry
 from logbook import Logger, StreamHandler
 
 
 StreamHandler(sys.stderr).push_application()
 log = Logger("jets")
 
-
-def main():
-    pass
+sess = requests.Session()
+retries = Retry(total=3,
+                backoff_factor=0.1,
+                status_forcelist=[ 500, 502, 503, 504 ])
+sess.mount('https://', HTTPAdapter(max_retries=retries))
 
 
 def fetch_raw_flights(flight_number: str, page: int, timestamp: int, token: str):
@@ -33,6 +36,7 @@ def fetch_raw_flights(flight_number: str, page: int, timestamp: int, token: str)
   -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36' \
   --compressed
     """
+    # TODO: Handle olderThenFlightId?
     url = f'https://api.flightradar24.com/common/v1/flight/list.json?query={flight_number}&fetchBy=flight&page={page}&pk=&limit=100&token={token}&timestamp={timestamp}&olderThenFlightId=2dcd9db8'
     headers = {
         "Authority": "api.flightradar24.com",
@@ -49,12 +53,15 @@ def fetch_raw_flights(flight_number: str, page: int, timestamp: int, token: str)
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36",
     }
     log.info(f"Fetching flights for {flight_number}, page {page}...")
-    resp = requests.get(url, headers=headers)
+    resp = sess.get(url, headers=headers)
     try:
         return json.loads(resp.text)
     except Exception as e:
         log.error(e)
         log.error(resp.text)
+        with open(f"logs/fetch_raw_flights-{flight_number}-{page}.log", "w") as fout:
+            fout.write(str(resp.status_code))
+            fout.write(resp.text)
 
 
 def fetch_all_flights(flight_number: str, token: str):
@@ -65,25 +72,34 @@ def fetch_all_flights(flight_number: str, token: str):
         result = fetch_raw_flights(flight_number, page, last_timestamp, token)
         yield result
 
-        resp = result["result"]["response"]
-        page += 1
-        more = resp["page"]["more"]
-        last_timestamp = resp["data"][-1]["time"]["scheduled"]["departure"]
-        last_id = resp["data"][-1]["identification"]["id"]
+        try:
+            resp = result["result"]["response"]
+            page += 1
+            more = resp["page"]["more"]
+            last_timestamp = resp["data"][-1]["time"]["scheduled"]["departure"]
+            last_id = resp["data"][-1]["identification"]["id"]
 
-        log.info(f"id={last_id}, timestamp={last_timestamp} ({datetime.fromtimestamp(last_timestamp)}), more={more}")
+            log.info(f"id={last_id}, timestamp={last_timestamp} ({datetime.fromtimestamp(last_timestamp)}), more={more}")
 
-        # for flight in result["result"]["response"]["data"]:
-        #     yield flight
+            # for flight in result["result"]["response"]["data"]:
+            #     yield flight
+        except:
+            with open(f"logs/fetch_all_flights-{flight_number}-{page}.log", "w") as fout:
+                fout.write(json.dumps(result))
+            raise
 
-        time.sleep(random.randint(1, 8))
+        time.sleep(random.random() * 1.5 + 0.75)
 
 
-if __name__ == "__main__":
+def main():
     flight_number = sys.argv[1]
     token = sys.argv[2]
     for flight in fetch_all_flights(flight_number, token):
-        print(flight)
+        print(json.dumps(flight, separators=(",", ":")))
+
+
+if __name__ == "__main__":
+    main()
 
 
 """
