@@ -14,6 +14,7 @@ from finance.utils import (
     parse_date,
     parse_datetime,
     parse_decimal,
+    parse_dollar_value,
     parse_int,
     parse_stock_code,
     parse_stock_records,
@@ -166,6 +167,12 @@ def test_parse_int():
 
     assert parse_int("1.1") == 0
     assert parse_int("1.1", fallback_to=2) == 2
+
+
+def test_parse_dollar_value():
+    assert parse_dollar_value("$123.45") == 123.45
+    assert parse_dollar_value("75.24") == 75.24
+    assert parse_dollar_value(35.00) == 35.00
 
 
 @pytest.mark.parametrize(
