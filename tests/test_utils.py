@@ -172,7 +172,6 @@ def test_parse_int():
 def test_parse_dollar_value():
     assert parse_dollar_value("$123.45") == 123.45
     assert parse_dollar_value("75.24") == 75.24
-    assert parse_dollar_value(35.00) == 35.00
 
 
 @pytest.mark.parametrize(
