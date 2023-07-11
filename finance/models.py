@@ -344,6 +344,9 @@ class Asset(CRUDMixin, Base):  # type: ignore
     isin = Column(String)
     description = Column(Text)
 
+    # TODO: Add `market` (e.g., NASDAQ)
+    # TODO: Add `region` (e.g., US)
+
     #: Arbitrary data
     data = Column(JsonType)
 

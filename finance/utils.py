@@ -316,7 +316,7 @@ def serialize_datetime(obj):
     raise TypeError("Type not serializable")
 
 
-class DictReader(object):
+class DictReader:
     def __init__(self, value):
         if not isinstance(value, dict):
             raise ValueError("DictReader only accepts dict type")
