@@ -11,6 +11,7 @@ from logbook import Logger
 # depencencies
 
 log = Logger("finance")
+nan = float("NaN")
 
 
 def date_range(start, end, step=1):
@@ -127,7 +128,7 @@ def parse_datetime(dt, at=datetime.now(), format="%Y-%m-%d %H:%M:%S"):
         return datetime.strptime(dt, format)
 
 
-def parse_decimal(v, type_=float, fallback_to=0):
+def parse_decimal(v, type_=float, fallback_to=nan):
     try:
         return type_(v)
     except ValueError:
@@ -139,10 +140,10 @@ def parse_dollar_value(v: str) -> float:
     if v.startswith("$"):
         v = v[1:]
     v = v.replace(",", "")
-    return float(v)
+    return parse_decimal(v)
 
 
-def parse_int(v, fallback_to=0):
+def parse_int(v, fallback_to=nan):
     """Parses a string as an integer value. Falls back to zero when failed to
     parse."""
     try:
@@ -236,7 +237,7 @@ def parse_stock_records(stream):
             "category2": category2,
             "code": parse_stock_code(code),
             "name": name,
-            "unit_price": parse_int(unit_price),
+            "unit_price": parse_int(unit_price, fallback_to=0),
             "quantity": parse_int(quantity),
             "subtotal": parse_int(subtotal),
             "interest": parse_int(interest),
