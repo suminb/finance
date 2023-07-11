@@ -5,15 +5,27 @@ from logbook import Logger
 
 
 log = Logger(__name__)
+nan = float("nan")
 
 
 class Financials:
     def __init__(self, data: dict):
         self.data = data
+        if "symbol" in data:
+            self.symbol = data["symbol"]
+        else:
+            self.symbol = "(unknown)"
 
     @property
     def market_cap(self):
-        if "raw" not in self.data["price"]["marketCap"]:
+        if "price" not in self.data:
+            log.warn(f"Missing key 'price' {self.symbol} financials")
+            return nan
+        elif "marketCap" not in self.data["price"]:
+            log.warn(f"Missing key 'price.marketCap' for {self.symbol} financials")
+            return nan
+        elif "raw" not in self.data["price"]["marketCap"]:
+            log.warn(f"Missing key 'price.marketCap.raw' for {self.symbol} financials")
             return nan
         return self.data["price"]["marketCap"]["raw"]
 
@@ -26,9 +38,12 @@ class Financials:
 
     @property
     def yearly_earnings(self):
-        if "financialsChart" not in self.data["earnings"]:
+        if "earnings" not in self.data:
+            log.warn(f"Missing key 'earnings' for {self.symbol} financials")
+            return []
+        elif "financialsChart" not in self.data["earnings"]:
             symbol = self.data["symbol"]
-            log.warn(f"financialsChart does not exist ({symbol})")
+            log.warn(f"Missing key 'earnings.financialsChart' for {self.symbol} financials")
             return []
         return [
             self._extract_raw_values_for_earnings(earnings)
@@ -77,7 +92,7 @@ class Financials:
 
         def growth_rate(x, y):
             try:
-                return y[key] - x[key] / x[key]
+                return (y[key] - x[key]) / x[key]
             except ZeroDivisionError:
                 return nan
 
@@ -98,6 +113,10 @@ class Financials:
 class HistoricalData:
     def __init__(self, data: dict):
         self.data = data
+        if "symbol" in data:
+            self.symbol = data["symbol"]
+        else:
+            self.symbol = "(unknown)"
 
     @property
     def first_trade_date(self):
@@ -116,6 +135,9 @@ class HistoricalData:
         """NOTE: The `prices` records contain different types of information
         such as dividend, and this method returns price records only.
         """
+        if "prices" not in self.data:
+            log.warn(f"Prices information not found in financials for {self.symbol}")
+            return []
         return [
             {
                 "date": datetime.utcfromtimestamp(d["date"]),
@@ -132,15 +154,38 @@ class HistoricalData:
 
     @property
     def most_recent_price(self):
-        return self.prices[0]["close"]
+        try:
+            return self.prices[0]["close"]
+        except IndexError:
+            return nan
 
 
 class Profile:
     def __init__(self, data: dict):
         self.data = data
+        if "symbol" in data:
+            self.symbol = data["symbol"]
+        else:
+            self.symbol = "(unknown)"
 
     @property
     def sector(self):
         if "sector" not in self.data["assetProfile"]:
             return "Unknown"
         return self.data["assetProfile"]["sector"]
+
+
+class Statistics:
+    def __init__(self, data: dict):
+        self.data = data
+        if "symbol" in data:
+            self.symbol = data["symbol"]
+        else:
+            self.symbol = "(unknown)"
+
+    @property
+    def forward_eps(self):
+        if "defaultKeyStatistics" in self.data and \
+                "forwardEps" in self.data["defaultKeyStatistics"] and \
+                "raw" in self.data["defaultKeyStatistics"]["forwardEps"]:
+            return self.data["defaultKeyStatistics"]["forwardEps"]["raw"]

@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import os
 from typing import Callable
@@ -5,11 +6,11 @@ from typing import Callable
 from logbook import Logger
 import requests
 
-from finance.ext.rapidapi.yahoo.models import Financials, HistoricalData, Profile
+from finance.ext.rapidapi.yahoo.models import Financials, HistoricalData, Profile, Statistics
 
 log = Logger(__name__)
 
-API_HOST = "apidojo-yahoo-finance-v1.p.rapidapi.com"
+API_HOST = "yh-finance.p.rapidapi.com"
 DEFAULT_CACHE_DIR = ".cache"
 SBF_RAPIDAPI_KEY = ""
 
@@ -59,14 +60,25 @@ def fetch_or_load_cache(
     return data
 
 
+def handle_http_request(symbol: str, url, headers, params):
+    resp = requests.get(url, headers=headers, params=params)
+    if resp.status_code == 200:
+        return json.loads(resp.text)
+    else:
+        return {
+            "symbol": symbol,
+            "status_code": resp.status_code,
+            "message": resp.text,
+            "fetched_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+
+
 def fetch_financials(symbol: str, region="US"):
-    """See https://rapidapi.com/apidojo/api/yahoo-finance1?endpoint=apiendpoint_2e0b16d4-a66b-469e-bc18-b60cec60661b for more details."""
+    """See https://rapidapi.com/apidojo/api/yh-finance/ for more details."""
     log.info(f"Fetching financials for {symbol}")
     url = f"https://{API_HOST}/stock/v2/get-financials"
     params = {"symbol": symbol, "region": region}
-    resp = requests.get(url, headers=headers, params=params)
-
-    return json.loads(resp.text)
+    return handle_http_request(symbol, url, headers, params)
 
 
 # TODO: Introduce a common layer for cache
@@ -83,13 +95,11 @@ def get_financials(
 
 
 def fetch_historical_data(symbol: str, region="US"):
-    """See https://rapidapi.com/apidojo/api/yahoo-finance1?endpoint=apiendpoint_2c81ebb5-60ab-41e4-8cd2-2056b26e93c2 for more details."""
+    """See https://rapidapi.com/apidojo/api/yh-finance/ for more details."""
     log.info(f"Fetching historical data for {symbol}")
-    url = f"https://{API_HOST}/stock/v2/get-historical-data"
+    url = f"https://{API_HOST}/stock/v3/get-historical-data"
     params = {"symbol": symbol, "region": region}
-    resp = requests.get(url, headers=headers, params=params)
-
-    return json.loads(resp.text)
+    return handle_http_request(symbol, url, headers, params)
 
 
 def get_historical_data(
@@ -109,9 +119,7 @@ def fetch_profile(symbol: str, region="US"):
     log.info(f"Fetching profile for {symbol}")
     url = f"https://{API_HOST}/stock/v2/get-profile"
     params = {"symbol": symbol, "region": region}
-    resp = requests.get(url, headers=headers, params=params)
-
-    return json.loads(resp.text)
+    return handle_http_request(symbol, url, headers, params)
 
 
 def get_profile(
@@ -124,3 +132,23 @@ def get_profile(
     topic = "profile"
     data = fetch_or_load_cache(topic, symbol, region, fetch, use_cache, cache_dir)
     return Profile(data)
+
+
+
+def fetch_statistics(symbol: str, region="US"):
+    log.info(f"Fetching statistics for {symbol}")
+    url = f"https://{API_HOST}/stock/v3/get-statistics"
+    params = {"symbol": symbol}
+    return handle_http_request(symbol, url, headers, params)
+
+
+def get_statistics(
+    symbol: str,
+    region="US",
+    fetch=fetch_statistics,
+    use_cache=True,
+    cache_dir=DEFAULT_CACHE_DIR,
+):
+    topic = "statistics"
+    data = fetch_or_load_cache(topic, symbol, region, fetch, use_cache, cache_dir)
+    return Statistics(data)

@@ -93,6 +93,23 @@ def test_dict_reader():
     assert d.key == "value"
 
 
+@pytest.mark.parametrize("pair", [
+    ("$0", 0),
+    ("$.75", 0.75),
+    ("$1.00", 1.0),
+    ("$423", 423),
+    ("$29.99", 29.99),
+    ("$1,000.00", 1000.0),
+    ("$12,000,000", 12000000),
+    ("0", 0),
+    ("1,000,000,000.99", 1000000000.99),
+])
+def test_dollar_value(pair):
+    value, expected = pair
+    actual = parse_dollar_value(value)
+    assert expected == actual
+
+
 def test_extract_numbers():
     assert "160" == extract_numbers("160")
     assert "1694" == extract_numbers("1,694")

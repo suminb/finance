@@ -134,6 +134,14 @@ def parse_decimal(v, type_=float, fallback_to=0):
         return fallback_to
 
 
+def parse_dollar_value(v: str) -> float:
+    v = str(v)
+    if v.startswith("$"):
+        v = v[1:]
+    v = v.replace(",", "")
+    return float(v)
+
+
 def parse_int(v, fallback_to=0):
     """Parses a string as an integer value. Falls back to zero when failed to
     parse."""
