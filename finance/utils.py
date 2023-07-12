@@ -11,6 +11,7 @@ from logbook import Logger
 # depencencies
 
 log = Logger("finance")
+nan = float("NaN")
 
 
 def date_range(start, end, step=1):
@@ -127,7 +128,7 @@ def parse_datetime(dt, at=datetime.now(), format="%Y-%m-%d %H:%M:%S"):
         return datetime.strptime(dt, format)
 
 
-def parse_decimal(v, type_=float, fallback_to=0):
+def parse_decimal(v, type_=float, fallback_to=nan):
     try:
         return type_(v)
     except ValueError:
@@ -139,23 +140,16 @@ def parse_dollar_value(v: str) -> float:
     if v.startswith("$"):
         v = v[1:]
     v = v.replace(",", "")
-    return float(v)
+    return parse_decimal(v)
 
 
-def parse_int(v, fallback_to=0):
+def parse_int(v, fallback_to=nan):
     """Parses a string as an integer value. Falls back to zero when failed to
     parse."""
     try:
         return int(v)
     except ValueError:
         return fallback_to
-
-
-def parse_dollar_value(value: str) -> float:
-    if value.startswith("$"):
-        return parse_decimal(value[1:])
-    else:
-        return parse_decimal(value)
 
 
 def parse_stock_code(code: str):
@@ -243,7 +237,7 @@ def parse_stock_records(stream):
             "category2": category2,
             "code": parse_stock_code(code),
             "name": name,
-            "unit_price": parse_int(unit_price),
+            "unit_price": parse_int(unit_price, fallback_to=0),
             "quantity": parse_int(quantity),
             "subtotal": parse_int(subtotal),
             "interest": parse_int(interest),
@@ -323,7 +317,7 @@ def serialize_datetime(obj):
     raise TypeError("Type not serializable")
 
 
-class DictReader(object):
+class DictReader:
     def __init__(self, value):
         if not isinstance(value, dict):
             raise ValueError("DictReader only accepts dict type")

@@ -1,7 +1,8 @@
+from datetime import datetime, timedelta
+from math import isnan
 import os
 import re
 import types
-from datetime import datetime, timedelta
 
 import pytest
 from finance.models import Asset
@@ -174,7 +175,7 @@ def test_parse_decimal():
     assert parse_decimal("1.1") == 1.1
     assert parse_decimal(1) == 1.0
 
-    assert parse_decimal("a") == 0
+    assert isnan(parse_decimal("a"))
     assert parse_decimal("a", fallback_to=1) == 1
 
 
@@ -182,7 +183,7 @@ def test_parse_int():
     assert parse_int(1) == 1
     assert parse_int("1") == 1
 
-    assert parse_int("1.1") == 0
+    assert isnan(parse_int("1.1"))
     assert parse_int("1.1", fallback_to=2) == 2
 
 
