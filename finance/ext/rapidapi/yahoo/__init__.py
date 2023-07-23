@@ -6,7 +6,12 @@ from typing import Callable
 from logbook import Logger
 import requests
 
-from finance.ext.rapidapi.yahoo.models import Financials, HistoricalData, Profile, Statistics
+from finance.ext.rapidapi.yahoo.models import (
+    Financials,
+    HistoricalData,
+    Profile,
+    Statistics,
+)
 
 log = Logger(__name__)
 
@@ -132,7 +137,6 @@ def get_profile(
     topic = "profile"
     data = fetch_or_load_cache(topic, symbol, region, fetch, use_cache, cache_dir)
     return Profile(data)
-
 
 
 def fetch_statistics(symbol: str, region="US"):

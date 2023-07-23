@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from math import nan
 
 from logbook import Logger
@@ -43,7 +43,9 @@ class Financials:
             return []
         elif "financialsChart" not in self.data["earnings"]:
             symbol = self.data["symbol"]
-            log.warn(f"Missing key 'earnings.financialsChart' for {self.symbol} financials")
+            log.warn(
+                f"Missing key 'earnings.financialsChart' for {self.symbol} financials"
+            )
             return []
         return [
             self._extract_raw_values_for_earnings(earnings)
@@ -169,10 +171,64 @@ class Profile:
             self.symbol = "(unknown)"
 
     @property
-    def sector(self):
+    def region(self) -> str:
+        raise NotImplementedError
+
+    @property
+    def exchange(self) -> str:
+        return self.data["price"]["exchange"]
+
+    @property
+    def currency(self) -> str:
+        return self.data["price"]["currency"]
+
+    @property
+    def market_cap(self) -> float:
+        try:
+            return self.data["price"]["marketCap"]["raw"]
+        except KeyError:
+            return nan
+
+    @property
+    def total_assets(self) -> float:
+        # NOTE: What is the difference between total assets and market cap?
+        try:
+            return self.data["summaryDetail"]["totalAssets"]["raw"]
+        except KeyError:
+            return nan
+
+    @property
+    def close(self):
+        return self.data["summaryDetail"]["previousClose"]["raw"]
+
+    @property
+    def volume(self):
+        return self.data["summaryDetail"]["regularMarketVolume"]["raw"]
+
+    @property
+    def average_volume_10days(self):
+        try:
+            return self.data["summaryDetail"]["averageVolume10days"]["raw"]
+        except KeyError:
+            return nan
+
+    @property
+    def listed_date(self) -> date:
+        raise NotImplementedError
+
+    @property
+    def sector(self) -> str:
         if "sector" not in self.data["assetProfile"]:
             return "Unknown"
         return self.data["assetProfile"]["sector"]
+
+    @property
+    def business_address(self) -> str:
+        raise NotImplementedError
+
+    # TODO: SEC filings
+    # TODO: Calendar events
+    # TODO: fundInceptionDate?
 
 
 class Statistics:
@@ -185,7 +241,9 @@ class Statistics:
 
     @property
     def forward_eps(self):
-        if "defaultKeyStatistics" in self.data and \
-                "forwardEps" in self.data["defaultKeyStatistics"] and \
-                "raw" in self.data["defaultKeyStatistics"]["forwardEps"]:
+        if (
+            "defaultKeyStatistics" in self.data
+            and "forwardEps" in self.data["defaultKeyStatistics"]
+            and "raw" in self.data["defaultKeyStatistics"]["forwardEps"]
+        ):
             return self.data["defaultKeyStatistics"]["forwardEps"]["raw"]

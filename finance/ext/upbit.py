@@ -73,7 +73,9 @@ def fetch_tickers(currency, base_currency="KRW", minutes=15, until=datetime.utcn
     return data
 
 
-def fetch_tickers_continuously(currency, base_currency="KRW", minutes=15, until=datetime.utcnow()):
+def fetch_tickers_continuously(
+    currency, base_currency="KRW", minutes=15, until=datetime.utcnow()
+):
     while True:
         result = fetch_tickers(currency, base_currency, minutes, until)
         if result:
@@ -97,14 +99,16 @@ granularity_to_minutes = {
 
 
 def insert_tickers(
-        currency: str,
-        base_currency="KRW",
-        granularity: str = Granularity.fifteen_min,
-        until=datetime.utcnow(),
+    currency: str,
+    base_currency="KRW",
+    granularity: str = Granularity.fifteen_min,
+    until=datetime.utcnow(),
 ):
     base_asset = Asset.get_by_symbol(base_currency)
     asset = Asset.get_by_symbol(currency)
-    records = fetch_tickers_continuously(currency, base_currency, granularity_to_minutes[granularity], until)
+    records = fetch_tickers_continuously(
+        currency, base_currency, granularity_to_minutes[granularity], until
+    )
     for r in records:
         evaluated_at = datetime.strptime(r["candle_date_time_utc"], "%Y-%m-%dT%H:%M:%S")
         try:
