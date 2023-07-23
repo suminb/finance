@@ -43,7 +43,9 @@ class Financials:
             return []
         elif "financialsChart" not in self.data["earnings"]:
             symbol = self.data["symbol"]
-            log.warn(f"Missing key 'earnings.financialsChart' for {self.symbol} financials")
+            log.warn(
+                f"Missing key 'earnings.financialsChart' for {self.symbol} financials"
+            )
             return []
         return [
             self._extract_raw_values_for_earnings(earnings)
@@ -239,7 +241,9 @@ class Statistics:
 
     @property
     def forward_eps(self):
-        if "defaultKeyStatistics" in self.data and \
-                "forwardEps" in self.data["defaultKeyStatistics"] and \
-                "raw" in self.data["defaultKeyStatistics"]["forwardEps"]:
+        if (
+            "defaultKeyStatistics" in self.data
+            and "forwardEps" in self.data["defaultKeyStatistics"]
+            and "raw" in self.data["defaultKeyStatistics"]["forwardEps"]
+        ):
             return self.data["defaultKeyStatistics"]["forwardEps"]["raw"]
