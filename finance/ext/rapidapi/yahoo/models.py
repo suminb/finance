@@ -172,7 +172,7 @@ class Profile:
 
     @property
     def region(self) -> str:
-        pass
+        raise NotImplementedError
 
     @property
     def exchange(self) -> str:
@@ -214,7 +214,7 @@ class Profile:
 
     @property
     def listed_date(self) -> date:
-        pass
+        raise NotImplementedError
 
     @property
     def sector(self) -> str:
@@ -224,7 +224,7 @@ class Profile:
 
     @property
     def business_address(self) -> str:
-        pass
+        raise NotImplementedError
 
     # TODO: SEC filings
     # TODO: Calendar events
