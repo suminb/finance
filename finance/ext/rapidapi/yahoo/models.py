@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from math import nan
 
 from logbook import Logger
@@ -169,10 +169,64 @@ class Profile:
             self.symbol = "(unknown)"
 
     @property
-    def sector(self):
+    def region(self) -> str:
+        pass
+
+    @property
+    def exchange(self) -> str:
+        return self.data["price"]["exchange"]
+
+    @property
+    def currency(self) -> str:
+        return self.data["price"]["currency"]
+
+    @property
+    def market_cap(self) -> float:
+        try:
+            return self.data["price"]["marketCap"]["raw"]
+        except KeyError:
+            return nan
+
+    @property
+    def total_assets(self) -> float:
+        # NOTE: What is the difference between total assets and market cap?
+        try:
+            return self.data["summaryDetail"]["totalAssets"]["raw"]
+        except KeyError:
+            return nan
+
+    @property
+    def close(self):
+        return self.data["summaryDetail"]["previousClose"]["raw"]
+
+    @property
+    def volume(self):
+        return self.data["summaryDetail"]["regularMarketVolume"]["raw"]
+
+    @property
+    def average_volume_10days(self):
+        try:
+            return self.data["summaryDetail"]["averageVolume10days"]["raw"]
+        except KeyError:
+            return nan
+
+    @property
+    def listed_date(self) -> date:
+        pass
+
+    @property
+    def sector(self) -> str:
         if "sector" not in self.data["assetProfile"]:
             return "Unknown"
         return self.data["assetProfile"]["sector"]
+
+    @property
+    def business_address(self) -> str:
+        pass
+
+    # TODO: SEC filings
+    # TODO: Calendar events
+    # TODO: fundInceptionDate?
 
 
 class Statistics:
