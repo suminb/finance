@@ -136,7 +136,7 @@ def get_profile(
 ):
     topic = "profile"
     data = fetch_or_load_cache(topic, symbol, region, fetch, use_cache, cache_dir)
-    return Profile(data)
+    return Profile(data, region)
 
 
 def fetch_statistics(symbol: str, region="US"):
@@ -155,4 +155,16 @@ def get_statistics(
 ):
     topic = "statistics"
     data = fetch_or_load_cache(topic, symbol, region, fetch, use_cache, cache_dir)
-    return Statistics(data)
+    return Statistics(data, region)
+
+
+def discover_tickers(screen_ids="MOST_ACTIVES"):
+    log.info(f"Discovering tickers (screen_ids={screen_ids})")
+    url = f"https://{API_HOST}/screeners/get-symbols-by-predefined"
+    params = {"scrIds": screen_ids}
+    resp = requests.get(url, headers=headers, params=params)
+
+    if resp.status_code == 200:
+        return json.loads(resp.text)
+    else:
+        log.error(resp.text)
