@@ -14,6 +14,7 @@ from finance.ext.rapidapi.yahoo.models import (
 )
 
 log = Logger(__name__)
+nan = float("NaN")
 
 API_HOST = "yh-finance.p.rapidapi.com"
 DEFAULT_CACHE_DIR = ".cache"
@@ -158,7 +159,47 @@ def get_statistics(
     return Statistics(data, region)
 
 
-def discover_tickers(screen_ids="MOST_ACTIVES"):
+def get_statistics_list(symbols, region="US") -> dict:
+    for symbol in symbols:
+        try:
+            statistics = get_statistics(symbol, region)
+            properties = [
+                "symbol",
+                "region",
+                "quote_type",
+                "currency",
+                "name",
+                "close",
+                "volume",
+                "market_cap",
+            ]
+            data = {k: getattr(statistics, k) for k in properties}
+        except Exception as e:
+            print(f"Failed to get statistics for {symbol}: {e}")
+        else:
+            data["fetched_at"] = datetime.utcnow()
+            yield data
+
+
+# FIXME: quotes? stocks? tickers? What should we call this?
+def discover_quotes(screen_ids="MOST_ACTIVES") -> dict:
+    tickers = _discover_quotes(screen_ids)
+    fetched_at = datetime.utcnow()
+    for quote in tickers["finance"]["result"][0]["quotes"]:
+        yield {
+            "symbol": quote["symbol"],
+            "region": "US",
+            "quote_type": quote["quoteType"],
+            "currency": quote["currency"],
+            "name": quote["longName"],
+            "close": nan,  # FIXME: It would be nice if these values can be directly obtained
+            "volume": nan,
+            "market_cap": nan,
+            "fetched_at": fetched_at,
+        }
+
+
+def _discover_quotes(screen_ids="MOST_ACTIVES"):
     log.info(f"Discovering tickers (screen_ids={screen_ids})")
     url = f"https://{API_HOST}/screeners/get-symbols-by-predefined"
     params = {"scrIds": screen_ids}
