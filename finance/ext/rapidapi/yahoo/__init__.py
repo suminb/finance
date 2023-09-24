@@ -1,7 +1,6 @@
 from datetime import datetime
 import json
 import os
-from typing import Callable
 
 from logbook import Logger
 import requests
@@ -12,6 +11,9 @@ from finance.ext.rapidapi.yahoo.models import (
     Profile,
     Statistics,
 )
+
+from typing import Callable, Generator
+
 
 log = Logger(__name__)
 nan = float("NaN")
@@ -159,7 +161,7 @@ def get_statistics(
     return Statistics(data, region)
 
 
-def get_statistics_list(symbols, region="US") -> dict:
+def get_statistics_list(symbols, region="US") -> Generator:
     for symbol in symbols:
         try:
             statistics = get_statistics(symbol, region)
@@ -182,7 +184,7 @@ def get_statistics_list(symbols, region="US") -> dict:
 
 
 # FIXME: quotes? stocks? tickers? What should we call this?
-def discover_quotes(screen_ids="MOST_ACTIVES") -> dict:
+def discover_quotes(screen_ids="MOST_ACTIVES") -> Generator:
     tickers = _discover_quotes(screen_ids)
     fetched_at = datetime.utcnow()
     for quote in tickers["finance"]["result"][0]["quotes"]:
