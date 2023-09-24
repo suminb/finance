@@ -237,8 +237,9 @@ class Profile:
 
 
 class Statistics:
-    def __init__(self, data: dict):
+    def __init__(self, data: dict, region: str):
         self.data = data
+        self.region = region
         if "symbol" in data:
             self.symbol = data["symbol"]
         else:
@@ -252,3 +253,33 @@ class Statistics:
             and "raw" in self.data["defaultKeyStatistics"]["forwardEps"]
         ):
             return self.data["defaultKeyStatistics"]["forwardEps"]["raw"]
+
+    @property
+    def close(self) -> float:
+        return self.data["financialData"]["currentPrice"][
+            "raw"
+        ]  # TODO: Not sure if this is the right key
+
+    @property
+    def currency(self) -> str:
+        return self.data["summaryDetail"]["currency"]
+
+    @property
+    def market_cap(self) -> float:
+        return self.data["summaryDetail"]["marketCap"]["raw"]
+
+    @property
+    def volume(self) -> float:
+        return self.data["summaryDetail"]["volume"]["raw"]
+
+    @property
+    def exchange(self) -> str:
+        return self.data["quoteType"]["exchange"]
+
+    @property
+    def name(self) -> str:
+        return self.data["quoteType"]["longName"]
+
+    @property
+    def quote_type(self) -> str:
+        return self.data["quoteType"]["quoteType"]

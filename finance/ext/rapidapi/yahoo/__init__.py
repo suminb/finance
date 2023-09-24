@@ -155,11 +155,11 @@ def get_statistics(
 ):
     topic = "statistics"
     data = fetch_or_load_cache(topic, symbol, region, fetch, use_cache, cache_dir)
-    return Statistics(data)
+    return Statistics(data, region)
 
 
 def discover_tickers(screen_ids="MOST_ACTIVES"):
-    log.info(F"Discovering tickers")
+    log.info(f"Discovering tickers (screen_ids={screen_ids})")
     url = f"https://{API_HOST}/screeners/get-symbols-by-predefined"
     params = {"scrIds": screen_ids}
     resp = requests.get(url, headers=headers, params=params)
