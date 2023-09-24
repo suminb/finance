@@ -194,7 +194,6 @@ class CRUDMixin(object):
 
 
 class User(CRUDMixin, Base):  # type: ignore
-
     __tablename__ = "user"
 
     given_name = Column(String)
@@ -212,7 +211,7 @@ class User(CRUDMixin, Base):  # type: ignore
     @property
     def name(self):
         # TODO: i18n
-        return u"{}, {}".format(self.family_name, self.given_name)
+        return "{}, {}".format(self.family_name, self.given_name)
 
 
 # TODO: Need a way to keep track of the value of volatile assets such as stocks
@@ -267,7 +266,9 @@ class AssetValue(CRUDMixin, Base):  # type: ignore
     base_asset_id = Column(BigInteger, ForeignKey("asset.id"))
     base_asset = relationship("Asset", uselist=False, foreign_keys=[base_asset_id])
     evaluated_at = Column(DateTime(timezone=False))
-    source: Column = Column(Enum("yahoo", "google", "kofia", "upbit", "test", name="asset_value_source"))
+    source: Column = Column(
+        Enum("yahoo", "google", "kofia", "upbit", "test", name="asset_value_source")
+    )
     granularity: Column = Column(
         Enum(
             "1sec",
@@ -406,7 +407,6 @@ class Asset(CRUDMixin, Base):  # type: ignore
 
 
 class BondAsset(Asset):
-
     __tablename__ = "asset"
 
     __mapper_args__ = {
@@ -415,7 +415,6 @@ class BondAsset(Asset):
 
 
 class CommodityAsset(Asset):
-
     __tablename__ = "asset"
 
     __mapper_args__ = {
@@ -424,7 +423,6 @@ class CommodityAsset(Asset):
 
 
 class FiatCurrencyAsset(Asset):
-
     __tablename__ = "asset"
 
     __mapper_args__ = {
@@ -433,7 +431,6 @@ class FiatCurrencyAsset(Asset):
 
 
 class CryptoCurrencyAsset(Asset):
-
     __tablename__ = "asset"
 
     __mapper_args__ = {
@@ -442,7 +439,6 @@ class CryptoCurrencyAsset(Asset):
 
 
 class FundAsset(Asset):
-
     __tablename__ = "asset"
 
     __mapper_args__ = {
@@ -451,7 +447,6 @@ class FundAsset(Asset):
 
 
 class P2PBondAsset(Asset):
-
     __tablename__ = "asset"
 
     __mapper_args__ = {
@@ -481,7 +476,6 @@ class P2PBondAsset(Asset):
 
 
 class SecurityAsset(Asset):
-
     __tablename__ = "asset"
 
     __mapper_args__ = {
@@ -490,7 +484,6 @@ class SecurityAsset(Asset):
 
 
 class StockAsset(Asset):
-
     __tablename__ = "asset"
 
     __mapper_args__ = {
