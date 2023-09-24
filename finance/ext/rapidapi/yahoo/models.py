@@ -172,8 +172,12 @@ class Profile:
             self.symbol = "(unknown)"
 
     @property
-    def region(self) -> str:
-        raise NotImplementedError
+    def name(self) -> str:
+        return self.data["quoteType"]["longName"]
+
+    @property
+    def quote_type(self) -> str:
+        return self.data["quoteType"]["quoteType"]
 
     @property
     def exchange(self) -> str:
