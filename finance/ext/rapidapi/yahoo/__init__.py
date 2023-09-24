@@ -136,7 +136,7 @@ def get_profile(
 ):
     topic = "profile"
     data = fetch_or_load_cache(topic, symbol, region, fetch, use_cache, cache_dir)
-    return Profile(data)
+    return Profile(data, region)
 
 
 def fetch_statistics(symbol: str, region="US"):

@@ -163,8 +163,9 @@ class HistoricalData:
 
 
 class Profile:
-    def __init__(self, data: dict):
+    def __init__(self, data: dict, region: str):
         self.data = data
+        self.region = region
         if "symbol" in data:
             self.symbol = data["symbol"]
         else:
