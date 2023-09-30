@@ -39,7 +39,14 @@ def get_cache_filename(topic, symbol, region, cache_dir=DEFAULT_CACHE_DIR):
 
 def cache_exists(topic, symbol, region, cache_dir=DEFAULT_CACHE_DIR):
     path = get_cache_filename(topic, symbol, region, cache_dir)
-    return os.path.exists(path)
+    if os.path.exists(path):
+        if os.path.getmtime(path) < datetime.now().timestamp() - (86400 * 7):
+            log.info(f"Cache file {path} is older than 7 days. Skipping...")
+            return False
+        else:
+            return True
+    else:
+        return False
 
 
 def load_cache(topic, symbol, region, cache_dir=DEFAULT_CACHE_DIR):
