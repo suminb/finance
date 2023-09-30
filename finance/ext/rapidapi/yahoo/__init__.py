@@ -1,7 +1,6 @@
 from datetime import datetime
 import json
 import os
-from typing import Callable
 
 from logbook import Logger
 import requests
@@ -13,7 +12,11 @@ from finance.ext.rapidapi.yahoo.models import (
     Statistics,
 )
 
+from typing import Callable, Generator
+
+
 log = Logger(__name__)
+nan = float("NaN")
 
 API_HOST = "yh-finance.p.rapidapi.com"
 DEFAULT_CACHE_DIR = ".cache"
@@ -36,7 +39,14 @@ def get_cache_filename(topic, symbol, region, cache_dir=DEFAULT_CACHE_DIR):
 
 def cache_exists(topic, symbol, region, cache_dir=DEFAULT_CACHE_DIR):
     path = get_cache_filename(topic, symbol, region, cache_dir)
-    return os.path.exists(path)
+    if os.path.exists(path):
+        if os.path.getmtime(path) < datetime.now().timestamp() - (86400 * 7):
+            log.info(f"Cache file {path} is older than 7 days. Skipping...")
+            return False
+        else:
+            return True
+    else:
+        return False
 
 
 def load_cache(topic, symbol, region, cache_dir=DEFAULT_CACHE_DIR):
@@ -158,7 +168,47 @@ def get_statistics(
     return Statistics(data, region)
 
 
-def discover_tickers(screen_ids="MOST_ACTIVES"):
+def get_statistics_list(symbols, region="US") -> Generator:
+    for symbol in symbols:
+        try:
+            statistics = get_statistics(symbol, region)
+            properties = [
+                "symbol",
+                "region",
+                "quote_type",
+                "currency",
+                "name",
+                "close",
+                "volume",
+                "market_cap",
+            ]
+            data = {k: getattr(statistics, k) for k in properties}
+        except Exception as e:
+            print(f"Failed to get statistics for {symbol}: {e}")
+        else:
+            data["fetched_at"] = datetime.utcnow()
+            yield data
+
+
+# FIXME: quotes? stocks? tickers? What should we call this?
+def discover_quotes(screen_ids="MOST_ACTIVES") -> Generator:
+    tickers = _discover_quotes(screen_ids)
+    fetched_at = datetime.utcnow()
+    for quote in tickers["finance"]["result"][0]["quotes"]:
+        yield {
+            "symbol": quote["symbol"],
+            "region": "US",
+            "quote_type": quote["quoteType"],
+            "currency": quote["currency"],
+            "name": quote["longName"],
+            "close": nan,  # FIXME: It would be nice if these values can be directly obtained
+            "volume": nan,
+            "market_cap": nan,
+            "fetched_at": fetched_at,
+        }
+
+
+def _discover_quotes(screen_ids="MOST_ACTIVES"):
     log.info(f"Discovering tickers (screen_ids={screen_ids})")
     url = f"https://{API_HOST}/screeners/get-symbols-by-predefined"
     params = {"scrIds": screen_ids}
