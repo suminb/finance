@@ -56,7 +56,11 @@ def cache_exists(topic, symbol, region, cache_dir=DEFAULT_CACHE_DIR, check_stale
 def load_cache(topic, symbol, region, cache_dir=DEFAULT_CACHE_DIR):
     path = get_cache_filename(topic, symbol, region, cache_dir)
     with open(path, "r") as fin:
-        return json.loads(fin.read())
+        parsed = json.loads(fin.read())
+        if int(parsed.get("status_code", 0)) // 100 == 3:
+            log.warn(f"Cache file contains some sort of redirection. Skipping...")
+            return None
+        return parsed
 
 
 def save_cache(topic, symbol, region, data, cache_dir=DEFAULT_CACHE_DIR):
@@ -72,24 +76,32 @@ def fetch_or_load_cache(
     topic, symbol, region, fetch: Callable, use_cache=True, cache_dir=DEFAULT_CACHE_DIR
 ):
     if use_cache and cache_exists(topic, symbol, region, cache_dir):
+        # This may return None if the cache file is invalid
         data = load_cache(topic, symbol, region, cache_dir)
     else:
+        data = None
+
+    if data is None:
         data = fetch(symbol, region)
         save_cache(topic, symbol, region, data, cache_dir)
     return data
 
 
 def handle_http_request(symbol: str, url, headers, params):
-    resp = requests.get(url, headers=headers, params=params)
+    resp = requests.get(url, headers=headers, params=params, allow_redirects=True)
     if resp.status_code == 200:
         return json.loads(resp.text)
-    else:
-        return {
-            "symbol": symbol,
-            "status_code": resp.status_code,
-            "message": resp.text,
-            "fetched_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        }
+    elif resp.status_code // 100 == 3 and "Location" in resp.headers:
+        resp = requests.get(resp.headers["Location"], headers=headers)
+        if resp.status_code == 200:
+            return json.loads(resp.text)
+
+    return {
+        "symbol": symbol,
+        "status_code": resp.status_code,
+        "message": resp.text,
+        "fetched_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }
 
 
 def fetch_financials(symbol: str, region="US"):
