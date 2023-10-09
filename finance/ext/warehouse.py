@@ -68,7 +68,12 @@ def preprocess_profile(profile: dict, symbol: str, region: str, updated_at: date
     profile["symbol"] = symbol
     profile["updated_at"] = updated_at
     profile["quote_type"] = profile.pop("quoteType")
-    profile["name"] = profile.pop("longName")
+    if "longName" in profile:
+        profile["name"] = profile.pop("longName")
+    elif "shortName" in profile:
+        profile["name"] = profile.pop("shortName")
+    else:
+        profile["name"] = None
 
     profile.setdefault("sector", None)
     profile.setdefault("industry", None)
