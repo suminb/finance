@@ -37,14 +37,18 @@ def get_cache_filename(topic, symbol, region, cache_dir=DEFAULT_CACHE_DIR):
     return f"{cache_dir}/{topic}_{symbol}_{region}.json"
 
 
-def cache_exists(topic, symbol, region, cache_dir=DEFAULT_CACHE_DIR, check_stale_data=True):
+def cache_exists(
+    topic, symbol, region, cache_dir=DEFAULT_CACHE_DIR, check_stale_data=True
+):
     """Check if the cache file exists.
 
     :param check_stale_data: If True, check if the cache file is older than 7 days.
     """
     path = get_cache_filename(topic, symbol, region, cache_dir)
     if os.path.exists(path):
-        if check_stale_data and os.path.getmtime(path) < datetime.now().timestamp() - (86400 * 7):
+        if check_stale_data and os.path.getmtime(path) < datetime.now().timestamp() - (
+            86400 * 7
+        ):
             log.info(f"Cache file {path} is older than 7 days. Skipping...")
             return False
         else:
