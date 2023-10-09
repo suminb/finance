@@ -120,7 +120,7 @@ def fetch_historical_data(
     return preprocess_historical_data(history, symbol, region, updated_at)
 
 
-def save_tickers(dataframe: pd.DataFrame, region: str, save_datetime=datetime.utcnow()):
+def save_tickers(dataframe: pd.DataFrame, save_datetime=datetime.utcnow()):
     date_format = "%Y%m%d"
     ticker_filename = f"tickers-{save_datetime.strftime(date_format)}.parquet"
     dataframe.to_parquet(ticker_filename)
