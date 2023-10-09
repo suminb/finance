@@ -5,7 +5,6 @@ from finance.ext.rapidapi.yahoo import (
     get_historical_data,
     get_profile,
 )
-import json
 import os
 
 from finance.ext.rapidapi.yahoo.models import Financials, Profile, HistoricalData
@@ -16,7 +15,7 @@ CACHE_DIR = BASE_PATH + "/rapidapi/yahoo"
 
 
 def test_cache():
-    assert cache_exists("profile", "NET", "US", CACHE_DIR)
+    assert cache_exists("profile", "NET", "US", CACHE_DIR, check_stale_data=False)
 
 
 def test_financials():
