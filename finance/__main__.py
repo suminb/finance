@@ -294,9 +294,11 @@ def refresh_tickers(filename):
     log.info(f"Fetching {len(symbols)} symbols")
     new_data = pd.DataFrame(get_statistics_list(symbols))
 
-    concated = pd.concat([existing_data, new_data], ignore_index=True) \
-        .sort_values("fetched_at") \
+    concated = (
+        pd.concat([existing_data, new_data], ignore_index=True)
+        .sort_values("fetched_at")
         .drop_duplicates(subset=["symbol"], keep="last")
+    )
 
     log.info(f"Saving results to {filename}")
     concated.to_parquet(filename)
