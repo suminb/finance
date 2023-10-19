@@ -124,7 +124,7 @@ Fetch Company Profiles From Naver Finance
    4290
 
 Fetch Financial Statements From DART (전자공시)
-*********************************************
+***********************************************
 
 .. code::
 
