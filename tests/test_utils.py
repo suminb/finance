@@ -1,7 +1,8 @@
+from datetime import datetime, timedelta
+from math import isnan
 import os
 import re
 import types
-from datetime import datetime, timedelta
 
 import pytest
 from finance.models import Asset
@@ -14,6 +15,7 @@ from finance.utils import (
     parse_date,
     parse_datetime,
     parse_decimal,
+    parse_dollar_value,
     parse_int,
     parse_stock_code,
     parse_stock_records,
@@ -92,6 +94,26 @@ def test_dict_reader():
     assert d.key == "value"
 
 
+@pytest.mark.parametrize(
+    "pair",
+    [
+        ("$0", 0),
+        ("$.75", 0.75),
+        ("$1.00", 1.0),
+        ("$423", 423),
+        ("$29.99", 29.99),
+        ("$1,000.00", 1000.0),
+        ("$12,000,000", 12000000),
+        ("0", 0),
+        ("1,000,000,000.99", 1000000000.99),
+    ],
+)
+def test_dollar_value(pair):
+    value, expected = pair
+    actual = parse_dollar_value(value)
+    assert expected == actual
+
+
 def test_extract_numbers():
     assert "160" == extract_numbers("160")
     assert "1694" == extract_numbers("1,694")
@@ -156,7 +178,7 @@ def test_parse_decimal():
     assert parse_decimal("1.1") == 1.1
     assert parse_decimal(1) == 1.0
 
-    assert parse_decimal("a") == 0
+    assert isnan(parse_decimal("a"))
     assert parse_decimal("a", fallback_to=1) == 1
 
 
@@ -164,8 +186,13 @@ def test_parse_int():
     assert parse_int(1) == 1
     assert parse_int("1") == 1
 
-    assert parse_int("1.1") == 0
+    assert isnan(parse_int("1.1"))
     assert parse_int("1.1", fallback_to=2) == 2
+
+
+def test_parse_dollar_value():
+    assert parse_dollar_value("$123.45") == 123.45
+    assert parse_dollar_value("75.24") == 75.24
 
 
 @pytest.mark.parametrize(

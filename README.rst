@@ -148,6 +148,31 @@ Fetch Financial Statements From DART (전자공시)
    get_listed_corporations()
    search_corporations("NAVER")
 
+Fetch Financials With RapidAPI
+******************************
+
+.. code::
+
+   >>> from from finance.ext.rapidapi.yahoo import *
+
+   >>> financials = get_financials("NET")
+   >>> financials.market_cap
+   25674999808
+
+   >>> financials.most_recent_yearly_earnings
+   {'date': 2019, 'revenue': 287022000, 'earnings': -105828000}
+
+   >>> financials.most_recent_quarterly_earnings
+   {'date': '3Q2020', 'revenue': 114162000, 'earnings': -26468000}
+
+   >>> historical_data = get_historical_data("MSFT")
+   >>> historical_data.first_trade_date
+   datetime.datetime(1986, 3, 13, 14, 30)
+
+   >>> profile = get_profile("TSLA")
+   >>> profile.sector
+   'Consumer Cyclical'
+
 Some Technical Details
 ----------------------
 

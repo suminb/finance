@@ -53,7 +53,6 @@ name_code_mappings = {
 
 
 class Miraeasset(Provider):
-
     DEFAULT_ENCODING = "euc-kr"
 
     def read_records(self, filename):

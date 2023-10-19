@@ -276,5 +276,34 @@ def import_stock_records(filename):
             insert_stock_record(parsed, account_stock, account_bank)
 
 
+@cli.command()
+@click.argument("filename")
+def refresh_tickers(filename):
+    # TODO: Code refactoring required
+    import pandas as pd
+    from finance.ext.rapidapi.yahoo import discover_quotes, get_statistics_list
+
+    if os.path.exists(filename):
+        existing_data = pd.read_parquet(filename)
+    else:
+        existing_data = None
+
+    quotes = discover_quotes()
+    symbols = [q["symbol"] for q in quotes]
+
+    log.info(f"Fetching {len(symbols)} symbols")
+    new_data = pd.DataFrame(get_statistics_list(symbols))
+
+    concated = (
+        pd.concat([existing_data, new_data], ignore_index=True)
+        .sort_values("fetched_at")
+        .drop_duplicates(subset=["symbol"], keep="last")
+    )
+
+    log.info(f"Saving results to {filename}")
+    concated.to_parquet(filename)
+    print(concated)
+
+
 if __name__ == "__main__":
     cli()

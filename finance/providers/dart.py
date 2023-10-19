@@ -101,7 +101,6 @@ class Dart(Provider):
 
 
 class Report(object):
-
     id = Integer()
     registered_at = DateTime(date_format="%Y.%m.%d")
     title = String()

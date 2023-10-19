@@ -23,6 +23,8 @@ from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.indexable import index_property
 from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.sql import text
+from sqlalchemy.sql.sqltypes import SmallInteger
 import uuid64
 
 from finance.exceptions import (
@@ -39,8 +41,8 @@ JsonType = String().with_variant(JSON(), "postgresql")
 
 Base = declarative_base()
 
-is_testing = bool(os.environ.get("TESTING", ""))
-db_url = os.environ["SBF_DB_URL" if is_testing else "SBF_TEST_DB_URL"]
+is_testing = bool(os.environ.get("SBF_TESTING", ""))
+db_url = os.environ["SBF_DB_URL" if not is_testing else "SBF_TEST_DB_URL"]
 engine = create_engine(db_url, echo=False)
 Session = sessionmaker(bind=engine)
 
@@ -77,13 +79,16 @@ def get_asset_by_fund_code(code: str):
     # temporary workaround until we figure out how to create an instance of
     # Asset model from a raw query result
     # (sqlalchemy.engine.result.RowProxy)
-    query = "SELECT * FROM asset WHERE data->>'code' = :code LIMIT 1"
-    raw_asset = session.execute(query, {"code": code}).first()
+    query = text("SELECT * FROM asset WHERE data->>'code' = :code LIMIT 1")
+    raw_asset = session.execute(query, {"code": code}).first()  # type: ignore
     if raw_asset is None:
         raise AssetNotFoundException(
             "Fund code {} is not mapped to any asset".format(code)
         )
-    asset_id = raw_asset[0]
+    # It appears the last column is the ID
+    asset_id = raw_asset[-1]
+    # if asset_id == 'fund':
+    #     import pdb; pdb.set_trace()
     return Asset.query.get(asset_id)
 
 
@@ -121,6 +126,7 @@ class CRUDMixin(object):
     """Copied from https://realpython.com/blog/python/python-web-applications-with-flask-part-ii/"""  # noqa
 
     __table_args__ = {"extend_existing": True}  # type: Any
+    unique_key = ["id"]
 
     id = Column(
         BigInteger, primary_key=True, autoincrement=False, default=uuid64.issue()
@@ -144,7 +150,7 @@ class CRUDMixin(object):
         except (IntegrityError, InvalidRequestError):
             if ignore_if_exists:
                 session.rollback()
-                return cls.find(**kwargs)
+                return cls.find(**{k: kwargs[k] for k in cls.unique_key})
             else:
                 raise
 
@@ -188,7 +194,6 @@ class CRUDMixin(object):
 
 
 class User(CRUDMixin, Base):  # type: ignore
-
     __tablename__ = "user"
 
     given_name = Column(String)
@@ -206,7 +211,7 @@ class User(CRUDMixin, Base):  # type: ignore
     @property
     def name(self):
         # TODO: i18n
-        return u"{}, {}".format(self.family_name, self.given_name)
+        return "{}, {}".format(self.family_name, self.given_name)
 
 
 # TODO: Need a way to keep track of the value of volatile assets such as stocks
@@ -214,11 +219,14 @@ class User(CRUDMixin, Base):  # type: ignore
 # conversion, stock evaluation, etc.)
 
 
-class Granularity(object):
+class Granularity:
     sec = "1sec"
     min = "1min"
+    three_min = "3min"
     five_min = "5min"
+    fifteen_min = "15min"
     hour = "1hour"
+    four_hour = "4hour"
     day = "1day"
     week = "1week"
     month = "1month"
@@ -229,8 +237,11 @@ class Granularity(object):
         return value in (
             cls.sec,
             cls.min,
+            cls.three_min,
             cls.five_min,
+            cls.fifteen_min,
             cls.hour,
+            cls.four_hour,
             cls.day,
             cls.week,
             cls.month,
@@ -249,31 +260,37 @@ class AssetValue(CRUDMixin, Base):  # type: ignore
         UniqueConstraint("asset_id", "evaluated_at", "granularity"),
         {},
     )  # type: Any
+    unique_key = ["asset_id", "evaluated_at", "granularity"]
 
     asset_id = Column(BigInteger, ForeignKey("asset.id"))
     base_asset_id = Column(BigInteger, ForeignKey("asset.id"))
     base_asset = relationship("Asset", uselist=False, foreign_keys=[base_asset_id])
     evaluated_at = Column(DateTime(timezone=False))
-    source = Column(Enum("yahoo", "google", "kofia", "test", name="asset_value_source"))
-    granularity = Column(
+    source: Column = Column(
+        Enum("yahoo", "google", "kofia", "upbit", "test", name="asset_value_source")
+    )
+    granularity: Column = Column(
         Enum(
             "1sec",
             "1min",
+            "3min",
             "5min",
+            "15min",
             "1hour",
+            "4hour",
             "1day",
             "1week",
             "1month",
             "1year",
-            name="granularity",
+            name="ticker_granularity",
         )
     )
     # NOTE: Should we also store `fetched_at`?
-    open = Column(Numeric(precision=20, scale=4))
-    high = Column(Numeric(precision=20, scale=4))
-    low = Column(Numeric(precision=20, scale=4))
-    close = Column(Numeric(precision=20, scale=4))
-    volume = Column(Integer)
+    open = Column(Numeric(precision=18, scale=10))
+    high = Column(Numeric(precision=18, scale=10))
+    low = Column(Numeric(precision=18, scale=10))
+    close = Column(Numeric(precision=18, scale=10))
+    volume = Column(Numeric(precision=18, scale=10))
 
     def __repr__(self):
         return (
@@ -289,8 +306,9 @@ class AssetValue(CRUDMixin, Base):  # type: ignore
         )
 
 
-class AssetType(object):
-    currency = "currency"
+class AssetType:
+    fiat_currency = "fiat_currency"
+    crypto_currency = "crypto_currency"
     stock = "stock"
     bond = "bond"
     p2p_bond = "p2p_bond"
@@ -300,7 +318,8 @@ class AssetType(object):
 
 
 asset_types = (
-    AssetType.currency,
+    AssetType.fiat_currency,
+    AssetType.crypto_currency,
     AssetType.stock,
     AssetType.bond,
     AssetType.p2p_bond,
@@ -319,12 +338,15 @@ class Asset(CRUDMixin, Base):  # type: ignore
         "polymorphic_on": "type",
     }
 
-    type = Column(Enum(*asset_types, name="asset_type"))
+    type: Column = Column(Enum(*asset_types, name="asset_type"))
     name = Column(String)
     # FIXME: Rename this as `symbol` or rename `get_by_symbol` -> `get_by_code`
     code = Column(String, unique=True)
     isin = Column(String)
     description = Column(Text)
+
+    # TODO: Add `market` (e.g., NASDAQ)
+    # TODO: Add `region` (e.g., US)
 
     #: Arbitrary data
     data = Column(JsonType)
@@ -385,7 +407,6 @@ class Asset(CRUDMixin, Base):  # type: ignore
 
 
 class BondAsset(Asset):
-
     __tablename__ = "asset"
 
     __mapper_args__ = {
@@ -394,7 +415,6 @@ class BondAsset(Asset):
 
 
 class CommodityAsset(Asset):
-
     __tablename__ = "asset"
 
     __mapper_args__ = {
@@ -402,17 +422,23 @@ class CommodityAsset(Asset):
     }
 
 
-class CurrencyAsset(Asset):
-
+class FiatCurrencyAsset(Asset):
     __tablename__ = "asset"
 
     __mapper_args__ = {
-        "polymorphic_identity": "currency",
+        "polymorphic_identity": "fiat_currency",
+    }
+
+
+class CryptoCurrencyAsset(Asset):
+    __tablename__ = "asset"
+
+    __mapper_args__ = {
+        "polymorphic_identity": "crypto_currency",
     }
 
 
 class FundAsset(Asset):
-
     __tablename__ = "asset"
 
     __mapper_args__ = {
@@ -421,7 +447,6 @@ class FundAsset(Asset):
 
 
 class P2PBondAsset(Asset):
-
     __tablename__ = "asset"
 
     __mapper_args__ = {
@@ -451,7 +476,6 @@ class P2PBondAsset(Asset):
 
 
 class SecurityAsset(Asset):
-
     __tablename__ = "asset"
 
     __mapper_args__ = {
@@ -460,7 +484,6 @@ class SecurityAsset(Asset):
 
 
 class StockAsset(Asset):
-
     __tablename__ = "asset"
 
     __mapper_args__ = {
@@ -498,7 +521,7 @@ class Account(CRUDMixin, Base):  # type: ignore
 
     user_id = Column(BigInteger, ForeignKey("user.id"))
     portfolio_id = Column(BigInteger, ForeignKey("portfolio.id"))
-    type = Column(Enum(*account_types, name="account_type"))
+    type: Column = Column(Enum(*account_types, name="account_type"))
     name = Column(String)
     institution = Column(String)  # Could be a routing number (US)
     number = Column(String)  # Account number
@@ -625,6 +648,37 @@ class Account(CRUDMixin, Base):  # type: ignore
             raise NotImplementedError
 
 
+class FinancialGranularity:
+    quarterly = "quarterly"
+    annual = "annual"
+
+
+class Financial(CRUDMixin, Base):  # type: ignore
+    """A financial record."""
+
+    unique_key = ["asset_id", "key", "granularity", "year", "quarter"]
+
+    __tablename__ = "financial"
+    __table_args__ = (
+        UniqueConstraint(*unique_key),
+        {},
+    )  # type: Any
+
+    asset_id = Column(BigInteger, ForeignKey("asset.id"))
+    key = Column(String)
+    # NOTE: 'quarterly' can be both an adjective and an adverb.
+    granularity: Column = Column(
+        Enum(
+            "quarterly",
+            "annual",
+            name="financial_granularity",
+        )
+    )
+    year = Column(Integer)
+    quarter = Column(SmallInteger)
+    value = Column(Numeric(precision=20, scale=4))
+
+
 class Portfolio(CRUDMixin, Base):  # type: ignore
     """A collection of accounts (= a collection of assets)."""
 
@@ -705,7 +759,7 @@ class Transaction(CRUDMixin, Base):  # type: ignore
 
     initiated_at = Column(DateTime(timezone=False))
     closed_at = Column(DateTime(timezone=False))
-    state = Column(Enum(*transaction_states, name="transaction_state"))
+    state: Column = Column(Enum(*transaction_states, name="transaction_state"))
     #: Individual record
     records = relationship("Record", backref="transaction", lazy="dynamic")
 
@@ -766,7 +820,7 @@ class Record(CRUDMixin, Base):  # type: ignore
     asset_id = Column(BigInteger, ForeignKey("asset.id"))
     # asset = relationship(Asset, uselist=False)
     transaction_id = Column(BigInteger, ForeignKey("transaction.id"))
-    type = Column(Enum(*record_types, name="record_type"))
+    type: Column = Column(Enum(*record_types, name="record_type"))
     # NOTE: We'll always use the UTC time
     created_at = Column(DateTime(timezone=False))
     category = Column(String)
