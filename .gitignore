@@ -14,11 +14,13 @@ dist
 *.egg-info
 .coverage
 .scannerwork
+build
+dist
 
 # Meant to be provided by users
 provision.sh
 
 # Misc
 /*.json
-frontend/src/assets
 sample-data/*
+notebooks
