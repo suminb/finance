@@ -43,9 +43,9 @@ Base = declarative_base()
 
 is_testing = bool(os.environ.get("SBF_TESTING", ""))
 if is_testing:
-    db_url = os.environ.get("SBF_TEST_DB_URL")
+    db_url = os.environ.get("SBF_TEST_DB_URL", "")
 else:
-    db_url = os.environ.get("SBF_DB_URL")
+    db_url = os.environ.get("SBF_DB_URL", "")
 engine = create_engine(db_url, echo=False)
 Session = sessionmaker(bind=engine)
 
