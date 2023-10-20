@@ -22,7 +22,7 @@ def concat_dataframes(
     df2,
     sort_by=["region", "symbol", "updated_at"],
     drop_duplicates_subset=["region", "symbol", "date"],
-):
+) -> pd.DataFrame:
     return (
         pd.concat([df1, df2], ignore_index=True)
         .sort_values(sort_by)
@@ -133,20 +133,6 @@ def refresh_tickers_and_historical_data(
     tickers_target: str,
     historical_target: str,
 ):
-    # NOTE: Do not override this value, as it will be saved as a file in the later stage
-    tickers = load_tickers(tickers_source)
-
-    # Filter tickers that were updated older than a day ago
-    filtered = tickers.copy()
-    now = datetime.utcnow()
-    filtered["time_elapsed"] = filtered["updated_at"].apply(lambda x: (now - x).days)
-    filtered = filtered[filtered["time_elapsed"] >= 1]
-
-    # filtered = tickers[(tickers["quote_type"] == "EQUITY") & (tickers["region"] == region)]
-    # filtered = filtered.sort_values("updated_at", ascending=True)
-
-    symbols = filtered["symbol"][:].tolist()
-
     ticker_keys = [
         "region",
         "symbol",
@@ -163,6 +149,26 @@ def refresh_tickers_and_historical_data(
         "long_business_summary",
         "status",
     ]
+
+    # NOTE: Do not override this value, as it will be saved as a file in the later stage
+    tickers = pd.DataFrame(columns=ticker_keys)
+    tickers = concat_dataframes(
+        tickers,
+        load_tickers(tickers_source),
+        drop_duplicates_subset=["region", "symbol"],
+    )
+
+    # Filter tickers that were updated older than a day ago
+    filtered = tickers.copy()
+    now = datetime.utcnow()
+    filtered["time_elapsed"] = filtered["updated_at"].apply(lambda x: (now - x).days)
+    filtered = filtered[filtered["time_elapsed"] >= 1]
+
+    # filtered = tickers[(tickers["quote_type"] == "EQUITY") & (tickers["region"] == region)]
+    # filtered = filtered.sort_values("updated_at", ascending=True)
+
+    symbols = filtered["symbol"][:].tolist()
+
     history_keys = [
         "region",
         "symbol",
