@@ -121,23 +121,3 @@ def fetch_historical_data(
     history = ticker.history(period=period)
 
     return preprocess_historical_data(history, symbol, region, updated_at)
-
-
-def save_tickers(dataframe: pd.DataFrame, save_datetime=datetime.utcnow()):
-    date_format = "%Y%m%d"
-    ticker_filename = f"tickers-{save_datetime.strftime(date_format)}.parquet"
-    dataframe.to_parquet(ticker_filename)
-
-
-def save_historical_data(
-    dataframe: pd.DataFrame,
-    region="US",
-    base_path="historical",
-    save_datetime=datetime.utcnow(),
-):
-    date_format = "%Y%m%d"
-    path = os.path.join(
-        base_path, f"{region}-{save_datetime.strftime(date_format)}.parquet"
-    )
-    # os.makedirs(os.path.dirname(path), exist_ok=True)
-    dataframe.to_parquet(path)

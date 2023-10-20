@@ -282,7 +282,9 @@ def import_stock_records(filename):
 @click.argument("tickers_target")
 @click.argument("historical_target")
 @click.option("-r", "--region", default="US", help="Region")
-def refresh_tickers(tickers_source, historical_source, tickers_target, historical_target, region):
+def refresh_tickers(
+    tickers_source, historical_source, tickers_target, historical_target, region
+):
     """Refreshes tickers.
 
     :param source: Source file name
