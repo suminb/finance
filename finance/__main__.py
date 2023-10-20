@@ -277,9 +277,13 @@ def import_stock_records(filename):
 
 
 @cli.command()
-@click.argument("filename")
+@click.argument("source")
 @click.option("-r", "--region", default="US", help="Region")
-def refresh_tickers(filename, region):
+def refresh_tickers(source, region):
+    """Refreshes tickers.
+
+    :param source: Source file name
+    """
     # FIXME: Code refactoring required
     from datetime import datetime
     import random
@@ -291,8 +295,7 @@ def refresh_tickers(filename, region):
     from finance.ext.warehouse import concat_dataframes, save_historical_data, save_tickers, fetch_profile_and_historical_data, load_tickers, load_historical_data
 
     # NOTE: Do not override this value, as it will be saved as a file in the later stage
-    tickers = load_tickers()
-    # tickers = tickers.drop("time_elapsed", axis=1)
+    tickers = load_tickers(source)
 
     # Filter tickers that were updated older than a day ago
     filtered = tickers.copy()

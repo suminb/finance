@@ -4,8 +4,12 @@ historical data."""
 from datetime import datetime, timedelta
 import os
 
+from logbook import Logger
 import pandas as pd
 import yfinance as yf
+
+
+log = Logger(__file__)
 
 
 def concat_dataframes(
@@ -27,14 +31,13 @@ def get_previous_dates(current_datetime=datetime.utcnow(), start=0, up_to=30):
         yield current_datetime - timedelta(days=d)
 
 
-def load_tickers(load_datetime=datetime.utcnow()):
-    date_format = "%Y%m%d"
-    for previous_date in get_previous_dates(load_datetime):
-        path = f"tickers-{previous_date.strftime(date_format)}.parquet"
-        if os.path.exists(path):
-            existing_data = pd.read_parquet(path)
-            print(f"Loaded tickers from {previous_date.strftime(date_format)}")
-            return existing_data.rename(columns={"fetched_at": "updated_at"})
+def load_tickers(path: str):
+    """Load tickers from a file."""
+    # TODO: Currently Parquet only. Add support for other file types like CSV, JSON, etc.
+    if os.path.exists(path):
+        existing_data = pd.read_parquet(path)
+        log.info(f"Loaded tickers from {path}")
+        return existing_data.rename(columns={"fetched_at": "updated_at"})
     return None
 
 
