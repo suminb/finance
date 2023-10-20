@@ -8,6 +8,8 @@ from logbook import Logger
 import pandas as pd
 import yfinance as yf
 
+from typing import Optional
+
 
 log = Logger(__file__)
 
@@ -31,7 +33,7 @@ def get_previous_dates(current_datetime=datetime.utcnow(), start=0, up_to=30):
         yield current_datetime - timedelta(days=d)
 
 
-def load_tickers(path: str):
+def load_tickers(path: str) -> Optional[pd.DataFrame]:
     """Load tickers from a file."""
     # TODO: Currently Parquet only. Add support for other file types like CSV, JSON, etc.
     if os.path.exists(path):
@@ -41,18 +43,11 @@ def load_tickers(path: str):
     return None
 
 
-def load_historical_data(
-    region: str, load_datetime=datetime.utcnow(), base_path="historical"
-):
-    date_format = "%Y%m%d"
-    for previous_date in get_previous_dates(load_datetime):
-        path = os.path.join(
-            base_path, f"{region}-{previous_date.strftime(date_format)}.parquet"
-        )
-        if os.path.exists(path):
-            existing_data = pd.read_parquet(path)
-            print(f"Loaded historical data from {previous_date.strftime(date_format)}")
-            return existing_data
+def load_historical_data(path: str) -> Optional[pd.DataFrame]:
+    if os.path.exists(path):
+        existing_data = pd.read_parquet(path)
+        log.info(f"Loaded historical data from {path}")
+        return existing_data
     return None
 
 

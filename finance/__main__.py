@@ -277,9 +277,12 @@ def import_stock_records(filename):
 
 
 @cli.command()
-@click.argument("source")
+@click.argument("tickers_source")
+@click.argument("historical_source")
+@click.argument("tickers_target")
+@click.argument("historical_target")
 @click.option("-r", "--region", default="US", help="Region")
-def refresh_tickers(source, region):
+def refresh_tickers(tickers_source, historical_source, tickers_target, historical_target, region):
     """Refreshes tickers.
 
     :param source: Source file name
@@ -292,10 +295,17 @@ def refresh_tickers(source, region):
     import pandas as pd
     from rich.progress import Progress
 
-    from finance.ext.warehouse import concat_dataframes, save_historical_data, save_tickers, fetch_profile_and_historical_data, load_tickers, load_historical_data
+    from finance.ext.warehouse import (
+        concat_dataframes,
+        save_historical_data,
+        save_tickers,
+        fetch_profile_and_historical_data,
+        load_tickers,
+        load_historical_data,
+    )
 
     # NOTE: Do not override this value, as it will be saved as a file in the later stage
-    tickers = load_tickers(source)
+    tickers = load_tickers(tickers_source)
 
     # Filter tickers that were updated older than a day ago
     filtered = tickers.copy()
@@ -308,14 +318,42 @@ def refresh_tickers(source, region):
 
     symbols = filtered["symbol"][:].tolist()
 
-    ticker_keys = ["region", "symbol", "exchange", "quote_type", "currency", "name", "sector", "industry", "close", "volume", "market_cap", "updated_at", "long_business_summary", "status"]
-    history_keys = ["region", "symbol", "date", "open", "high", "low", "close", "volume", "dividends", "stock_splits", "capital_gains", "updated_at"]
+    ticker_keys = [
+        "region",
+        "symbol",
+        "exchange",
+        "quote_type",
+        "currency",
+        "name",
+        "sector",
+        "industry",
+        "close",
+        "volume",
+        "market_cap",
+        "updated_at",
+        "long_business_summary",
+        "status",
+    ]
+    history_keys = [
+        "region",
+        "symbol",
+        "date",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "dividends",
+        "stock_splits",
+        "capital_gains",
+        "updated_at",
+    ]
 
     # manually add symbols
     # symbols = ["EWG", "EWH"]
 
     history = pd.DataFrame(columns=history_keys)
-    history = concat_dataframes(history, load_historical_data(region=region))
+    history = concat_dataframes(history, load_historical_data(historical_source))
 
     with Progress() as progress:
         task = progress.add_task("[red]Fetching", total=len(symbols))
@@ -325,20 +363,35 @@ def refresh_tickers(source, region):
             try:
                 profile, history_new = fetch_profile_and_historical_data(symbol, region)
             except Exception as e:
-                print(symbol, e)
-                profile = pd.DataFrame([{"region": region, "symbol": symbol, "status": "error", "updated_at": datetime.utcnow()}])
+                log.warn(f"{symbol}: {e}")
+                profile = pd.DataFrame(
+                    [
+                        {
+                            "region": region,
+                            "symbol": symbol,
+                            "status": "error",
+                            "updated_at": datetime.utcnow(),
+                        }
+                    ]
+                )
                 history_new = None
             else:
-                profile = pd.DataFrame([{k: profile[k] for k in ticker_keys if k in profile}])
+                profile = pd.DataFrame(
+                    [{k: profile[k] for k in ticker_keys if k in profile}]
+                )
 
             # By placing the new dataframe prior to the existing one, we can easily re-order columns
-            tickers = concat_dataframes(profile, tickers, drop_duplicates_subset=["region", "symbol"])
+            tickers = concat_dataframes(
+                profile, tickers, drop_duplicates_subset=["region", "symbol"]
+            )
             history = concat_dataframes(history_new, history)
 
             # This is wasteful, but an acceptable practice not to lose data
+            tickers.to_parquet(tickers_target)
             save_tickers(tickers)
 
-            save_historical_data(history)
+            history.to_parquet(historical_target)
+            # save_historical_data(history)
             time.sleep(random.random() * 3)
 
 
