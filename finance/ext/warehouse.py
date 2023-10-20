@@ -3,9 +3,18 @@ historical data."""
 
 from datetime import datetime, timedelta
 import os
+import random
+import time
 
+from logbook import Logger
 import pandas as pd
+from rich.progress import Progress
 import yfinance as yf
+
+from typing import Optional
+
+
+log = Logger(__file__)
 
 
 def concat_dataframes(
@@ -13,7 +22,7 @@ def concat_dataframes(
     df2,
     sort_by=["region", "symbol", "updated_at"],
     drop_duplicates_subset=["region", "symbol", "date"],
-):
+) -> pd.DataFrame:
     return (
         pd.concat([df1, df2], ignore_index=True)
         .sort_values(sort_by)
@@ -27,29 +36,21 @@ def get_previous_dates(current_datetime=datetime.utcnow(), start=0, up_to=30):
         yield current_datetime - timedelta(days=d)
 
 
-def load_tickers(load_datetime=datetime.utcnow()):
-    date_format = "%Y%m%d"
-    for previous_date in get_previous_dates(load_datetime):
-        path = f"tickers-{previous_date.strftime(date_format)}.parquet"
-        if os.path.exists(path):
-            existing_data = pd.read_parquet(path)
-            print(f"Loaded tickers from {previous_date.strftime(date_format)}")
-            return existing_data.rename(columns={"fetched_at": "updated_at"})
+def load_tickers(path: str) -> Optional[pd.DataFrame]:
+    """Load tickers from a file."""
+    # TODO: Currently Parquet only. Add support for other file types like CSV, JSON, etc.
+    if os.path.exists(path):
+        existing_data = pd.read_parquet(path)
+        log.info(f"Loaded tickers from {path}")
+        return existing_data.rename(columns={"fetched_at": "updated_at"})
     return None
 
 
-def load_historical_data(
-    region: str, load_datetime=datetime.utcnow(), base_path="historical"
-):
-    date_format = "%Y%m%d"
-    for previous_date in get_previous_dates(load_datetime):
-        path = os.path.join(
-            base_path, f"{region}-{previous_date.strftime(date_format)}.parquet"
-        )
-        if os.path.exists(path):
-            existing_data = pd.read_parquet(path)
-            print(f"Loaded historical data from {previous_date.strftime(date_format)}")
-            return existing_data
+def load_historical_data(path: str) -> Optional[pd.DataFrame]:
+    if os.path.exists(path):
+        existing_data = pd.read_parquet(path)
+        log.info(f"Loaded historical data from {path}")
+        return existing_data
     return None
 
 
@@ -125,21 +126,103 @@ def fetch_historical_data(
     return preprocess_historical_data(history, symbol, region, updated_at)
 
 
-def save_tickers(dataframe: pd.DataFrame, save_datetime=datetime.utcnow()):
-    date_format = "%Y%m%d"
-    ticker_filename = f"tickers-{save_datetime.strftime(date_format)}.parquet"
-    dataframe.to_parquet(ticker_filename)
-
-
-def save_historical_data(
-    dataframe: pd.DataFrame,
-    region="US",
-    base_path="historical",
-    save_datetime=datetime.utcnow(),
+def refresh_tickers_and_historical_data(
+    region: str,
+    tickers_source: str,
+    historical_source: str,
+    tickers_target: str,
+    historical_target: str,
 ):
-    date_format = "%Y%m%d"
-    path = os.path.join(
-        base_path, f"{region}-{save_datetime.strftime(date_format)}.parquet"
+    ticker_keys = [
+        "region",
+        "symbol",
+        "exchange",
+        "quote_type",
+        "currency",
+        "name",
+        "sector",
+        "industry",
+        "close",
+        "volume",
+        "market_cap",
+        "updated_at",
+        "long_business_summary",
+        "status",
+    ]
+
+    # NOTE: Do not override this value, as it will be saved as a file in the later stage
+    tickers = pd.DataFrame(columns=ticker_keys)
+    tickers = concat_dataframes(
+        tickers,
+        load_tickers(tickers_source),
+        drop_duplicates_subset=["region", "symbol"],
     )
-    # os.makedirs(os.path.dirname(path), exist_ok=True)
-    dataframe.to_parquet(path)
+
+    # Filter tickers that were updated older than a day ago
+    filtered = tickers.copy()
+    now = datetime.utcnow()
+    filtered["time_elapsed"] = filtered["updated_at"].apply(lambda x: (now - x).days)
+    filtered = filtered[filtered["time_elapsed"] >= 1]
+
+    # filtered = tickers[(tickers["quote_type"] == "EQUITY") & (tickers["region"] == region)]
+    # filtered = filtered.sort_values("updated_at", ascending=True)
+
+    symbols = filtered["symbol"][:].tolist()
+
+    history_keys = [
+        "region",
+        "symbol",
+        "date",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "dividends",
+        "stock_splits",
+        "capital_gains",
+        "updated_at",
+    ]
+
+    # manually add symbols
+    # symbols = ["EWG", "EWH"]
+
+    history = pd.DataFrame(columns=history_keys)
+    history = concat_dataframes(history, load_historical_data(historical_source))
+
+    with Progress() as progress:
+        task = progress.add_task("[red]Fetching", total=len(symbols))
+        for symbol in symbols:
+            progress.update(task, description=f"Fetching[{symbol}]", advance=1)
+
+            try:
+                profile, history_new = fetch_profile_and_historical_data(symbol, region)
+            except Exception as e:
+                log.warn(f"{symbol}: {e}")
+                profile = pd.DataFrame(
+                    [
+                        {
+                            "region": region,
+                            "symbol": symbol,
+                            "status": "error",
+                            "updated_at": datetime.utcnow(),
+                        }
+                    ]
+                )
+                history_new = None
+            else:
+                profile = pd.DataFrame(
+                    [{k: profile[k] for k in ticker_keys if k in profile}]
+                )
+
+            # By placing the new dataframe prior to the existing one, we can easily re-order columns
+            tickers = concat_dataframes(
+                profile, tickers, drop_duplicates_subset=["region", "symbol"]
+            )
+            history = concat_dataframes(history_new, history)
+
+            # This is wasteful, but an acceptable practice not to lose data
+            tickers.to_parquet(tickers_target)
+
+            history.to_parquet(historical_target)
+            time.sleep(random.random() * 3)

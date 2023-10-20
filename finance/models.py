@@ -42,10 +42,11 @@ JsonType = String().with_variant(JSON(), "postgresql")
 Base = declarative_base()
 
 is_testing = bool(os.environ.get("SBF_TESTING", ""))
+default_db_url = "sqlite:///:memory:"
 if is_testing:
-    db_url = os.environ.get("SBF_TEST_DB_URL", "")
+    db_url = os.environ.get("SBF_TEST_DB_URL", default_db_url)
 else:
-    db_url = os.environ.get("SBF_DB_URL", "")
+    db_url = os.environ.get("SBF_DB_URL", default_db_url)
 engine = create_engine(db_url, echo=False)
 Session = sessionmaker(bind=engine)
 
