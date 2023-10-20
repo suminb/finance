@@ -278,7 +278,8 @@ def import_stock_records(filename):
 
 @cli.command()
 @click.argument("filename")
-def refresh_tickers(filename):
+@click.option("-r", "--region", default="US", help="Region")
+def refresh_tickers(filename, region):
     # FIXME: Code refactoring required
     from datetime import datetime
     import random
@@ -288,8 +289,6 @@ def refresh_tickers(filename):
     from rich.progress import Progress
 
     from finance.ext.warehouse import concat_dataframes, save_historical_data, save_tickers, fetch_profile_and_historical_data, load_tickers, load_historical_data
-
-    region = "US"
 
     # NOTE: Do not override this value, as it will be saved as a file in the later stage
     tickers = load_tickers()
