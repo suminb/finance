@@ -132,6 +132,7 @@ def refresh_tickers_and_historical_data(
     historical_source: pd.DataFrame,
     tickers_target_path: str,
     historical_target_path: str,
+    delay_factor: float = 2.0,
 ):
     ticker_keys = [
         "region",
@@ -213,4 +214,4 @@ def refresh_tickers_and_historical_data(
             tickers.to_parquet(tickers_target_path)
 
             history.to_parquet(historical_target_path)
-            time.sleep(random.random() * 3)
+            time.sleep(random.random() * delay_factor)
