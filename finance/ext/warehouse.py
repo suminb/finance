@@ -128,10 +128,10 @@ def fetch_historical_data(
 
 def refresh_tickers_and_historical_data(
     region: str,
-    tickers_source: str,
-    historical_source: str,
-    tickers_target: str,
-    historical_target: str,
+    tickers_source: pd.DataFrame,
+    historical_source: pd.DataFrame,
+    tickers_target_path: str,
+    historical_target_path: str,
 ):
     ticker_keys = [
         "region",
@@ -150,16 +150,9 @@ def refresh_tickers_and_historical_data(
         "status",
     ]
 
-    # NOTE: Do not override this value, as it will be saved as a file in the later stage
-    tickers = pd.DataFrame(columns=ticker_keys)
-    tickers = concat_dataframes(
-        tickers,
-        load_tickers(tickers_source),
-        drop_duplicates_subset=["region", "symbol"],
-    )
-
     # Filter tickers that were updated older than a day ago
-    filtered = tickers.copy()
+    tickers = tickers_source.copy()
+    filtered = tickers_source.copy()
     now = datetime.utcnow()
     filtered["time_elapsed"] = filtered["updated_at"].apply(lambda x: (now - x).days)
     filtered = filtered[filtered["time_elapsed"] >= 1]
@@ -167,7 +160,7 @@ def refresh_tickers_and_historical_data(
     # filtered = tickers[(tickers["quote_type"] == "EQUITY") & (tickers["region"] == region)]
     # filtered = filtered.sort_values("updated_at", ascending=True)
 
-    symbols = filtered["symbol"][:].tolist()
+    symbols = filtered["symbol"].tolist()
 
     history_keys = [
         "region",
@@ -184,12 +177,7 @@ def refresh_tickers_and_historical_data(
         "updated_at",
     ]
 
-    # manually add symbols
-    # symbols = ["EWG", "EWH"]
-
-    history = pd.DataFrame(columns=history_keys)
-    history = concat_dataframes(history, load_historical_data(historical_source))
-
+    history = historical_source.copy()
     with Progress() as progress:
         task = progress.add_task("[red]Fetching", total=len(symbols))
         for symbol in symbols:
@@ -222,7 +210,7 @@ def refresh_tickers_and_historical_data(
             history = concat_dataframes(history_new, history)
 
             # This is wasteful, but an acceptable practice not to lose data
-            tickers.to_parquet(tickers_target)
+            tickers.to_parquet(tickers_target_path)
 
-            history.to_parquet(historical_target)
+            history.to_parquet(historical_target_path)
             time.sleep(random.random() * 3)
