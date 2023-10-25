@@ -178,7 +178,9 @@ def refresh_tickers_and_historical_data(
                 continue
 
             try:
-                profile, history_new = fetch_profile_and_historical_data(symbol, region)
+                profile, history_new = fetch_profile_and_historical_data(
+                    symbol, region, period="10y"
+                )
             except Exception as e:
                 log.warn(f"{symbol}: {e}")
                 with open(skip_marker_path, "w") as fout:
