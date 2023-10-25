@@ -2,6 +2,7 @@
 historical data."""
 
 from datetime import datetime, timedelta
+import os
 import random
 import time
 
@@ -110,7 +111,7 @@ def fetch_historical_data(
 def refresh_tickers_and_historical_data(
     region: str,
     tickers_source: pd.DataFrame,
-    historical_source: pd.DataFrame,
+    base_path: str,
     tickers_target_path: str,
     historical_target_path: str,
     delay_factor: float = 2.0,
@@ -158,6 +159,8 @@ def refresh_tickers_and_historical_data(
         "capital_gains",
         "updated_at",
     ]
+
+    os.makedirs(base_path, exist_ok=True)
 
     with Progress() as progress:
         task = progress.add_task("[red]Fetching", total=len(symbols))
