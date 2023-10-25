@@ -2,6 +2,7 @@
 historical data."""
 
 from datetime import datetime, timedelta
+import os
 import random
 import time
 
@@ -110,7 +111,7 @@ def fetch_historical_data(
 def refresh_tickers_and_historical_data(
     region: str,
     tickers_source: pd.DataFrame,
-    historical_source: pd.DataFrame,
+    staging_path: str,
     tickers_target_path: str,
     historical_target_path: str,
     delay_factor: float = 2.0,
@@ -159,40 +160,52 @@ def refresh_tickers_and_historical_data(
         "updated_at",
     ]
 
-    history = historical_source.copy()
+    # profile_base_path = os.path.join(staging_path, "profiles")
+    historical_base_path = os.path.join(staging_path, "historical")
+    os.makedirs(historical_base_path, exist_ok=True)
+
     with Progress() as progress:
         task = progress.add_task("[red]Fetching", total=len(symbols))
         for symbol in symbols:
             progress.update(task, description=f"Fetching[{symbol}]", advance=1)
+            dt = datetime.utcnow().strftime("%Y%m%d")
+
+            skip_marker_path = os.path.join(
+                historical_base_path, f"{region}-{symbol}-{dt}.skip"
+            )
+            if os.path.exists(skip_marker_path):
+                log.info(f"Skipping {symbol}...")
+                continue
 
             try:
-                profile, history_new = fetch_profile_and_historical_data(symbol, region)
+                profile, history_new = fetch_profile_and_historical_data(
+                    symbol, region, period="10y"
+                )
             except Exception as e:
                 log.warn(f"{symbol}: {e}")
-                profile = pd.DataFrame(
-                    [
-                        {
-                            "region": region,
-                            "symbol": symbol,
-                            "status": "error",
-                            "updated_at": datetime.utcnow(),
-                        }
-                    ]
-                )
-                history_new = None
+                with open(skip_marker_path, "w") as fout:
+                    fout.write(str(e))
             else:
                 profile = pd.DataFrame(
                     [{k: profile[k] for k in ticker_keys if k in profile}]
                 )
+                history_new.to_parquet(
+                    os.path.join(
+                        historical_base_path, f"{region}-{symbol}-{dt}.parquet"
+                    )
+                )
 
-            # By placing the new dataframe prior to the existing one, we can easily re-order columns
-            tickers = concat_dataframes(
-                profile, tickers, drop_duplicates_subset=["region", "symbol"]
-            )
-            history = concat_dataframes(history_new, history)
+                # By placing the new dataframe prior to the existing one, we can easily re-order columns
+                tickers = concat_dataframes(
+                    profile, tickers, drop_duplicates_subset=["region", "symbol"]
+                )
 
-            # This is wasteful, but an acceptable practice not to lose data
-            tickers.to_parquet(tickers_target_path)
+                # This is wasteful, but an acceptable practice not to lose data
+                tickers.to_parquet(tickers_target_path)
 
-            history.to_parquet(historical_target_path)
-            time.sleep(random.random() * delay_factor)
+                time.sleep(random.random() * delay_factor)
+
+        historical = pd.read_parquet(historical_base_path)
+        historical.drop_duplicates(
+            subset=["date", "region", "symbol"], keep="last"
+        ).to_parquet(historical_target_path)
