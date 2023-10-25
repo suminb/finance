@@ -2,7 +2,6 @@
 historical data."""
 
 from datetime import datetime, timedelta
-import os
 import random
 import time
 
@@ -34,24 +33,6 @@ def get_previous_dates(current_datetime=datetime.utcnow(), start=0, up_to=30):
     """Get previous dates up to a point"""
     for d in range(start, up_to + 1):
         yield current_datetime - timedelta(days=d)
-
-
-def load_tickers(path: str) -> Optional[pd.DataFrame]:
-    """Load tickers from a file."""
-    # TODO: Currently Parquet only. Add support for other file types like CSV, JSON, etc.
-    if os.path.exists(path):
-        existing_data = pd.read_parquet(path)
-        log.info(f"Loaded tickers from {path}")
-        return existing_data.rename(columns={"fetched_at": "updated_at"})
-    return None
-
-
-def load_historical_data(path: str) -> Optional[pd.DataFrame]:
-    if os.path.exists(path):
-        existing_data = pd.read_parquet(path)
-        log.info(f"Loaded historical data from {path}")
-        return existing_data
-    return None
 
 
 def fetch_profile_and_historical_data(symbol: str, region="US", period="5y"):
