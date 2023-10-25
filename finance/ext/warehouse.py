@@ -206,4 +206,6 @@ def refresh_tickers_and_historical_data(
                 time.sleep(random.random() * delay_factor)
 
         historical = pd.read_parquet(historical_base_path)
-        historical.to_parquet(historical_target_path)
+        historical.drop_duplicates(
+            subset=["date", "region", "symbol"], keep="last"
+        ).to_parquet(historical_target_path)
