@@ -12,7 +12,7 @@ import pandas as pd
 from rich.progress import Progress
 import yfinance as yf
 
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 
 log = Logger(__file__)
@@ -214,7 +214,7 @@ def refresh_tickers_and_historical_data(
 
 def make_correlation_matrix(
     historical: pd.DataFrame, symbols: List[str]
-) -> pd.DataFrame:
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
     # This works but very slow (450ms vs < 0.2ms)
     # symbols = historical.groupby("symbol")["symbol"].apply(lambda x: x[0]).values
 
@@ -228,7 +228,7 @@ def make_correlation_matrix(
         columns=historical_by_symbols.columns,
         index=historical_by_symbols.index,
     )
-    return scaled_values.corr()
+    return scaled_values.corr(), scaled_values
 
 
 def rearrange_historical_data_by_symbols(
