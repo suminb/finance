@@ -341,26 +341,29 @@ class Portfolio:
     # TODO: Tax on dividends?
     # TODO: Transaction fees?
     def apply_plan(
-        self, plan: dict, start_dt: datetime, end_dt: datetime, dividends: dict
+        self, plan: dict, start_dt: datetime, end_dt: datetime, dividend_records: dict
     ):
         def apply(t, q):
             self.inventory.setdefault(t, 0)
             self.inventory["_USD"] -= self.current_prices[t] * q
-            if t in dividends:
-                self.inventory["_USD"] += (
-                    sum(
-                        [
-                            div * q
-                            for date, div in dividends[t]
-                            if start_dt <= date < end_dt
-                        ]
-                    )
-                    * 0.85
-                )
-
             return self.inventory[t] + q
 
+        self.inventory["_USD"] += self.calc_dividends_sum(
+            start_dt, end_dt, dividend_records
+        )
         self.inventory = {t: apply(t, q) for t, q in plan.items()} | {
             "_USD": self.inventory["_USD"]
         }
         return self.inventory
+
+    def calc_dividends_sum(
+        self, start_dt: datetime, end_dt: datetime, dividend_records: dict
+    ) -> float:
+        div_sum = 0.0
+        for t, q in self.inventory.items():
+            if t in dividend_records:
+                for div_dt, div_amount in dividend_records[t]:
+                    if start_dt <= div_dt <= end_dt:
+                        assert q >= 0
+                        div_sum += div_amount * q
+        return div_sum
