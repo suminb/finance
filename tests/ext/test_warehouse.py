@@ -32,6 +32,12 @@ def test_make_combination_indices(indices, r, static_indices, expected):
     assert make_combination_indices(indices, r, static_indices) == expected
 
 
+def parse_dt(str_dt, tz=pytz.timezone("America/New_York")):
+    return datetime.strptime(str_dt + " 00:00:00", "%Y-%m-%d %H:%M:%S").replace(
+        tzinfo=tz
+    )
+
+
 # TODO: Diversify test scenarios
 inventory = {
     "SPY": 50,
@@ -56,13 +62,6 @@ target = {
     "_USD": 1,
 }
 p1 = Portfolio(inventory, current_prices, target)
-tz = pytz.timezone("America/New_York")
-
-
-def parse_dt(str_dt):
-    return datetime.strptime(str_dt + " 00:00:00", "%Y-%m-%d %H:%M:%S").replace(
-        tzinfo=tz
-    )
 
 
 def test_portfolio_asset_values():
