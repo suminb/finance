@@ -21,7 +21,7 @@ target = {
     "GDX": 2,
     "ARKW": 1,
 }
-p1 = Portfolio(inventory, current_prices, target)
+p1 = Portfolio(inventory, current_prices, target, 0)
 
 
 def test_portfolio_asset_values():
@@ -58,10 +58,10 @@ def test_portfolio_calc_diff():
 
 def test_portfolio_make_rebalancing_plan():
     assert p1.make_rebalancing_plan() == {
-        "SPY": 4,
+        "SPY": 3,
         "ARKW": -389,
-        "TLT": 158,
-        "GDX": 403,
+        "TLT": 157,
+        "GDX": 402,
         "REMX": -100,
     }
 
@@ -70,9 +70,10 @@ def test_portfolio_apply_plan():
     plan = p1.make_rebalancing_plan()
     p1.apply_plan(plan)
     assert p1.inventory == {
-        "SPY": 54,
-        "TLT": 203,
+        "SPY": 53,
+        "TLT": 202,
         "ARKW": 111,
         "REMX": 0,
-        "GDX": 403,
+        "GDX": 402,
     }
+    assert p1.cash_balance >= 0

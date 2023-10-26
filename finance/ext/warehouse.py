@@ -2,6 +2,7 @@
 historical data."""
 
 from datetime import datetime, timedelta
+import math
 import os
 import random
 import time
@@ -213,10 +214,17 @@ def refresh_tickers_and_historical_data(
 
 class Portfolio:
     # TODO: Get rid of dependencies on DataFrame
-    def __init__(self, inventory: dict, current_prices: dict, target_weights: dict):
+    def __init__(
+        self,
+        inventory: dict,
+        current_prices: dict,
+        target_weights: dict,
+        cash_balance: float,
+    ):
         self.inventory = inventory  # ticker: quantity
         self.current_prices = current_prices  # ticker: price
         self.target_weights = self.normalize_weights(target_weights)  # ticker: weight
+        self.cash_balance = cash_balance
 
     @property
     def asset_values(self):
@@ -224,7 +232,7 @@ class Portfolio:
 
     @property
     def net_asset_value(self):
-        return sum(self.asset_values.values())
+        return sum(self.asset_values.values()) + self.cash_balance
 
     @property
     def current_weights(self):
@@ -259,13 +267,19 @@ class Portfolio:
         diff = self.calc_diff()
 
         def plan(t, diff):
+            if diff[t] > 0:
+                round = math.ceil
+            else:
+                round = math.floor
             return round((nav * -diff[t]) / self.current_prices[t])
 
         return {t: plan(t, diff) for t in diff}
 
+    # TODO: Calculate dividends
     def apply_plan(self, plan: dict):
         def apply(t, q):
             self.inventory.setdefault(t, 0)
+            self.cash_balance -= self.current_prices[t] * q
             return self.inventory[t] + q
 
         self.inventory = {t: apply(t, q) for t, q in plan.items()}
