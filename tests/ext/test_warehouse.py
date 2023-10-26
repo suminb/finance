@@ -6,14 +6,22 @@ import pytest
 from finance.ext.warehouse import Portfolio, make_combination_indices
 
 
-@pytest.mark.parametrize(["indices", "r", "static_indices", "expected"], [
-    ([1, 2, 3, 4], 1, [], [[1], [2], [3], [4]]),
-    ([1, 2, 3], 2, [], [[1, 2], [1, 3], [2, 3]]),
-    ([5, 4, 3], 3, [], [[5, 4, 3]]),
-    ("abcd", 2, [], [['a', 'b'], ['a', 'c'], ['a', 'd'], ['b', 'c'], ['b', 'd'], ['c', 'd']]),
-    ([1, 2, 3, 4], 2, [1], [[1, 2], [1, 3], [1, 4]]),
-    ([1, 2, 3, 4], 3, [2, 3], [[2, 3, 1], [2, 3, 4]]),
-])
+@pytest.mark.parametrize(
+    ["indices", "r", "static_indices", "expected"],
+    [
+        ([1, 2, 3, 4], 1, [], [[1], [2], [3], [4]]),
+        ([1, 2, 3], 2, [], [[1, 2], [1, 3], [2, 3]]),
+        ([5, 4, 3], 3, [], [[5, 4, 3]]),
+        (
+            "abcd",
+            2,
+            [],
+            [["a", "b"], ["a", "c"], ["a", "d"], ["b", "c"], ["b", "d"], ["c", "d"]],
+        ),
+        ([1, 2, 3, 4], 2, [1], [[1, 2], [1, 3], [1, 4]]),
+        ([1, 2, 3, 4], 3, [2, 3], [[2, 3, 1], [2, 3, 4]]),
+    ],
+)
 def test_make_combination_indices(indices, r, static_indices, expected):
     assert make_combination_indices(indices, r, static_indices) == expected
 

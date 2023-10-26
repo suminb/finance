@@ -257,22 +257,22 @@ def make_combination_indices(
     indices: List[str], r: int, static_indices: List[int] = []
 ) -> List[List[int]]:
     n, r = len(indices), r - len(static_indices)
-    assert r >= 1
+    assert r >= 1, "r must be greater than or equal to 1"
+    assert r <= n, "n must be less than or equal to r"
     ncr = int(factorial(n) / (factorial(r) * factorial(n - r)))
     log.debug(f"n={n}, r={r}, ncr={ncr}")
-    comb_g = combinations(indices, r)
+    comb_g = combinations([i for i in indices if i not in set(static_indices)], r)
 
     with Progress() as progress:
         task = progress.add_task("[red]Making combinations...", total=int(ncr))
 
         def generate_combination_indices():
             for _ in range(ncr):
-                indices_ = static_indices + list(next(comb_g))
+                try:
+                    yield static_indices + list(next(comb_g))
+                except StopIteration:
+                    break
                 progress.advance(task)
-
-                # Drop any list that contains duplicates
-                if len(indices_) == len(set(indices_)):
-                    yield indices_
 
         return list(generate_combination_indices())
 
