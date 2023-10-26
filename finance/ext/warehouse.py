@@ -250,7 +250,7 @@ class Portfolio:
         return {t: diff(t, cw, tw) for t in all_keys}
 
     # TODO: Incorporate tax and fees
-    def make_rebalance_plans(self):
+    def make_rebalancing_plans(self):
         """
         Negative diff means we're short of that asset, so we need to buy more; whereas positive diff means we need to sell some.
         Positive values in rebalance plans means the quantity of the asset to be purchased.

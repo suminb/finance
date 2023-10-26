@@ -56,8 +56,8 @@ def test_portfolio_calc_diff():
     }
 
 
-def test_portfolio_make_rebalance_plans():
-    assert p1.make_rebalance_plans() == {
+def test_portfolio_make_rebalancing_plans():
+    assert p1.make_rebalancing_plans() == {
         "SPY": 4,
         "ARKW": -389,
         "TLT": 158,
