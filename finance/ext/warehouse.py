@@ -209,3 +209,56 @@ def refresh_tickers_and_historical_data(
         historical.drop_duplicates(
             subset=["date", "region", "symbol"], keep="last"
         ).to_parquet(historical_target_path)
+
+
+class Portfolio:
+    # TODO: Get rid of dependencies on DataFrame
+    def __init__(self, inventory: dict, current_prices: dict, target_weights: dict):
+        self.inventory = inventory  # ticker: quantity
+        self.current_prices = current_prices  # ticker: price
+        self.target_weights = self.normalize_weights(target_weights)  # ticker: weight
+
+    @property
+    def asset_values(self):
+        return {t: self.current_prices[t] * q for t, q in self.inventory.items()}
+
+    @property
+    def net_asset_value(self):
+        return sum(self.asset_values.values())
+
+    @property
+    def current_weights(self):
+        """Calculate the weights of the current holdings based on the current price."""
+        nav = self.net_asset_value
+        return {t: v / nav for t, v in self.asset_values.items()}
+
+    def normalize_weights(self, weights: dict):
+        net_weight = sum(weights.values())
+        return {t: v / net_weight for t, v in weights.items()}
+
+    def calc_diff(self):
+        """Calculate the difference between the target weights and the current ones."""
+        cw = self.current_weights
+        tw = self.target_weights
+        all_keys = set(list(cw.keys()) + list(tw.keys()))
+
+        def diff(t, cw, tw):
+            cw.setdefault(t, 0)
+            tw.setdefault(t, 0)
+            return cw[t] - tw[t]
+
+        return {t: diff(t, cw, tw) for t in all_keys}
+
+    # TODO: Incorporate tax and fees
+    def make_rebalance_plans(self):
+        """
+        Negative diff means we're short of that asset, so we need to buy more; whereas positive diff means we need to sell some.
+        Positive values in rebalance plans means the quantity of the asset to be purchased.
+        """
+        nav = self.net_asset_value
+        diff = self.calc_diff()
+
+        def plan(t, diff):
+            return round((nav * -diff[t]) / self.current_prices[t])
+
+        return {t: plan(t, diff) for t in diff}
