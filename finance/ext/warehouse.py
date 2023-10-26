@@ -12,7 +12,7 @@ import pandas as pd
 from rich.progress import Progress
 import yfinance as yf
 
-from typing import Optional
+from typing import List, Optional
 
 
 log = Logger(__file__)
@@ -210,6 +210,46 @@ def refresh_tickers_and_historical_data(
         historical.drop_duplicates(
             subset=["date", "region", "symbol"], keep="last"
         ).to_parquet(historical_target_path)
+
+
+def make_correlation_matrix(
+    historical: pd.DataFrame, symbols: List[str]
+) -> pd.DataFrame:
+    # This works but very slow (450ms vs < 0.2ms)
+    # symbols = historical.groupby("symbol")["symbol"].apply(lambda x: x[0]).values
+
+    historical_by_symbols = rearrange_historical_data_by_symbols(historical, symbols)
+
+    import sklearn.preprocessing as preprocessing
+
+    min_max_scaler = preprocessing.MinMaxScaler()
+    scaled_values = pd.DataFrame(
+        min_max_scaler.fit_transform(historical_by_symbols),
+        columns=historical_by_symbols.columns,
+        index=historical_by_symbols.index,
+    )
+    return scaled_values.corr()
+
+
+def rearrange_historical_data_by_symbols(
+    historical: pd.DataFrame, symbols: List[str]
+) -> pd.DataFrame:
+    historical = historical.set_index("date")
+    historical_by_symbols = pd.DataFrame(columns=[s for s in symbols])
+    with Progress() as progress:
+        task = progress.add_task(
+            "[red]Rearranging historical data by symbol...", total=len(symbols)
+        )
+        for symbol in symbols:
+            try:
+                historical_by_symbols[symbol] = historical[
+                    historical["symbol"] == symbol
+                ]["close"]
+            except KeyError as e:
+                log.warn(f"KeyError for {symbol}: {e}")
+            progress.advance(task)
+
+    return historical_by_symbols.fillna(0)
 
 
 class Portfolio:
