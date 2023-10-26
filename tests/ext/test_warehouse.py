@@ -56,11 +56,23 @@ def test_portfolio_calc_diff():
     }
 
 
-def test_portfolio_make_rebalancing_plans():
-    assert p1.make_rebalancing_plans() == {
+def test_portfolio_make_rebalancing_plan():
+    assert p1.make_rebalancing_plan() == {
         "SPY": 4,
         "ARKW": -389,
         "TLT": 158,
         "GDX": 403,
         "REMX": -100,
+    }
+
+
+def test_portfolio_apply_plan():
+    plan = p1.make_rebalancing_plan()
+    p1.apply_plan(plan)
+    assert p1.inventory == {
+        "SPY": 54,
+        "TLT": 203,
+        "ARKW": 111,
+        "REMX": 0,
+        "GDX": 403,
     }
