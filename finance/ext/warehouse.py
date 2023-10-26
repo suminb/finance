@@ -254,25 +254,25 @@ def rearrange_historical_data_by_symbols(
 
 
 def make_combination_indices(
-    symbols: List[str], r: int, static_indices: List[int] = []
+    indices: List[str], r: int, static_indices: List[int] = []
 ) -> List[List[int]]:
-    n, r = len(symbols), r - len(static_indices)
+    n, r = len(indices), r - len(static_indices)
     assert r >= 1
     ncr = int(factorial(n) / (factorial(r) * factorial(n - r)))
     log.debug(f"n={n}, r={r}, ncr={ncr}")
-    comb_g = combinations(range(n), r)
+    comb_g = combinations(indices, r)
 
     with Progress() as progress:
         task = progress.add_task("[red]Making combinations...", total=int(ncr))
 
         def generate_combination_indices():
             for _ in range(ncr):
-                indices = static_indices + list(next(comb_g))
+                indices_ = static_indices + list(next(comb_g))
                 progress.advance(task)
 
                 # Drop any list that contains duplicates
-                if len(indices) == len(set(indices)):
-                    yield indices
+                if len(indices_) == len(set(indices_)):
+                    yield indices_
 
         return list(generate_combination_indices())
 
