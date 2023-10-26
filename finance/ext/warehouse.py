@@ -253,7 +253,9 @@ def rearrange_historical_data_by_symbols(
     return historical_by_symbols.fillna(0)
 
 
-def make_combination_indices(symbols: List[str], r: int, static_indices: List[int] = []) -> List[List[int]]:
+def make_combination_indices(
+    symbols: List[str], r: int, static_indices: List[int] = []
+) -> List[List[int]]:
     n, r = len(symbols), r - len(static_indices)
     assert r >= 1
     ncr = int(factorial(n) / (factorial(r) * factorial(n - r)))
@@ -262,6 +264,7 @@ def make_combination_indices(symbols: List[str], r: int, static_indices: List[in
 
     with Progress() as progress:
         task = progress.add_task("[red]Making combinations...", total=int(ncr))
+
         def generate_combination_indices():
             for _ in range(ncr):
                 indices = static_indices + list(next(comb_g))
@@ -281,12 +284,10 @@ class Portfolio:
         inventory: dict,
         current_prices: dict,
         target_weights: dict,
-        cash_balance: float,
     ):
         self.inventory = inventory  # ticker: quantity
         self.current_prices = current_prices  # ticker: price
         self.target_weights = self.normalize_weights(target_weights)  # ticker: weight
-        self.cash_balance = cash_balance
 
     @property
     def asset_values(self):
@@ -294,7 +295,7 @@ class Portfolio:
 
     @property
     def net_asset_value(self):
-        return sum(self.asset_values.values()) + self.cash_balance
+        return sum(self.asset_values.values())
 
     @property
     def current_weights(self):
@@ -335,14 +336,31 @@ class Portfolio:
                 round = floor
             return round((nav * -diff[t]) / self.current_prices[t])
 
-        return {t: plan(t, diff) for t in diff}
+        return {t: plan(t, diff) for t in diff if t != "_USD"}
 
-    # TODO: Calculate dividends
-    def apply_plan(self, plan: dict):
+    # TODO: Tax on dividends?
+    # TODO: Transaction fees?
+    def apply_plan(
+        self, plan: dict, start_dt: datetime, end_dt: datetime, dividends: dict
+    ):
         def apply(t, q):
             self.inventory.setdefault(t, 0)
-            self.cash_balance -= self.current_prices[t] * q
+            self.inventory["_USD"] -= self.current_prices[t] * q
+            if t in dividends:
+                self.inventory["_USD"] += (
+                    sum(
+                        [
+                            div * q
+                            for date, div in dividends[t]
+                            if start_dt <= date < end_dt
+                        ]
+                    )
+                    * 0.85
+                )
+
             return self.inventory[t] + q
 
-        self.inventory = {t: apply(t, q) for t, q in plan.items()}
+        self.inventory = {t: apply(t, q) for t, q in plan.items()} | {
+            "_USD": self.inventory["_USD"]
+        }
         return self.inventory
