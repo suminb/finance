@@ -2,7 +2,8 @@
 historical data."""
 
 from datetime import datetime, timedelta
-import math
+from itertools import combinations
+from math import ceil, floor, factorial
 import os
 import random
 import time
@@ -252,6 +253,27 @@ def rearrange_historical_data_by_symbols(
     return historical_by_symbols.fillna(0)
 
 
+def make_combination_indices(symbols: List[str], r: int, static_indices: List[int] = []) -> List[List[int]]:
+    n, r = len(symbols), r - len(static_indices)
+    assert r >= 1
+    ncr = int(factorial(n) / (factorial(r) * factorial(n - r)))
+    log.debug(f"n={n}, r={r}, ncr={ncr}")
+    comb_g = combinations(range(n), r)
+
+    with Progress() as progress:
+        task = progress.add_task("[red]Making combinations...", total=int(ncr))
+        def generate_combination_indices():
+            for _ in range(ncr):
+                indices = static_indices + list(next(comb_g))
+                progress.advance(task)
+
+                # Drop any list that contains duplicates
+                if len(indices) == len(set(indices)):
+                    yield indices
+
+        return list(generate_combination_indices())
+
+
 class Portfolio:
     # TODO: Get rid of dependencies on DataFrame
     def __init__(
@@ -308,9 +330,9 @@ class Portfolio:
 
         def plan(t, diff):
             if diff[t] > 0:
-                round = math.ceil
+                round = ceil
             else:
-                round = math.floor
+                round = floor
             return round((nav * -diff[t]) / self.current_prices[t])
 
         return {t: plan(t, diff) for t in diff}
