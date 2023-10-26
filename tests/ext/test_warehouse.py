@@ -65,13 +65,16 @@ p1 = Portfolio(inventory, current_prices, target)
 
 
 def test_portfolio_asset_values():
-    assert_equals_dict_of_float(p1.asset_values, {
-        "SPY": 21802.0,
-        "TLT": 3879.0,
-        "ARKW": 26320.0,
-        "REMX": 6325.0,
-        "_USD": 10000,
-    })
+    assert_equals_dict_of_float(
+        p1.asset_values,
+        {
+            "SPY": 21802.0,
+            "TLT": 3879.0,
+            "ARKW": 26320.0,
+            "REMX": 6325.0,
+            "_USD": 10000,
+        },
+    )
 
 
 def test_portfolio_net_asset_value():
@@ -79,46 +82,58 @@ def test_portfolio_net_asset_value():
 
 
 def test_portfolio_current_weights():
-    assert_equals_dict_of_float(p1.current_weights, {
-        "ARKW": 0.3852120715393847,
-        "REMX": 0.09257091004888329,
-        "SPY": 0.3190879021163247,
-        "TLT": 0.056771946257647164,
-        "_USD": 0.14635717003776014,
-    })
+    assert_equals_dict_of_float(
+        p1.current_weights,
+        {
+            "ARKW": 0.3852120715393847,
+            "REMX": 0.09257091004888329,
+            "SPY": 0.3190879021163247,
+            "TLT": 0.056771946257647164,
+            "_USD": 0.14635717003776014,
+        },
+    )
 
 
 def test_portfolio_calc_diff():
-    assert_equals_dict_of_float(p1.calc_diff(), {
-        "SPY": -0.04454846152003894,
-        "ARKW": 0.2943029806302938,
-        "TLT": -0.21595532646962554,
-        "GDX": -0.18181818181818182,
-        "REMX": 0.09257091004888329,
-        "_USD": 0.055448079128669225,
-    })
+    assert_equals_dict_of_float(
+        p1.calc_diff(),
+        {
+            "SPY": -0.04454846152003894,
+            "ARKW": 0.2943029806302938,
+            "TLT": -0.21595532646962554,
+            "GDX": -0.18181818181818182,
+            "REMX": 0.09257091004888329,
+            "_USD": 0.055448079128669225,
+        },
+    )
 
 
 def test_portfolio_make_rebalancing_plan():
-    assert_equals_dict_of_float(p1.make_rebalancing_plan(), {
-        "SPY": 6,
-        "ARKW": -382,
-        "TLT": 171,
-        "GDX": 429,
-        "REMX": -100,
-    })
+    assert_equals_dict_of_float(
+        p1.make_rebalancing_plan(),
+        {
+            "SPY": 6,
+            "ARKW": -382,
+            "TLT": 171,
+            "GDX": 429,
+            "REMX": -100,
+        },
+    )
 
 
 def test_portfolio_apply_plan():
     plan = p1.make_rebalancing_plan()
     p1.apply_plan(plan, parse_dt("2023-01-03"), parse_dt("2023-01-05"), {})
-    assert_equals_dict_of_float(p1.inventory, {
-        "SPY": 56,
-        "TLT": 216,
-        "ARKW": 118,
-        "REMX": 0,
-        "GDX": 429,
-        "_USD": 6657.49,
-    })
+    assert_equals_dict_of_float(
+        p1.inventory,
+        {
+            "SPY": 56,
+            "TLT": 216,
+            "ARKW": 118,
+            "REMX": 0,
+            "GDX": 429,
+            "_USD": 6657.49,
+        },
+    )
     expected_usd = (target["_USD"] / sum(target.values())) * p1.net_asset_value
     assert 0.9 < p1.inventory["_USD"] / expected_usd < 1.1
