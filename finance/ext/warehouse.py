@@ -2,6 +2,7 @@
 historical data."""
 
 from datetime import datetime, timedelta
+from functools import reduce
 from itertools import combinations
 from math import ceil, floor, factorial
 import os
@@ -230,6 +231,14 @@ def make_correlation_matrix(
         index=historical_by_symbols.index,
     )
     return scaled_values.corr(), scaled_values
+
+
+def calc_correlation(corr_matrix: pd.DataFrame, indices: List[int]):
+    """Multivariate correlation analysis for a given correlation matrix."""
+    n = len(indices)
+    xs = [corr_matrix.values[i][j] ** 2 for i, j in combinations(indices, 2)]
+    m = reduce(lambda x, y: x * y, xs)
+    return m ** (1 / n)
 
 
 def rearrange_historical_data_by_symbols(
