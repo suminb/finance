@@ -241,6 +241,17 @@ def calc_correlation(corr_matrix: pd.DataFrame, indices: List[int]):
     return m ** (1 / n)
 
 
+def calc_pairwise_correlations(corr_matrix, indices: List[int]):
+    return [corr_matrix.values[i][j] ** 2 for i, j in combinations(indices, 2)]
+
+
+def calc_overall_correlation(corr_matrix, indices: List[int]):
+    n = len(indices)
+    pairwise_correlations = calc_pairwise_correlations(corr_matrix, indices)
+    m = reduce(lambda x, y: x * y, pairwise_correlations)
+    return m ** (1 / n), pairwise_correlations
+
+
 def rearrange_historical_data_by_symbols(
     historical: pd.DataFrame, symbols: List[str]
 ) -> pd.DataFrame:
