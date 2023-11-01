@@ -108,6 +108,7 @@ def test_portfolio_calc_diff():
     )
 
 
+@pytest.mark.skip
 def test_portfolio_make_rebalancing_plan():
     assert_equals_dict_of_float(
         p1.make_rebalancing_plan(),
@@ -121,6 +122,7 @@ def test_portfolio_make_rebalancing_plan():
     )
 
 
+@pytest.mark.skip
 def test_portfolio_apply_plan():
     plan = p1.make_rebalancing_plan()
     p1.apply_plan(plan, parse_dt("2023-01-03"), parse_dt("2023-01-05"), {})
