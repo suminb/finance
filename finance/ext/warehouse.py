@@ -368,9 +368,8 @@ class Portfolio:
             self.inventory["_USD"] -= self.current_prices[t] * q
             return self.inventory[t] + q
 
-        self.inventory["_USD"] += self.calc_dividends_sum(
-            start_dt, end_dt, dividend_records
-        )
+        # 'close' is actually 'adj close', which already includes dividends/stock split/capital gains
+        # self.inventory["_USD"] += self.calc_dividends_sum(start_dt, end_dt, dividend_records) * 0.85
         self.inventory = {t: apply(t, q) for t, q in plan.items()} | {
             "_USD": self.inventory["_USD"]
         }
@@ -383,7 +382,9 @@ class Portfolio:
         for t, q in self.inventory.items():
             if t in dividend_records:
                 for div_dt, div_amount in dividend_records[t]:
-                    if start_dt <= div_dt <= end_dt:
-                        assert q >= 0
+                    if start_dt <= div_dt < end_dt:
+                        if q < 0:
+                            raise ValueError(f"Quantity cannot be negative: {t}, {q}")
                         div_sum += div_amount * q
+                        # print(f"div[{t}] = {div_amount} * {q} = {div_amount * q}, {start_dt}, {end_dt}")
         return div_sum
