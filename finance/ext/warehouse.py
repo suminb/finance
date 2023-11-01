@@ -2,6 +2,9 @@
 historical data."""
 
 from datetime import datetime, timedelta
+from functools import reduce
+from itertools import combinations
+from math import factorial
 import os
 import random
 import time
@@ -11,7 +14,7 @@ import pandas as pd
 from rich.progress import Progress
 import yfinance as yf
 
-from typing import Optional
+from typing import List, Optional, Tuple
 
 
 log = Logger(__file__)
@@ -209,3 +212,181 @@ def refresh_tickers_and_historical_data(
         historical.drop_duplicates(
             subset=["date", "region", "symbol"], keep="last"
         ).to_parquet(historical_target_path)
+
+
+def make_correlation_matrix(
+    historical: pd.DataFrame, symbols: List[str]
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    # This works but very slow (450ms vs < 0.2ms)
+    # symbols = historical.groupby("symbol")["symbol"].apply(lambda x: x[0]).values
+
+    historical_by_symbols = rearrange_historical_data_by_symbols(historical, symbols)
+
+    import sklearn.preprocessing as preprocessing
+
+    min_max_scaler = preprocessing.MinMaxScaler()
+    scaled_values = pd.DataFrame(
+        min_max_scaler.fit_transform(historical_by_symbols),
+        columns=historical_by_symbols.columns,
+        index=historical_by_symbols.index,
+    )
+    return scaled_values.corr(), scaled_values
+
+
+def calc_correlation(corr_matrix: pd.DataFrame, indices: List[int]):
+    """Multivariate correlation analysis for a given correlation matrix."""
+    n = len(indices)
+    xs = [corr_matrix.values[i][j] ** 2 for i, j in combinations(indices, 2)]
+    m = reduce(lambda x, y: x * y, xs)
+    return m ** (1 / n)
+
+
+def calc_pairwise_correlations(corr_matrix, indices: List[int]):
+    return [corr_matrix.values[i][j] ** 2 for i, j in combinations(indices, 2)]
+
+
+def calc_overall_correlation(corr_matrix, indices: List[int]):
+    n = len(indices)
+    pairwise_correlations = calc_pairwise_correlations(corr_matrix, indices)
+    m = reduce(lambda x, y: x * y, pairwise_correlations)
+    return m ** (1 / n), pairwise_correlations
+
+
+def rearrange_historical_data_by_symbols(
+    historical: pd.DataFrame, symbols: List[str]
+) -> pd.DataFrame:
+    historical = historical.set_index("date")
+    historical_by_symbols = pd.DataFrame(columns=[s for s in symbols])
+    with Progress() as progress:
+        task = progress.add_task(
+            "[red]Rearranging historical data by symbol...", total=len(symbols)
+        )
+        for symbol in symbols:
+            try:
+                historical_by_symbols[symbol] = historical[
+                    historical["symbol"] == symbol
+                ]["close"]
+            except KeyError as e:
+                log.warn(f"KeyError for {symbol}: {e}")
+            progress.advance(task)
+
+    return historical_by_symbols.fillna(0)
+
+
+def make_combination_indices(
+    indices: List[str], r: int, static_indices: List[int] = []
+) -> List[List[int]]:
+    n, r = len(indices), r - len(static_indices)
+    assert r >= 1, "r must be greater than or equal to 1"
+    assert r <= n, "n must be less than or equal to r"
+    ncr = int(factorial(n) / (factorial(r) * factorial(n - r)))
+    log.debug(f"n={n}, r={r}, ncr={ncr}")
+    comb_g = combinations([i for i in indices if i not in set(static_indices)], r)
+
+    with Progress() as progress:
+        task = progress.add_task("[red]Making combinations...", total=int(ncr))
+
+        def generate_combination_indices():
+            for _ in range(ncr):
+                try:
+                    yield static_indices + list(next(comb_g))
+                except StopIteration:
+                    break
+                progress.advance(task)
+
+        return list(generate_combination_indices())
+
+
+class Portfolio:
+    # TODO: Get rid of dependencies on DataFrame
+    def __init__(
+        self,
+        inventory: dict,
+        current_prices: dict,
+        target_weights: dict,
+    ):
+        self.inventory = inventory  # ticker: quantity
+        self.current_prices = current_prices  # ticker: price
+        self.target_weights = self.normalize_weights(target_weights)  # ticker: weight
+
+    @property
+    def asset_values(self):
+        return {t: self.current_prices[t] * q for t, q in self.inventory.items()}
+
+    @property
+    def net_asset_value(self):
+        return sum(self.asset_values.values())
+
+    @property
+    def current_weights(self):
+        """Calculate the weights of the current holdings based on the current price."""
+        nav = self.net_asset_value
+        return {t: v / nav for t, v in self.asset_values.items()}
+
+    def normalize_weights(self, weights: dict):
+        net_weight = sum(weights.values())
+        return {t: v / net_weight for t, v in weights.items()}
+
+    def calc_diff(self):
+        """Calculate the difference between the target weights and the current ones."""
+        cw = self.current_weights
+        tw = self.target_weights
+        all_keys = set(list(cw.keys()) + list(tw.keys()))
+
+        def diff(t, cw, tw):
+            cw.setdefault(t, 0)
+            tw.setdefault(t, 0)
+            return cw[t] - tw[t]
+
+        return {t: diff(t, cw, tw) for t in all_keys}
+
+    # TODO: Incorporate tax and fees
+    def make_rebalancing_plan(self):
+        """
+        Negative diff means we're short of that asset, so we need to buy more; whereas positive diff means we need to sell some.
+        Positive values in rebalance plans means the quantity of the asset to be purchased.
+        """
+        nav = self.net_asset_value
+        diff = self.calc_diff()
+
+        def plan(t, diff):
+            return round((nav * -diff[t]) / self.current_prices[t])
+
+        return {t: plan(t, diff) for t in diff if t != "_USD"}
+
+    # TODO: Tax on dividends?
+    # TODO: Transaction fees?
+    def apply_plan(
+        self, plan: dict, start_dt: datetime, end_dt: datetime, dividend_records: dict
+    ):
+        def apply(t, q):
+            self.inventory.setdefault(t, 0)
+            while self.inventory["_USD"] - self.current_prices[t] * q < 0:
+                if q > 0:
+                    q -= 1
+                else:
+                    q += 1
+            self.inventory["_USD"] -= self.current_prices[t] * q
+            if self.inventory["_USD"] < 0:
+                raise ValueError(f"USD balance cannot be negative: {t}, {q}")
+            return self.inventory[t] + q
+
+        # 'close' is actually 'adj close', which already includes dividends/stock split/capital gains
+        # self.inventory["_USD"] += self.calc_dividends_sum(start_dt, end_dt, dividend_records) * 0.85
+        self.inventory = {t: apply(t, q) for t, q in plan.items()} | {
+            "_USD": self.inventory["_USD"]
+        }
+        return self.inventory
+
+    def calc_dividends_sum(
+        self, start_dt: datetime, end_dt: datetime, dividend_records: dict
+    ) -> float:
+        div_sum = 0.0
+        for t, q in self.inventory.items():
+            if t in dividend_records:
+                for div_dt, div_amount in dividend_records[t]:
+                    if start_dt <= div_dt < end_dt:
+                        if q < 0:
+                            raise ValueError(f"Quantity cannot be negative: {t}, {q}")
+                        div_sum += div_amount * q
+        return div_sum
