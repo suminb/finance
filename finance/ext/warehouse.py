@@ -361,7 +361,14 @@ class Portfolio:
     ):
         def apply(t, q):
             self.inventory.setdefault(t, 0)
+            while self.inventory["_USD"] - self.current_prices[t] * q < 0:
+                if q > 0:
+                    q -= 1
+                else:
+                    q += 1
             self.inventory["_USD"] -= self.current_prices[t] * q
+            if self.inventory["_USD"] < 0:
+                raise ValueError(f"USD balance cannot be negative: {t}, {q}")
             return self.inventory[t] + q
 
         # 'close' is actually 'adj close', which already includes dividends/stock split/capital gains
@@ -382,5 +389,4 @@ class Portfolio:
                         if q < 0:
                             raise ValueError(f"Quantity cannot be negative: {t}, {q}")
                         div_sum += div_amount * q
-                        # print(f"div[{t}] = {div_amount} * {q} = {div_amount * q}, {start_dt}, {end_dt}")
         return div_sum
