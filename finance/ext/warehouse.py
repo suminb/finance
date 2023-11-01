@@ -246,9 +246,10 @@ def calc_correlation(corr_matrix: pd.DataFrame, indices: List[int]):
 
 
 def calc_pairwise_correlations(historical_by_symbols: pd.DataFrame, row: pd.Series):
+    combination_indices = row[0]
     return [
         historical_by_symbols[i].corr(historical_by_symbols[j])
-        for i, j in combinations(row.combination_indices, 2)
+        for i, j in combinations(combination_indices, 2)
     ]
 
 
@@ -260,8 +261,9 @@ def calc_pairwise_correlations(historical_by_symbols: pd.DataFrame, row: pd.Seri
 
 
 def calc_overall_correlation(row: pd.Series):
-    n = len(row.pairwise_correlations)
-    return sum(c**2 for c in row.pairwise_correlations) * (1 / n)
+    pairwise_correlations = row[0]
+    n = len(pairwise_correlations)
+    return sum(c**2 for c in pairwise_correlations) * (1 / n)
 
 
 def rearrange_historical_data_by_symbols(

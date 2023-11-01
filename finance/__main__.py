@@ -312,8 +312,9 @@ def prescreen(
     partitions: int,
 ):
     from functools import partial
-    from random import randint
+    from random import randint, random
     import pandas as pd
+    import polars as pl
     from finance.ext.warehouse import (
         make_combination_indices,
         calc_pairwise_correlations,
@@ -366,23 +367,34 @@ def prescreen(
     log.info(
         f"Making a dataframe with {len(combination_indices)} combination indices..."
     )
-    prescreening = pd.DataFrame(
-        [[v, randint(0, partitions)] for v in combination_indices],
-        columns=["combination_indices", "__partition__"],
+    prescreening = pl.DataFrame(
+        {
+            "combination_indices": combination_indices,
+            "__partition__": [int(random() * partitions) for _ in combination_indices],
+        },
+        # schema={"combination_indices": pl.Array(r, pl.UInt32), "__partition__": pl.UInt16},
     )
 
     log.info("Calculating pairwise correlations...")
-    prescreening["pairwise_correlations"] = prescreening.apply(
-        partial(calc_pairwise_correlations, historical_by_symbols), axis=1
+    prescreening = prescreening.with_columns(
+        pl.col("combination_indices")
+        .map_batches(partial(calc_pairwise_correlations, historical_by_symbols))
+        .alias("pairwise_correlations")
     )
 
     log.info("Calculating overall correlations...")
-    prescreening["overall_correlation"] = prescreening.apply(
-        calc_overall_correlation, axis=1
+    prescreening = prescreening.with_columns(
+        pl.col("pairwise_correlations")
+        .map_batches(calc_overall_correlation)
+        .alias("overall_correlation")
     )
 
     log.info(f"Saving prescreening results to '{prescreening_target}'")
-    prescreening.to_parquet(prescreening_target, partition_cols=["__partition__"])
+    prescreening.write_parquet(
+        prescreening_target,
+        use_pyarrow=True,
+        pyarrow_options={"partition_cols": ["__partition__"]},
+    )
 
 
 if __name__ == "__main__":

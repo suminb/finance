@@ -13,3 +13,4 @@ pandas-datareader>=0.7.4,<1.0
 types-click>=7.1,<8.0
 yfinance>=0.2,<0.3
 rich>=13.6,<14.0
+polars
