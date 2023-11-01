@@ -4,7 +4,7 @@ historical data."""
 from datetime import datetime, timedelta
 from functools import reduce
 from itertools import combinations
-from math import ceil, floor, factorial
+from math import factorial
 import os
 import random
 import time
@@ -350,10 +350,6 @@ class Portfolio:
         diff = self.calc_diff()
 
         def plan(t, diff):
-            if diff[t] > 0:
-                round = ceil
-            else:
-                round = floor
             return round((nav * -diff[t]) / self.current_prices[t])
 
         return {t: plan(t, diff) for t in diff if t != "_USD"}
