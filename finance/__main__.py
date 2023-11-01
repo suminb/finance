@@ -296,5 +296,94 @@ def refresh_tickers(
     )
 
 
+@cli.command()
+@click.argument("tickers_source")
+@click.argument("historical_source")
+@click.argument("prescreening_target")
+@click.argument("r", type=int)
+@click.option("-r", "--region", default="US", help="Region")
+@click.option("-p", "--partitions", default=32, help="Number of partitions")
+def prescreen(
+    tickers_source: str,
+    historical_source: str,
+    prescreening_target: str,
+    r: int,
+    region: str,
+    partitions: int,
+):
+    from functools import partial
+    from random import randint
+    import pandas as pd
+    from finance.ext.warehouse import (
+        make_combination_indices,
+        calc_pairwise_correlations,
+        calc_overall_correlation,
+    )
+
+    tickers = pd.read_parquet(tickers_source)
+    tickers = tickers[(tickers["quote_type"] == "ETF") & (tickers["region"] == region)]
+
+    tickers = tickers[tickers["market_cap"] >= 5e9]
+    tickers = tickers[
+        ~tickers["name"].str.contains("2X") & ~tickers["name"].str.contains("3X")
+    ]
+
+    # Temporary workaround
+    tickers["sector"] = ""
+    tickers["industry"] = ""
+    tickers["status"] = ""
+
+    # TODO: Support 'static_symbols' option
+    static_symbols = []
+    symbols = list(tickers["symbol"].values) + static_symbols
+
+    historical = pd.read_parquet(historical_source)
+
+    # TODO: Take date range as parameters
+    # Takes recent data only
+    historical.drop(historical[historical.date < "2018-01-01"].index, inplace=True)
+
+    historical.drop(historical[~historical.symbol.isin(symbols)].index, inplace=True)
+
+    historical["date"] = pd.to_datetime(historical.date).dt.tz_localize(None)
+    historical.set_index("date", inplace=True)
+
+    # Drop unneccessary columns
+    historical.drop(["open", "high", "low", "updated_at"], axis=1, inplace=True)
+    if "__index_level_0__" in historical.columns:
+        historical.drop(["__index_level_0__"], axis=1, inplace=True)
+
+    historical["symbol_index"] = historical["symbol"].apply(symbols.index)
+
+    historical_by_symbols = historical.pivot(columns="symbol_index", values="close")
+    log.info(f"historical_by_symbols.shape = {historical_by_symbols.shape}")
+
+    static_indices = [symbols.index(s) for s in static_symbols]
+    combination_indices = make_combination_indices(
+        range(len(symbols)), r, static_indices
+    )
+
+    log.info(
+        f"Making a dataframe with {len(combination_indices)} combination indices..."
+    )
+    prescreening = pd.DataFrame(
+        [[v, randint(0, partitions)] for v in combination_indices],
+        columns=["combination_indices", "__partition__"],
+    )
+
+    log.info("Calculating pairwise correlations...")
+    prescreening["pairwise_correlations"] = prescreening.apply(
+        partial(calc_pairwise_correlations, historical_by_symbols), axis=1
+    )
+
+    log.info("Calculating overall correlations...")
+    prescreening["overall_correlation"] = prescreening.apply(
+        calc_overall_correlation, axis=1
+    )
+
+    log.info(f"Saving prescreening results to '{prescreening_target}'")
+    prescreening.to_parquet(prescreening_target, partition_cols=["__partition__"])
+
+
 if __name__ == "__main__":
     cli()

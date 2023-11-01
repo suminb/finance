@@ -241,15 +241,27 @@ def calc_correlation(corr_matrix: pd.DataFrame, indices: List[int]):
     return m ** (1 / n)
 
 
-def calc_pairwise_correlations(corr_matrix, indices: List[int]):
-    return [corr_matrix.values[i][j] ** 2 for i, j in combinations(indices, 2)]
+# def calc_pairwise_correlations(corr_matrix, indices: List[int]):
+#     return [corr_matrix.values[i][j] ** 2 for i, j in combinations(indices, 2)]
 
 
-def calc_overall_correlation(corr_matrix, indices: List[int]):
-    n = len(indices)
-    pairwise_correlations = calc_pairwise_correlations(corr_matrix, indices)
-    m = reduce(lambda x, y: x * y, pairwise_correlations)
-    return m ** (1 / n), pairwise_correlations
+def calc_pairwise_correlations(historical_by_symbols: pd.DataFrame, row: pd.Series):
+    return [
+        historical_by_symbols[i].corr(historical_by_symbols[j])
+        for i, j in combinations(row.combination_indices, 2)
+    ]
+
+
+# def calc_overall_correlation(corr_matrix, indices: List[int]):
+#     n = len(indices)
+#     pairwise_correlations = calc_pairwise_correlations(corr_matrix, indices)
+#     m = reduce(lambda x, y: x * y, pairwise_correlations)
+#     return m ** (1 / n), pairwise_correlations
+
+
+def calc_overall_correlation(row: pd.Series):
+    n = len(row.pairwise_correlations)
+    return sum(c**2 for c in row.pairwise_correlations) * (1 / n)
 
 
 def rearrange_historical_data_by_symbols(
