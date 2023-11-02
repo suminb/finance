@@ -35,6 +35,7 @@ from finance.utils import (
     serialize_datetime,
 )
 
+from typing import List
 
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 log = Logger("finance")
@@ -335,7 +336,7 @@ def prescreen(
     tickers["status"] = ""
 
     # TODO: Support 'static_symbols' option
-    static_symbols = []
+    static_symbols: List[str] = []
     symbols = list(tickers["symbol"].values) + static_symbols
 
     historical = pd.read_parquet(historical_source)
@@ -363,7 +364,7 @@ def prescreen(
 
     os.makedirs(prescreening_target, exist_ok=True)
     combination_indices_with_partition = make_combination_indices(
-        range(len(symbols)), static_indices, r, partitions
+        list(range(len(symbols))), static_indices, r, partitions
     )
     for p in range(partitions):
         try:

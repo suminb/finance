@@ -229,7 +229,7 @@ def calc_overall_correlation(row: pd.Series):
 
 
 def make_combination_indices(
-    indices: List[str], static_indices: List[int], r: int, partitions: int
+    indices: List[int], static_indices: List[int], r: int, partitions: int
 ):
     n, r = len(indices), r - len(static_indices)
     assert r >= 1, "r must be greater than or equal to 1"
