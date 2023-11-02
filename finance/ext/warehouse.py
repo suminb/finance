@@ -288,27 +288,29 @@ def rearrange_historical_data_by_symbols(
 
 
 def make_combination_indices(
-    indices: List[str], r: int, static_indices: List[int] = []
-) -> List[List[int]]:
+    indices: List[str], static_indices: List[int], r: int, partitions: int
+):
     n, r = len(indices), r - len(static_indices)
     assert r >= 1, "r must be greater than or equal to 1"
     assert r <= n, "n must be less than or equal to r"
     ncr = int(factorial(n) / (factorial(r) * factorial(n - r)))
-    log.debug(f"n={n}, r={r}, ncr={ncr}")
+    count_per_partition = ncr // partitions
+    log.debug(f"n={n}, r={r}, ncr={ncr}, count_per_partitions={count_per_partition}")
     comb_g = combinations([i for i in indices if i not in set(static_indices)], r)
+
+    def generate_combination_indices(progress, task):
+        for _ in range(count_per_partition):
+            try:
+                indices = static_indices + list(next(comb_g))
+            except StopIteration:
+                break
+            yield indices
+            progress.advance(task)
 
     with Progress() as progress:
         task = progress.add_task("[red]Making combinations...", total=int(ncr))
-
-        def generate_combination_indices():
-            for _ in range(ncr):
-                try:
-                    yield static_indices + list(next(comb_g))
-                except StopIteration:
-                    break
-                progress.advance(task)
-
-        return list(generate_combination_indices())
+        for _ in range(partitions):
+            yield list(generate_combination_indices(progress, task))
 
 
 class Portfolio:

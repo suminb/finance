@@ -360,20 +360,35 @@ def prescreen(
     log.info(f"historical_by_symbols.shape = {historical_by_symbols.shape}")
 
     static_indices = [symbols.index(s) for s in static_symbols]
-    combination_indices = make_combination_indices(
-        range(len(symbols)), r, static_indices
-    )
 
-    log.info(
-        f"Making a dataframe with {len(combination_indices)} combination indices..."
+    os.makedirs(prescreening_target, exist_ok=True)
+    combination_indices_with_partition = make_combination_indices(
+        range(len(symbols)), static_indices, r, partitions
     )
-    prescreening = pl.DataFrame(
-        {
-            "combination_indices": combination_indices,
-            "__partition__": [int(random() * partitions) for _ in combination_indices],
-        },
-        # schema={"combination_indices": pl.Array(r, pl.UInt32), "__partition__": pl.UInt16},
-    )
+    for p in range(partitions):
+        try:
+            combination_indices = next(combination_indices_with_partition)
+        except StopIteration:
+            break
+
+        log.debug(
+            f"Making a dataframe with {len(combination_indices)} combination indices..."
+        )
+        prescreening = pl.DataFrame(
+            {
+                "combination_indices": combination_indices,
+                "__partition__": [p for _ in combination_indices],
+            },
+            schema={
+                "combination_indices": pl.Array(r, pl.UInt32),
+                "__partition__": pl.UInt16,
+            },
+        )
+        prescreening.write_parquet(
+            prescreening_target,
+            use_pyarrow=True,
+            pyarrow_options={"partition_cols": ["__partition__"]},
+        )
 
     log.info("Calculating pairwise correlations...")
     prescreening = prescreening.with_columns(
