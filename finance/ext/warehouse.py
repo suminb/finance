@@ -214,37 +214,6 @@ def refresh_tickers_and_historical_data(
         ).to_parquet(historical_target_path)
 
 
-def make_correlation_matrix(
-    historical: pd.DataFrame, symbols: List[str]
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    # This works but very slow (450ms vs < 0.2ms)
-    # symbols = historical.groupby("symbol")["symbol"].apply(lambda x: x[0]).values
-
-    historical_by_symbols = rearrange_historical_data_by_symbols(historical, symbols)
-
-    import sklearn.preprocessing as preprocessing
-
-    min_max_scaler = preprocessing.MinMaxScaler()
-    scaled_values = pd.DataFrame(
-        min_max_scaler.fit_transform(historical_by_symbols),
-        columns=historical_by_symbols.columns,
-        index=historical_by_symbols.index,
-    )
-    return scaled_values.corr(), scaled_values
-
-
-def calc_correlation(corr_matrix: pd.DataFrame, indices: List[int]):
-    """Multivariate correlation analysis for a given correlation matrix."""
-    n = len(indices)
-    xs = [corr_matrix.values[i][j] ** 2 for i, j in combinations(indices, 2)]
-    m = reduce(lambda x, y: x * y, xs)
-    return m ** (1 / n)
-
-
-# def calc_pairwise_correlations(corr_matrix, indices: List[int]):
-#     return [corr_matrix.values[i][j] ** 2 for i, j in combinations(indices, 2)]
-
-
 def calc_pairwise_correlations(historical_by_symbols: pd.DataFrame, row: pd.Series):
     combination_indices = row[0]
     return [
@@ -253,38 +222,10 @@ def calc_pairwise_correlations(historical_by_symbols: pd.DataFrame, row: pd.Seri
     ]
 
 
-# def calc_overall_correlation(corr_matrix, indices: List[int]):
-#     n = len(indices)
-#     pairwise_correlations = calc_pairwise_correlations(corr_matrix, indices)
-#     m = reduce(lambda x, y: x * y, pairwise_correlations)
-#     return m ** (1 / n), pairwise_correlations
-
-
 def calc_overall_correlation(row: pd.Series):
     pairwise_correlations = row[0]
     n = len(pairwise_correlations)
     return sum(c**2 for c in pairwise_correlations) * (1 / n)
-
-
-def rearrange_historical_data_by_symbols(
-    historical: pd.DataFrame, symbols: List[str]
-) -> pd.DataFrame:
-    historical = historical.set_index("date")
-    historical_by_symbols = pd.DataFrame(columns=[s for s in symbols])
-    with Progress() as progress:
-        task = progress.add_task(
-            "[red]Rearranging historical data by symbol...", total=len(symbols)
-        )
-        for symbol in symbols:
-            try:
-                historical_by_symbols[symbol] = historical[
-                    historical["symbol"] == symbol
-                ]["close"]
-            except KeyError as e:
-                log.warn(f"KeyError for {symbol}: {e}")
-            progress.advance(task)
-
-    return historical_by_symbols.fillna(0)
 
 
 def make_combination_indices(
