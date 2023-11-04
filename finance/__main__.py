@@ -313,7 +313,6 @@ def prescreen(
     partitions: int,
 ):
     from functools import partial
-    from random import randint, random
     import pandas as pd
     import polars as pl
     from finance.ext.warehouse import (
@@ -322,22 +321,22 @@ def prescreen(
         calc_overall_correlation,
     )
 
-    tickers = pd.read_parquet(tickers_source)
-    tickers = tickers[(tickers["quote_type"] == "ETF") & (tickers["region"] == region)]
+    tickers = pl.read_parquet(tickers_source)
 
-    tickers = tickers[tickers["market_cap"] >= 5e9]
-    tickers = tickers[
+    # US ETFs only
+    tickers = tickers.filter((tickers["quote_type"] == "ETF") & (tickers["region"] == region))
+
+    # Filter by market cap
+    tickers = tickers.filter(tickers["market_cap"] >= 5e9)
+
+    # Exclude leveraged ETFs
+    tickers = tickers.filter(
         ~tickers["name"].str.contains("2X") & ~tickers["name"].str.contains("3X")
-    ]
-
-    # Temporary workaround
-    tickers["sector"] = ""
-    tickers["industry"] = ""
-    tickers["status"] = ""
+    )
 
     # TODO: Support 'static_symbols' option
     static_symbols: List[str] = []
-    symbols = list(tickers["symbol"].values) + static_symbols
+    symbols = list(tickers["symbol"]) + static_symbols
 
     historical = pd.read_parquet(historical_source)
 
