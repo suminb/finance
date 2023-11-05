@@ -384,32 +384,32 @@ def prescreen(
                 "__partition__": pl.UInt16,
             },
         )
+        # prescreening.write_parquet(
+        #     prescreening_target,
+        #     use_pyarrow=True,
+        #     pyarrow_options={"partition_cols": ["__partition__"]},
+        # )
+
+        log.info("Calculating pairwise correlations...")
+        prescreening = prescreening.with_columns(
+            pl.col("combination_indices")
+            .map_batches(partial(calc_pairwise_correlations, historical_by_symbols))
+            .alias("pairwise_correlations")
+        )
+
+        log.info("Calculating overall correlations...")
+        prescreening = prescreening.with_columns(
+            pl.col("pairwise_correlations")
+            .map_batches(calc_overall_correlation)
+            .alias("overall_correlation")
+        )
+
+        log.info(f"Saving prescreening results to '{prescreening_target}'")
         prescreening.write_parquet(
             prescreening_target,
             use_pyarrow=True,
             pyarrow_options={"partition_cols": ["__partition__"]},
         )
-
-    log.info("Calculating pairwise correlations...")
-    prescreening = prescreening.with_columns(
-        pl.col("combination_indices")
-        .map_batches(partial(calc_pairwise_correlations, historical_by_symbols))
-        .alias("pairwise_correlations")
-    )
-
-    log.info("Calculating overall correlations...")
-    prescreening = prescreening.with_columns(
-        pl.col("pairwise_correlations")
-        .map_batches(calc_overall_correlation)
-        .alias("overall_correlation")
-    )
-
-    log.info(f"Saving prescreening results to '{prescreening_target}'")
-    prescreening.write_parquet(
-        prescreening_target,
-        use_pyarrow=True,
-        pyarrow_options={"partition_cols": ["__partition__"]},
-    )
 
 
 if __name__ == "__main__":
