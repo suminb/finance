@@ -384,11 +384,6 @@ def prescreen(
                 "__partition__": pl.UInt16,
             },
         )
-        # prescreening.write_parquet(
-        #     prescreening_target,
-        #     use_pyarrow=True,
-        #     pyarrow_options={"partition_cols": ["__partition__"]},
-        # )
 
         log.info("Calculating pairwise correlations...")
         prescreening = prescreening.with_columns(

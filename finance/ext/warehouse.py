@@ -239,19 +239,17 @@ def make_combination_indices(
     log.debug(f"n={n}, r={r}, ncr={ncr}, count_per_partitions={count_per_partition}")
     comb_g = combinations([i for i in indices if i not in set(static_indices)], r)
 
-    def generate_combination_indices(progress, task):
+    def generate_combination_indices():
         for _ in range(count_per_partition):
             try:
                 indices = static_indices + list(next(comb_g))
             except StopIteration:
                 break
             yield indices
-            progress.advance(task)
 
-    with Progress() as progress:
-        task = progress.add_task("[red]Making combinations...", total=int(ncr))
-        for _ in range(partitions):
-            yield list(generate_combination_indices(progress, task))
+    for p in range(partitions):
+        log.info(f"Generating combination indices: partition {p}/{partitions}")
+        yield list(generate_combination_indices())
 
 
 class Portfolio:
