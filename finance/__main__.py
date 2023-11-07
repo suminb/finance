@@ -4,6 +4,7 @@ import os
 import click
 from click.testing import CliRunner
 from logbook import Logger
+import polars as pl
 from sqlalchemy.exc import IntegrityError
 
 from finance.importers import (
@@ -297,17 +298,15 @@ def refresh_tickers(
     )
 
 
-# def map_sector_indices(tickers, sectors: List[int], combination_indices):
-#     from IPython import embed
-
-#     embed()
-#     pass
+def map_sector_indices(tickers, sector_index_map: dict, combination_indices):
+    sector_values = (tickers[i]["sector"][0] for i in combination_indices)
+    return [sector_index_map[s] for s in sector_values]
 
 
 def filter_tickers(tickers, region):
     # US ETFs only
     tickers = tickers.filter(
-        (tickers["quote_type"] == "ETF") & (tickers["region"] == region)
+        (pl.col("quote_type") == "ETF") & (pl.col("region") == region)
     )
 
     # Filter by market cap
@@ -337,7 +336,6 @@ def prescreen(
 ):
     from functools import partial
     import pandas as pd
-    import polars as pl
     from finance.ext.warehouse import (
         make_combination_indices,
         calc_pairwise_correlations,
@@ -347,7 +345,8 @@ def prescreen(
     tickers = pl.read_parquet(tickers_source)
     filtered_tickers = filter_tickers(tickers, region)
 
-    sectors = list(set(filtered_tickers["segment"]))
+    sectors = list(set(filtered_tickers["sector"]))
+    sector_index_map = dict(zip(sectors, range(len(sectors))))
 
     # TODO: Support 'static_symbols' option
     static_symbols: List[str] = []
@@ -385,7 +384,7 @@ def prescreen(
 
     os.makedirs(prescreening_target, exist_ok=True)
     combination_indices_with_partition = make_combination_indices(
-        symbol_indices, static_indices, r, partitions
+        list(symbol_indices), static_indices, r, partitions
     )
 
     for p in range(partitions):
@@ -420,6 +419,20 @@ def prescreen(
             pl.col("pairwise_correlations")
             .map_batches(calc_overall_correlation)
             .alias("overall_correlation")
+        )
+
+        log.info("Mapping sector indicies...")
+        prescreening = prescreening.with_columns(
+            pl.col("combination_indices")
+            .apply(partial(map_sector_indices, tickers, sector_index_map))
+            .alias("sector_indices")
+        )
+
+        log.info("Determining if duplicated sectors exist...")
+        prescreening = prescreening.with_columns(
+            pl.col("sector_indices")
+            .apply(lambda x: len(set(x)) != len(x))
+            .alias("has_duplicated_sectors")
         )
 
         log.info(f"Saving prescreening results to '{prescreening_target}'")
