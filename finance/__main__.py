@@ -4,7 +4,6 @@ import os
 import click
 from click.testing import CliRunner
 from logbook import Logger
-import polars as pl
 from sqlalchemy.exc import IntegrityError
 
 from finance.importers import (
@@ -298,25 +297,11 @@ def refresh_tickers(
     )
 
 
-def map_sector_indices(tickers, sector_index_map: dict, combination_indices):
+# NOTE: Why this can't be concurrent?
+def map_sector_indices(tickers, sectors, combination_indices):
     sector_values = (tickers[i]["sector"][0] for i in combination_indices)
-    return [sector_index_map[s] for s in sector_values]
-
-
-def filter_tickers(tickers, region):
-    # US ETFs only
-    tickers = tickers.filter(
-        (pl.col("quote_type") == "ETF") & (pl.col("region") == region)
-    )
-
-    # Filter by market cap
-    tickers = tickers.filter(tickers["market_cap"] >= 5e9)
-
-    # Exclude leveraged ETFs
-    tickers = tickers.filter(
-        ~tickers["name"].str.contains("2X") & ~tickers["name"].str.contains("3X")
-    )
-    return tickers
+    # return [sector_index_map[s] for s in sector_values]
+    return [sectors.index(s) for s in sector_values]
 
 
 @cli.command()
@@ -336,10 +321,12 @@ def prescreen(
 ):
     from functools import partial
     import pandas as pd
+    import polars as pl
     from finance.ext.warehouse import (
         make_combination_indices,
         calc_pairwise_correlations,
         calc_overall_correlation,
+        filter_tickers,
     )
 
     tickers = pl.read_parquet(tickers_source)
@@ -424,7 +411,7 @@ def prescreen(
         log.info("Mapping sector indicies...")
         prescreening = prescreening.with_columns(
             pl.col("combination_indices")
-            .apply(partial(map_sector_indices, tickers, sector_index_map))
+            .apply(partial(map_sector_indices, tickers, sectors))
             .alias("sector_indices")
         )
 

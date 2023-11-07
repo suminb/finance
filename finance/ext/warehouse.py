@@ -11,6 +11,7 @@ import time
 
 from logbook import Logger
 import pandas as pd
+import polars as pl
 from rich.progress import Progress
 import yfinance as yf
 
@@ -250,6 +251,24 @@ def make_combination_indices(
     for p in range(partitions):
         log.info(f"Generating combination indices: partition {p}/{partitions}")
         yield list(generate_combination_indices())
+
+
+def filter_tickers(
+    tickers: pl.DataFrame, region: str, market_cap_trheshold: float = 5e9
+):
+    # US ETFs only
+    tickers = tickers.filter(
+        (pl.col("quote_type") == "ETF") & (pl.col("region") == region)
+    )
+
+    # Filter by market cap
+    tickers = tickers.filter(tickers["market_cap"] >= market_cap_trheshold)
+
+    # Exclude leveraged ETFs
+    tickers = tickers.filter(
+        ~tickers["name"].str.contains("2X") & ~tickers["name"].str.contains("3X")
+    )
+    return tickers
 
 
 class Portfolio:
