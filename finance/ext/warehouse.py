@@ -271,6 +271,13 @@ def filter_tickers(
     return tickers
 
 
+# NOTE: Why this can't be concurrent?
+def map_sector_indices(tickers: pl.DataFrame, sector_index_map: dict, combination_indices: List[int]):
+    sector_values = (tickers[i]["sector"][0] for i in combination_indices)
+    return [sector_index_map[s] for s in sector_values]
+    # return [sectors.index(s) for s in sector_values]
+
+
 class Portfolio:
     # TODO: Get rid of dependencies on DataFrame
     def __init__(

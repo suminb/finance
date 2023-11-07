@@ -297,13 +297,6 @@ def refresh_tickers(
     )
 
 
-# NOTE: Why this can't be concurrent?
-def map_sector_indices(tickers, sectors, combination_indices):
-    sector_values = (tickers[i]["sector"][0] for i in combination_indices)
-    # return [sector_index_map[s] for s in sector_values]
-    return [sectors.index(s) for s in sector_values]
-
-
 @cli.command()
 @click.argument("tickers_source")
 @click.argument("historical_source")
@@ -327,6 +320,7 @@ def prescreen(
         calc_pairwise_correlations,
         calc_overall_correlation,
         filter_tickers,
+        map_sector_indices,
     )
 
     tickers = pl.read_parquet(tickers_source)
@@ -411,7 +405,7 @@ def prescreen(
         log.info("Mapping sector indicies...")
         prescreening = prescreening.with_columns(
             pl.col("combination_indices")
-            .apply(partial(map_sector_indices, tickers, sectors))
+            .apply(partial(map_sector_indices, tickers, sector_index_map))
             .alias("sector_indices")
         )
 
