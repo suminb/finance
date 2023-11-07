@@ -297,6 +297,29 @@ def refresh_tickers(
     )
 
 
+# def map_sector_indices(tickers, sectors: List[int], combination_indices):
+#     from IPython import embed
+
+#     embed()
+#     pass
+
+
+def filter_tickers(tickers, region):
+    # US ETFs only
+    tickers = tickers.filter(
+        (tickers["quote_type"] == "ETF") & (tickers["region"] == region)
+    )
+
+    # Filter by market cap
+    tickers = tickers.filter(tickers["market_cap"] >= 5e9)
+
+    # Exclude leveraged ETFs
+    tickers = tickers.filter(
+        ~tickers["name"].str.contains("2X") & ~tickers["name"].str.contains("3X")
+    )
+    return tickers
+
+
 @cli.command()
 @click.argument("tickers_source")
 @click.argument("historical_source")
@@ -322,21 +345,20 @@ def prescreen(
     )
 
     tickers = pl.read_parquet(tickers_source)
+    filtered_tickers = filter_tickers(tickers, region)
 
-    # US ETFs only
-    tickers = tickers.filter((tickers["quote_type"] == "ETF") & (tickers["region"] == region))
-
-    # Filter by market cap
-    tickers = tickers.filter(tickers["market_cap"] >= 5e9)
-
-    # Exclude leveraged ETFs
-    tickers = tickers.filter(
-        ~tickers["name"].str.contains("2X") & ~tickers["name"].str.contains("3X")
-    )
+    sectors = list(set(filtered_tickers["segment"]))
 
     # TODO: Support 'static_symbols' option
     static_symbols: List[str] = []
-    symbols = list(tickers["symbol"]) + static_symbols
+
+    symbols = list(filtered_tickers["symbol"]) + static_symbols
+    symbol_indices = tickers.filter(pl.col("symbol").is_in(symbols))[
+        "__index_level_0__"
+    ]
+    assert len(symbols) == len(symbol_indices)
+
+    symbol_index_map = dict(zip(symbols, symbol_indices))
 
     historical = pd.read_parquet(historical_source)
 
@@ -354,7 +376,7 @@ def prescreen(
     if "__index_level_0__" in historical.columns:
         historical.drop(["__index_level_0__"], axis=1, inplace=True)
 
-    historical["symbol_index"] = historical["symbol"].apply(symbols.index)
+    historical["symbol_index"] = historical["symbol"].apply(symbol_index_map.get)
 
     historical_by_symbols = historical.pivot(columns="symbol_index", values="close")
     log.info(f"historical_by_symbols.shape = {historical_by_symbols.shape}")
@@ -363,8 +385,9 @@ def prescreen(
 
     os.makedirs(prescreening_target, exist_ok=True)
     combination_indices_with_partition = make_combination_indices(
-        list(range(len(symbols))), static_indices, r, partitions
+        symbol_indices, static_indices, r, partitions
     )
+
     for p in range(partitions):
         try:
             combination_indices = next(combination_indices_with_partition)
