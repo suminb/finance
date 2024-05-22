@@ -280,6 +280,7 @@ def import_stock_records(filename):
 @click.argument("tickers_target")
 @click.argument("historical_target")
 @click.option("-r", "--region", default="US", help="Region")
+# TODO: Take a list of symbols as a parameter
 def refresh_tickers(
     tickers_source, historical_source, tickers_target, historical_target, region
 ):
@@ -287,10 +288,12 @@ def refresh_tickers(
 
     :param source: Source file name
     """
+    import pandas as pd
     from finance.ext.warehouse import refresh_tickers_and_historical_data
 
     refresh_tickers_and_historical_data(
-        region, tickers_source, historical_source, tickers_target, historical_target
+        region, pd.read_parquet(tickers_source),
+        historical_source, tickers_target, historical_target
     )
 
 
@@ -309,6 +312,7 @@ def prescreen(
     region: str,
     partitions: int,
 ):
+    """Pre-screen stocks based on some pre-defined criteria"""
     from functools import partial
     import pandas as pd
     import polars as pl
