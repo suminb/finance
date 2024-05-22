@@ -280,7 +280,9 @@ def import_stock_records(filename):
 @click.argument("tickers_target")
 @click.argument("historical_target")
 @click.option("-r", "--region", default="US", help="Region")
-@click.option("-s", "--strategy", default="sample", help="all | sample | static")
+@click.option(
+    "-s", "--strategy", default="oldest", help="all | oldest | random | static"
+)
 @click.option("-k", "--sample-count", default=25)
 # TODO: Take a list of symbols as a parameter
 def refresh_tickers(
@@ -301,10 +303,12 @@ def refresh_tickers(
     from finance.ext.warehouse import refresh_tickers_and_historical_data
 
     tickers = pd.read_parquet(tickers_source)
-    symbols = tickers["symbol"].to_list()
+    symbols = tickers.sort_values("updated_at")["symbol"].to_list()
     if strategy == "all":
         pass
-    elif strategy == "sample":
+    elif strategy == "oldest":
+        symbols = symbols[:sample_count]
+    elif strategy == "random":
         symbols = random.sample(symbols, sample_count)
     else:
         raise NotImplementedError(f"Strategy: {strategy}")
