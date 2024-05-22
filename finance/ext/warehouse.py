@@ -177,7 +177,7 @@ def refresh_tickers_and_historical_data(
             dt = datetime.utcnow().strftime("%Y%m%d")
 
             skip_marker_path = os.path.join(
-                historical_base_path, f"{region}-{symbol}-{dt}.skip"
+                historical_base_path, f".{region}-{symbol}-{dt}.skip"
             )
             if os.path.exists(skip_marker_path):
                 log.info(f"Skipping {symbol}...")
