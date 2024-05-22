@@ -1,4 +1,3 @@
-import json
 import os
 
 import click
@@ -16,7 +15,6 @@ from finance.models import (
     AssetType,
     AssetValue,
     Base,
-    DartReport,
     engine,
     get_asset_by_fund_code,
     Granularity,
@@ -25,14 +23,13 @@ from finance.models import (
     Transaction,
     User,
 )
-from finance.providers import Dart, Kofia, Yahoo
+from finance.providers import Kofia, Yahoo
 from finance.utils import (
     date_to_datetime,
     extract_numbers,
     insert_stock_record,
     parse_date,
     parse_stock_records,
-    serialize_datetime,
 )
 
 from typing import List
