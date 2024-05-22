@@ -185,7 +185,7 @@ def refresh_tickers_and_historical_data(
 
             try:
                 profile, history_new = fetch_profile_and_historical_data(
-                    symbol, region, period="10y"
+                    symbol, region, period="max"
                 )
             except Exception as e:
                 log.warn(f"{symbol}: {e}")
