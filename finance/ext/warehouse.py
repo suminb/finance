@@ -2,7 +2,6 @@
 historical data."""
 
 from datetime import datetime, timedelta
-from functools import reduce
 from itertools import combinations
 from math import factorial
 import os
@@ -15,7 +14,7 @@ import polars as pl
 from rich.progress import Progress
 import yfinance as yf
 
-from typing import List, Optional, Tuple
+from typing import List
 
 
 log = Logger(__file__)
@@ -140,31 +139,6 @@ def refresh_tickers_and_historical_data(
 
     # Filter tickers that were updated older than a day ago
     tickers = tickers_source.copy()
-    # filtered = tickers_source.copy()
-    # now = datetime.utcnow()
-    # filtered["time_elapsed"] = \
-    #     filtered["updated_at"].apply(lambda x: (now - x).days)
-    # filtered = filtered[filtered["time_elapsed"] >= 1]
-
-    # filtered = tickers[(tickers["quote_type"] == "EQUITY") & (tickers["region"] == region)]
-    # filtered = filtered.sort_values("updated_at", ascending=True)
-
-    # symbols = filtered["symbol"].tolist()
-
-    # history_keys = [
-    #     "region",
-    #     "symbol",
-    #     "date",
-    #     "open",
-    #     "high",
-    #     "low",
-    #     "close",
-    #     "volume",
-    #     "dividends",
-    #     "stock_splits",
-    #     "capital_gains",
-    #     "updated_at",
-    # ]
 
     # profile_base_path = os.path.join(staging_path, "profiles")
     historical_base_path = os.path.join(staging_path, "historical")
