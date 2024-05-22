@@ -406,7 +406,7 @@ def prescreen(
                 "__partition__": [p for _ in combination_indices],
             },
             schema={
-                "combination_indices": pl.Array(r, pl.UInt32),
+                "combination_indices": pl.Array(pl.UInt32, r),
                 "__partition__": pl.UInt16,
             },
         )
