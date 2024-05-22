@@ -118,6 +118,7 @@ def refresh_tickers_and_historical_data(
     staging_path: str,
     tickers_target_path: str,
     historical_target_path: str,
+    symbols: List[str],
     delay_factor: float = 2.0,
 ):
     ticker_keys = [
@@ -139,30 +140,31 @@ def refresh_tickers_and_historical_data(
 
     # Filter tickers that were updated older than a day ago
     tickers = tickers_source.copy()
-    filtered = tickers_source.copy()
-    now = datetime.utcnow()
-    filtered["time_elapsed"] = filtered["updated_at"].apply(lambda x: (now - x).days)
-    filtered = filtered[filtered["time_elapsed"] >= 1]
+    # filtered = tickers_source.copy()
+    # now = datetime.utcnow()
+    # filtered["time_elapsed"] = \
+    #     filtered["updated_at"].apply(lambda x: (now - x).days)
+    # filtered = filtered[filtered["time_elapsed"] >= 1]
 
     # filtered = tickers[(tickers["quote_type"] == "EQUITY") & (tickers["region"] == region)]
     # filtered = filtered.sort_values("updated_at", ascending=True)
 
-    symbols = filtered["symbol"].tolist()
+    # symbols = filtered["symbol"].tolist()
 
-    history_keys = [
-        "region",
-        "symbol",
-        "date",
-        "open",
-        "high",
-        "low",
-        "close",
-        "volume",
-        "dividends",
-        "stock_splits",
-        "capital_gains",
-        "updated_at",
-    ]
+    # history_keys = [
+    #     "region",
+    #     "symbol",
+    #     "date",
+    #     "open",
+    #     "high",
+    #     "low",
+    #     "close",
+    #     "volume",
+    #     "dividends",
+    #     "stock_splits",
+    #     "capital_gains",
+    #     "updated_at",
+    # ]
 
     # profile_base_path = os.path.join(staging_path, "profiles")
     historical_base_path = os.path.join(staging_path, "historical")
@@ -199,7 +201,8 @@ def refresh_tickers_and_historical_data(
                     )
                 )
 
-                # By placing the new dataframe prior to the existing one, we can easily re-order columns
+                # By placing the new dataframe prior to the existing one,
+                # we can easily re-order columns
                 tickers = concat_dataframes(
                     profile, tickers, drop_duplicates_subset=["region", "symbol"]
                 )
@@ -272,7 +275,9 @@ def filter_tickers(
 
 
 # NOTE: Why this can't be concurrent?
-def map_sector_indices(tickers: pl.DataFrame, sector_index_map: dict, combination_indices: List[int]):
+def map_sector_indices(
+    tickers: pl.DataFrame, sector_index_map: dict, combination_indices: List[int]
+):
     sector_values = (tickers[i]["sector"][0] for i in combination_indices)
     return [sector_index_map[s] for s in sector_values]
     # return [sectors.index(s) for s in sector_values]
