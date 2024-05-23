@@ -206,7 +206,9 @@ def refresh_tickers_and_historical_data(
         ).to_parquet(historical_target_path)
 
 
-def calc_pairwise_correlations(historical_by_symbols: pd.DataFrame, row: pd.Series):
+def calc_pairwise_correlations(
+    historical_by_symbols: pd.DataFrame, row: pd.Series
+) -> List[float]:
     combination_indices = row[0]
     return [
         historical_by_symbols[i].corr(historical_by_symbols[j])
@@ -214,7 +216,7 @@ def calc_pairwise_correlations(historical_by_symbols: pd.DataFrame, row: pd.Seri
     ]
 
 
-def calc_overall_correlation(row: pd.Series):
+def calc_overall_correlation(row: pd.Series) -> float:
     pairwise_correlations = row[0]
     n = len(pairwise_correlations)
     return sum(c**2 for c in pairwise_correlations) * (1 / n)
@@ -246,7 +248,7 @@ def make_combination_indices(
 
 def filter_tickers(
     tickers: pl.DataFrame, region: str, market_cap_trheshold: float = 5e9
-):
+) -> pd.DataFrame:
     # US ETFs only
     tickers = tickers.filter(
         (pl.col("quote_type") == "ETF") & (pl.col("region") == region)
