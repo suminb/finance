@@ -7,7 +7,6 @@ from click.testing import CliRunner
 from finance.__main__ import (
     create_all,
     drop_all,
-    fetch_stock_values,
     import_fund,
     import_sp500_records,
     import_stock_records,
@@ -16,7 +15,7 @@ from finance.__main__ import (
     insert_test_data,
 )
 from finance.exceptions import AssetNotFoundException
-from finance.models import StockAsset, deposit
+from finance.models import StockAsset
 from finance.utils import load_stock_codes
 
 
@@ -62,15 +61,6 @@ def test_import_non_existing_fund():
     runner = CliRunner()
     result = runner.invoke(import_fund, ["???", "2016-01-01", "2016-01-31"])
     assert isinstance(result.exception, AssetNotFoundException)
-
-
-@pytest.mark.skip(reason="Yahoo Finance provider is scheduled to be deprecated.")
-def test_fetch_stock_values():
-    runner = CliRunner()
-    result = runner.invoke(
-        fetch_stock_values, ["NVDA", "-s", "2017-01-01", "-e", "2017-01-15"]
-    )
-    assert result.exit_code == 0
 
 
 # NOTE: This test case may intermittently fail as some of the stock codes

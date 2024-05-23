@@ -23,9 +23,8 @@ from finance.models import (
     Transaction,
     User,
 )
-from finance.providers import Kofia, Yahoo
+from finance.providers import Kofia
 from finance.utils import (
-    date_to_datetime,
     extract_numbers,
     insert_stock_record,
     parse_date,
@@ -180,36 +179,6 @@ def import_sp500_records():
                 except IntegrityError:
                     log.warn("Identical record exists")
                     session.rollback()
-
-
-@cli.command()
-@click.argument("stock_code")  # e.g., NVDA, 027410.KS
-@click.option("-s", "--start", "start_date", help="Start date (e.g., 2017-01-01)")
-@click.option("-e", "--end", "end_date", help="End date (e.g., 2017-12-31)")
-def fetch_stock_values(stock_code, start_date, end_date):
-    """Fetches daily stock values from Yahoo Finance."""
-
-    start_date = date_to_datetime(
-        parse_date(start_date if start_date is not None else -30 * 3600 * 24)
-    )
-    end_date = date_to_datetime(parse_date(end_date if end_date is not None else 0))
-
-    if start_date > end_date:
-        raise ValueError("start_date must be equal to or less than end_date")
-
-    provider = Yahoo()
-    rows = provider.asset_values(stock_code, start_date, end_date, Granularity.day)
-
-    for row in rows:
-        # TODO: Write a function to handle this for generic cases
-        # TODO: Convert the timestamp to an ISO format
-        # NOTE: The last column is data source. Not sure if this is an elegant
-        # way to handle this.
-
-        # FIXME: Think of a better way to handle this
-        dt = row[0].isoformat()
-
-        print(", ".join([dt] + [str(c) for c in row[1:]] + ["yahoo"]))
 
 
 # NOTE: This will probably be called by AWS Lambda

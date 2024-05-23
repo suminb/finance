@@ -5,10 +5,9 @@ from datetime import datetime, time, timedelta
 import pytest
 
 from finance.models import Granularity
-from finance.providers import Dart, Kofia, Miraeasset
+from finance.providers import Dart, Kofia
 from finance.providers.dart import Report as DartReport
 from finance.providers.record import Decimal, Float
-from finance.providers.yahoo import Yahoo
 from finance.utils import parse_date
 
 BASE_PATH = os.path.abspath(os.path.dirname(__file__))
@@ -98,30 +97,3 @@ def test_dart_fetch_data_with_invalid_code():
     provider = Dart()
     with pytest.raises(ValueError):
         list(provider.fetch_reports("_", "_"))
-
-
-@pytest.mark.skip
-@pytest.mark.parametrize("granularity", [Granularity.min, Granularity.day])
-def test_yahoo_provider(granularity):
-    provider = Yahoo()
-    symbol = "MSFT"
-    start_time = datetime.combine(parse_date(-5), time(0))
-    end_time = datetime.utcnow()
-    asset_values = provider.asset_values(symbol, start_time, end_time, granularity)
-    flag = False
-    for asset_value in asset_values:
-        flag = True
-        assert len(asset_value) == 6
-        assert all([c is not None for c in asset_value])
-    assert flag
-
-
-@pytest.mark.skip
-def test_yahoo_provider_with_invalid_symbol():
-    provider = Yahoo()
-    symbol = "(invalid)"
-    end_time = datetime.utcnow()
-    start_time = end_time - timedelta(days=1)
-
-    with pytest.raises(ValueError):
-        provider.asset_values(symbol, start_time, end_time, Granularity.day)
