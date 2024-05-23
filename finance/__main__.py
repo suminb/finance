@@ -294,7 +294,7 @@ def refresh_tickers(
     strategy: str,
     sample_count: int,
 ):
-    """Refreshes tickers.
+    """Refreshes tickers and historical data.
 
     :param source: Source file name
     """
@@ -303,6 +303,7 @@ def refresh_tickers(
     from finance.ext.warehouse import refresh_tickers_and_historical_data
 
     tickers = pd.read_parquet(tickers_source)
+    tickers = tickers[tickers.status != "delisted"]
     symbols = tickers.sort_values("updated_at")["symbol"].to_list()
     if strategy == "all":
         pass
@@ -312,6 +313,7 @@ def refresh_tickers(
         symbols = random.sample(symbols, sample_count)
     else:
         raise NotImplementedError(f"Strategy: {strategy}")
+    # TODO: What happens when the server returns 5xx (or 4xx other than 404)?
 
     refresh_tickers_and_historical_data(
         region,

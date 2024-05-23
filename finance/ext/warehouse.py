@@ -20,6 +20,11 @@ from typing import List
 log = Logger(__file__)
 
 
+# TODO: Move this elsewhere
+class TickerNotFoundException(Exception):
+    pass
+
+
 def concat_dataframes(
     df1,
     df2,
@@ -41,6 +46,8 @@ def get_previous_dates(current_datetime=datetime.utcnow(), start=0, up_to=30):
 
 def fetch_profile_and_historical_data(symbol: str, region="US", period="5y"):
     ticker = yf.Ticker(symbol)
+    if "quoteType" not in ticker.info:
+        raise TickerNotFoundException
     updated_at = datetime.utcnow()
     profile = preprocess_profile(ticker.info, symbol, region, updated_at)
     history = preprocess_historical_data(
@@ -161,6 +168,13 @@ def refresh_tickers_and_historical_data(
                 profile, history_new = fetch_profile_and_historical_data(
                     symbol, region, period="max"
                 )
+            except TickerNotFoundException:
+                log.warn(f"{symbol} not found")
+                row_indexer = tickers.symbol == symbol
+                tickers.loc[row_indexer, "updated_at"] = datetime.utcnow()
+                # TODO: Define enum instead of using string literals
+                tickers.loc[row_indexer, "status"] = "delisted"
+                tickers.to_parquet(tickers_target_path)
             except Exception as e:
                 log.warn(f"{symbol}: {e}")
                 with open(skip_marker_path, "w") as fout:
