@@ -23,8 +23,8 @@ log = Logger(__file__)
 
 
 def concat_dataframes(
-    df1,
-    df2,
+    df1: pd.DataFrame,
+    df2: pd.DataFrame,
     sort_by=["region", "symbol", "updated_at"],
     drop_duplicates_subset=["region", "symbol", "date"],
 ) -> pd.DataFrame:
@@ -45,6 +45,7 @@ def fetch_profile_and_historical_data(symbol: str, region="US", period="5y"):
     ticker = yf.Ticker(symbol)
     if "quoteType" not in ticker.info:
         raise TickerNotFoundException
+    # TODO: What happens when the server returns 5xx (or 4xx other than 404)?
     updated_at = datetime.utcnow()
     profile = preprocess_profile(ticker.info, symbol, region, updated_at)
     history = preprocess_historical_data(

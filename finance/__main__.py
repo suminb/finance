@@ -284,6 +284,7 @@ def import_stock_records(filename):
     "-s", "--strategy", default="oldest", help="all | oldest | random | static"
 )
 @click.option("-k", "--sample-count", default=25)
+@click.option("--symbols", type=str)
 # TODO: Take a list of symbols as a parameter
 def refresh_tickers(
     tickers_source: str,
@@ -293,10 +294,12 @@ def refresh_tickers(
     region,
     strategy: str,
     sample_count: int,
+    symbols: str,
 ):
     """Refreshes tickers and historical data.
 
     :param source: Source file name
+    :param symbols: Comma separated strings (without spaces in between)
     """
     import random
     import pandas as pd
@@ -304,16 +307,18 @@ def refresh_tickers(
 
     tickers = pd.read_parquet(tickers_source)
     tickers = tickers[tickers.status != "delisted"]
-    symbols = tickers.sort_values("updated_at")["symbol"].to_list()
     if strategy == "all":
-        pass
+        symbols_ = tickers["symbol"].to_list()
     elif strategy == "oldest":
-        symbols = symbols[:sample_count]
+        symbols_ = tickers.sort_values("updated_at")["symbol"].to_list()
+        symbols_ = symbols_[:sample_count]
     elif strategy == "random":
-        symbols = random.sample(symbols, sample_count)
+        symbols_ = tickers["symbol"].to_list()
+        symbols_ = random.sample(symbols_, sample_count)
+    elif strategy == "static":
+        symbols_ = symbols.split(",")
     else:
         raise NotImplementedError(f"Strategy: {strategy}")
-    # TODO: What happens when the server returns 5xx (or 4xx other than 404)?
 
     refresh_tickers_and_historical_data(
         region,
@@ -321,7 +326,7 @@ def refresh_tickers(
         historical_source,
         tickers_target,
         historical_target,
-        symbols,
+        symbols_,
     )
 
 
