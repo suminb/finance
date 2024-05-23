@@ -4,7 +4,6 @@ import json
 from math import nan as math_nan
 import os
 
-import boto3
 from logbook import Logger
 
 # NOTE: finance.models should not be imported here in order to avoid circular

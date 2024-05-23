@@ -23,12 +23,11 @@ class Portfolio:
     # TODO: Get rid of dependencies on DataFrame
     def __init__(
         self,
-        inventory: dict,
         current_prices: dict,
         target_weights: dict,
         transactions: List[Transaction],
     ):
-        self.inventory = {}  # ticker: quantity
+        self.inventory: dict[str, float] = {}  # ticker: quantity
         self.current_prices = current_prices  # ticker: price
         self.target_weights = self.normalize_weights(target_weights)  # ticker: weight
         self.transactions = transactions
@@ -71,7 +70,6 @@ class Portfolio:
             portfolio = content["portfolio"]
             transactions = cls.Transaction.load_transactions(content["transactions"])
             return Portfolio(
-                {},
                 current_prices,
                 portfolio["target_weights"],
                 transactions,
