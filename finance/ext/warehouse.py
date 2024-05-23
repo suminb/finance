@@ -2,7 +2,6 @@
 historical data."""
 
 from datetime import datetime, timedelta
-from functools import reduce
 from itertools import combinations
 from math import factorial
 import os
@@ -15,15 +14,17 @@ import polars as pl
 from rich.progress import Progress
 import yfinance as yf
 
-from typing import List, Optional, Tuple
+from finance.ext.exceptions import TickerNotFoundException
+
+from typing import List
 
 
 log = Logger(__file__)
 
 
 def concat_dataframes(
-    df1,
-    df2,
+    df1: pd.DataFrame,
+    df2: pd.DataFrame,
     sort_by=["region", "symbol", "updated_at"],
     drop_duplicates_subset=["region", "symbol", "date"],
 ) -> pd.DataFrame:
@@ -42,6 +43,9 @@ def get_previous_dates(current_datetime=datetime.utcnow(), start=0, up_to=30):
 
 def fetch_profile_and_historical_data(symbol: str, region="US", period="5y"):
     ticker = yf.Ticker(symbol)
+    if "quoteType" not in ticker.info:
+        raise TickerNotFoundException
+    # TODO: What happens when the server returns 5xx (or 4xx other than 404)?
     updated_at = datetime.utcnow()
     profile = preprocess_profile(ticker.info, symbol, region, updated_at)
     history = preprocess_historical_data(
@@ -118,6 +122,7 @@ def refresh_tickers_and_historical_data(
     staging_path: str,
     tickers_target_path: str,
     historical_target_path: str,
+    symbols: List[str],
     delay_factor: float = 2.0,
 ):
     ticker_keys = [
@@ -139,30 +144,6 @@ def refresh_tickers_and_historical_data(
 
     # Filter tickers that were updated older than a day ago
     tickers = tickers_source.copy()
-    filtered = tickers_source.copy()
-    now = datetime.utcnow()
-    filtered["time_elapsed"] = filtered["updated_at"].apply(lambda x: (now - x).days)
-    filtered = filtered[filtered["time_elapsed"] >= 1]
-
-    # filtered = tickers[(tickers["quote_type"] == "EQUITY") & (tickers["region"] == region)]
-    # filtered = filtered.sort_values("updated_at", ascending=True)
-
-    symbols = filtered["symbol"].tolist()
-
-    history_keys = [
-        "region",
-        "symbol",
-        "date",
-        "open",
-        "high",
-        "low",
-        "close",
-        "volume",
-        "dividends",
-        "stock_splits",
-        "capital_gains",
-        "updated_at",
-    ]
 
     # profile_base_path = os.path.join(staging_path, "profiles")
     historical_base_path = os.path.join(staging_path, "historical")
@@ -175,7 +156,7 @@ def refresh_tickers_and_historical_data(
             dt = datetime.utcnow().strftime("%Y%m%d")
 
             skip_marker_path = os.path.join(
-                historical_base_path, f"{region}-{symbol}-{dt}.skip"
+                historical_base_path, f".{region}-{symbol}-{dt}.skip"
             )
             if os.path.exists(skip_marker_path):
                 log.info(f"Skipping {symbol}...")
@@ -183,8 +164,15 @@ def refresh_tickers_and_historical_data(
 
             try:
                 profile, history_new = fetch_profile_and_historical_data(
-                    symbol, region, period="10y"
+                    symbol, region, period="max"
                 )
+            except TickerNotFoundException:
+                log.warn(f"{symbol} not found")
+                row_indexer = tickers.symbol == symbol
+                tickers.loc[row_indexer, "updated_at"] = datetime.utcnow()
+                # TODO: Define enum instead of using string literals
+                tickers.loc[row_indexer, "status"] = "delisted"
+                tickers.to_parquet(tickers_target_path)
             except Exception as e:
                 log.warn(f"{symbol}: {e}")
                 with open(skip_marker_path, "w") as fout:
@@ -199,7 +187,8 @@ def refresh_tickers_and_historical_data(
                     )
                 )
 
-                # By placing the new dataframe prior to the existing one, we can easily re-order columns
+                # By placing the new dataframe prior to the existing one,
+                # we can easily re-order columns
                 tickers = concat_dataframes(
                     profile, tickers, drop_duplicates_subset=["region", "symbol"]
                 )
@@ -215,7 +204,9 @@ def refresh_tickers_and_historical_data(
         ).to_parquet(historical_target_path)
 
 
-def calc_pairwise_correlations(historical_by_symbols: pd.DataFrame, row: pd.Series):
+def calc_pairwise_correlations(
+    historical_by_symbols: pd.DataFrame, row: pd.Series
+) -> List[float]:
     combination_indices = row[0]
     return [
         historical_by_symbols[i].corr(historical_by_symbols[j])
@@ -223,7 +214,7 @@ def calc_pairwise_correlations(historical_by_symbols: pd.DataFrame, row: pd.Seri
     ]
 
 
-def calc_overall_correlation(row: pd.Series):
+def calc_overall_correlation(row: pd.Series) -> float:
     pairwise_correlations = row[0]
     n = len(pairwise_correlations)
     return sum(c**2 for c in pairwise_correlations) * (1 / n)
@@ -255,7 +246,7 @@ def make_combination_indices(
 
 def filter_tickers(
     tickers: pl.DataFrame, region: str, market_cap_trheshold: float = 5e9
-):
+) -> pd.DataFrame:
     # US ETFs only
     tickers = tickers.filter(
         (pl.col("quote_type") == "ETF") & (pl.col("region") == region)
@@ -272,7 +263,9 @@ def filter_tickers(
 
 
 # NOTE: Why this can't be concurrent?
-def map_sector_indices(tickers: pl.DataFrame, sector_index_map: dict, combination_indices: List[int]):
+def map_sector_indices(
+    tickers: pl.DataFrame, sector_index_map: dict, combination_indices: List[int]
+):
     sector_values = (tickers[i]["sector"][0] for i in combination_indices)
     return [sector_index_map[s] for s in sector_values]
     # return [sectors.index(s) for s in sector_values]

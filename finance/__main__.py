@@ -1,4 +1,3 @@
-import json
 import os
 
 import click
@@ -16,7 +15,6 @@ from finance.models import (
     AssetType,
     AssetValue,
     Base,
-    DartReport,
     engine,
     get_asset_by_fund_code,
     Granularity,
@@ -25,14 +23,13 @@ from finance.models import (
     Transaction,
     User,
 )
-from finance.providers import Dart, Kofia, Yahoo
+from finance.providers import Kofia, Yahoo
 from finance.utils import (
     date_to_datetime,
     extract_numbers,
     insert_stock_record,
     parse_date,
     parse_stock_records,
-    serialize_datetime,
 )
 
 from typing import List
@@ -283,17 +280,53 @@ def import_stock_records(filename):
 @click.argument("tickers_target")
 @click.argument("historical_target")
 @click.option("-r", "--region", default="US", help="Region")
+@click.option(
+    "-s", "--strategy", default="oldest", help="all | oldest | random | static"
+)
+@click.option("-k", "--sample-count", default=25)
+@click.option("--symbols", type=str)
+# TODO: Take a list of symbols as a parameter
 def refresh_tickers(
-    tickers_source, historical_source, tickers_target, historical_target, region
+    tickers_source: str,
+    historical_source: str,
+    tickers_target: str,
+    historical_target: str,
+    region,
+    strategy: str,
+    sample_count: int,
+    symbols: str,
 ):
-    """Refreshes tickers.
+    """Refreshes tickers and historical data.
 
     :param source: Source file name
+    :param symbols: Comma separated strings (without spaces in between)
     """
+    import random
+    import pandas as pd
     from finance.ext.warehouse import refresh_tickers_and_historical_data
 
+    tickers = pd.read_parquet(tickers_source)
+    tickers = tickers[tickers.status != "delisted"]
+    if strategy == "all":
+        symbols_ = tickers["symbol"].to_list()
+    elif strategy == "oldest":
+        symbols_ = tickers.sort_values("updated_at")["symbol"].to_list()
+        symbols_ = symbols_[:sample_count]
+    elif strategy == "random":
+        symbols_ = tickers["symbol"].to_list()
+        symbols_ = random.sample(symbols_, sample_count)
+    elif strategy == "static":
+        symbols_ = symbols.split(",")
+    else:
+        raise NotImplementedError(f"Strategy: {strategy}")
+
     refresh_tickers_and_historical_data(
-        region, tickers_source, historical_source, tickers_target, historical_target
+        region,
+        tickers,
+        historical_source,
+        tickers_target,
+        historical_target,
+        symbols_,
     )
 
 
@@ -312,6 +345,7 @@ def prescreen(
     region: str,
     partitions: int,
 ):
+    """Pre-screen stocks based on some pre-defined criteria"""
     from functools import partial
     import pandas as pd
     import polars as pl
@@ -383,7 +417,7 @@ def prescreen(
                 "__partition__": [p for _ in combination_indices],
             },
             schema={
-                "combination_indices": pl.Array(r, pl.UInt32),
+                "combination_indices": pl.Array(pl.UInt32, r),
                 "__partition__": pl.UInt16,
             },
         )
