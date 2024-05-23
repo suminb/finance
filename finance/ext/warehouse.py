@@ -14,15 +14,12 @@ import polars as pl
 from rich.progress import Progress
 import yfinance as yf
 
+from finance.ext.exceptions import TickerNotFoundException
+
 from typing import List
 
 
 log = Logger(__file__)
-
-
-# TODO: Move this elsewhere
-class TickerNotFoundException(Exception):
-    pass
 
 
 def concat_dataframes(
