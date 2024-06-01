@@ -21,4 +21,7 @@ transactions:
     quantity: 10
   - date: 2020-01-03
     ticker: TLT
-    quantity: 15
+    quantity: 16
+  - date: 2023-10-15
+    ticker: TLT
+    quantity: -1
