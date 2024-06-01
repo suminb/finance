@@ -1,8 +1,10 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
+import pytz
+import pandas as pd
 import yaml
 
-from finance.utils import date_to_datetime
+from finance.utils import date_to_datetime, make_dates
 
 from typing import List
 
@@ -18,7 +20,14 @@ class Portfolio:
         # complains that Transaction is not defined...
         @classmethod
         def load_transactions(cls, yaml_data: List[dict]):
-            return [cls(d["date"], d["ticker"], d["quantity"]) for d in yaml_data]
+            return [
+                cls(
+                    date_to_datetime(d["date"]).replace(tzinfo=pytz.utc),
+                    d["ticker"],
+                    d["quantity"],
+                )
+                for d in yaml_data
+            ]
 
     # TODO: Get rid of dependencies on DataFrame
     def __init__(
@@ -47,10 +56,10 @@ class Portfolio:
         nav = self.net_asset_value
         return {t: v / nav for t, v in self.asset_values.items()}
 
-    def evaluate_inventory(self, evaluated_at=datetime.utcnow()) -> dict:
+    def eval_inventory(self, evaluated_at=datetime.utcnow()) -> dict:
         self.inventory = {}
         for record in self.transactions:
-            if date_to_datetime(record.date) <= evaluated_at:
+            if record.date <= evaluated_at:
                 self.apply_transaction(record)
         return self.inventory
 
@@ -58,6 +67,48 @@ class Portfolio:
         """Reflects the given transaction record to the inventory."""
         self.inventory.setdefault(record.ticker, 0)
         self.inventory[record.ticker] += record.quantity
+
+    def eval_daily_inventories(self, from_date: datetime, to_date: datetime):
+        """
+        :param from_date: A timezone aware datetime markig the lower bound (inclusive)
+        :param to_date: A timezone aware datetime marking the upper bound (exclusive)
+        """
+        for date in make_dates(from_date, to_date):
+            yield self.eval_inventory(date)
+            date += timedelta(days=1)
+
+    def eval_daily_nav(
+        self, from_date: datetime, to_date: datetime, historical: pd.DataFrame
+    ):
+        """
+        :param from_date: A timezone aware datetime markig the lower bound (inclusive)
+        :param to_date: A timezone aware datetime marking the upper bound (exclusive)
+        """
+        historical = historical[
+            (historical.date >= from_date) & (historical.date < to_date)
+        ]
+        dates: pd.Series = historical.groupby("date").head(1).date
+
+        partial = {}
+        for (
+            t,
+            q,
+        ) in self.inventory.items():
+            partial[t] = (
+                historical[historical.symbol == t][["date", "close"]]
+                .set_index("date")
+                .rename(columns={"close": t})
+            )
+
+        # TODO: Consider cases where quantites and inventories change as time passes
+        import pdb
+
+        pdb.set_trace()
+
+        pass
+
+    def eval_nav(self, date: datetime, historical: pd.DataFrame):
+        return 0
 
     @classmethod
     def load_from_file(cls, path: str, current_prices: dict):

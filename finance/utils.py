@@ -92,6 +92,14 @@ def load_stock_codes(fin):
             yield code, name
 
 
+def make_dates(from_date: datetime, to_date: datetime):
+    """Returns a generator of consecutive dates"""
+    cursor = from_date
+    while cursor < to_date:
+        yield cursor
+        cursor += timedelta(days=1)
+
+
 def make_request_import_stock_values_message(code, start_time, end_time):
     # type: (str, datetime, datetime) -> dict
     return {
