@@ -1,3 +1,4 @@
+import pytz
 import pytest
 
 from finance.ext.models import Portfolio
@@ -11,8 +12,16 @@ def assert_equals_dict_of_float(d1: dict, d2: dict):
 
 def test_portfolio():
     pf = Portfolio.load_from_file("tests/samples/portfolio1.yml", {})
-    pf.evaluate_inventory()
+    pf.eval_inventory()
     assert pf.inventory == {"QQQ": 6, "SCHD": 70, "SCHH": 10, "TLT": 15}
+
+    import pandas as pd
+    from finance.utils import parse_date
+
+    historical = pd.read_parquet("notebooks/historical/US.parquet")
+    from_date = parse_date("2023-10-01").replace(tzinfo=pytz.utc)
+    to_date = parse_date("2023-10-30").replace(tzinfo=pytz.utc)
+    pf.eval_daily_nav(from_date, to_date, historical)
 
 
 # TODO: Diversify test scenarios

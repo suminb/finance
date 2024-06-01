@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 
 import pytz
 import pandas as pd
@@ -56,7 +56,7 @@ class Portfolio:
         nav = self.net_asset_value
         return {t: v / nav for t, v in self.asset_values.items()}
 
-    def eval_inventory(self, evaluated_at=datetime.utcnow()) -> dict:
+    def eval_inventory(self, evaluated_at=datetime.now(UTC)) -> dict:
         self.inventory = {}
         for record in self.transactions:
             if record.date <= evaluated_at:
@@ -99,13 +99,6 @@ class Portfolio:
                 .set_index("date")
                 .rename(columns={"close": t})
             )
-
-        # TODO: Consider cases where quantites and inventories change as time passes
-        import pdb
-
-        pdb.set_trace()
-
-        pass
 
     def eval_nav(self, date: datetime, historical: pd.DataFrame):
         return 0
