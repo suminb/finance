@@ -1,3 +1,4 @@
+import os
 import pytz
 import pytest
 
@@ -10,6 +11,10 @@ def assert_equals_dict_of_float(d1: dict, d2: dict):
         assert abs(d1[k] - d2[k]) < 1e-6
 
 
+@pytest.mark.skipif(
+    not os.path.exists("notebooks/historical/US.parquet"),
+    reason="Data file does not exist",
+)
 def test_portfolio():
     pf = Portfolio.load_from_file("tests/samples/portfolio1.yml", {})
     pf.eval_inventory()
