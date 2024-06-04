@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta, timezone
 
 import pytz
 import pandas as pd
@@ -56,7 +56,7 @@ class Portfolio:
         nav = self.net_asset_value
         return {t: v / nav for t, v in self.asset_values.items()}
 
-    def eval_inventory(self, evaluated_at=datetime.now(UTC)) -> dict:
+    def eval_inventory(self, evaluated_at=datetime.now(timezone.utc)) -> dict:
         self.inventory = {}
         for record in self.transactions:
             if record.date <= evaluated_at:
