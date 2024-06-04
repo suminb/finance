@@ -74,31 +74,49 @@ class Portfolio:
         :param to_date: A timezone aware datetime marking the upper bound (exclusive)
         """
         for date in make_dates(from_date, to_date):
-            yield self.eval_inventory(date)
+            yield date, self.eval_inventory(date)
             date += timedelta(days=1)
 
     def eval_daily_nav(
         self, from_date: datetime, to_date: datetime, historical: pd.DataFrame
     ):
-        """
+        """Evaluate daily NAVs to make a DataFrame that looks like the following:
+
+                ticker1 | quantity  | ticker2 | quantity  | ...
+        date1 | price1  | quantity1 | price2  | quantity2 | ...
+        date2 | price1  | quantity1 | price2  | quantity2 | ...
+
         :param from_date: A timezone aware datetime markig the lower bound (inclusive)
         :param to_date: A timezone aware datetime marking the upper bound (exclusive)
         """
         historical = historical[
             (historical.date >= from_date) & (historical.date < to_date)
         ]
-        dates: pd.Series = historical.groupby("date").head(1).date
+        # dates: pd.Series = historical.groupby("date").head(1).date
+        daily_inventories = {
+            date.strftime("%Y%m%d"): inventory
+            for date, inventory in pf.eval_daily_inventories(from_date, to_date)
+        }
 
-        partial = {}
-        for (
-            t,
-            q,
-        ) in self.inventory.items():
-            partial[t] = (
-                historical[historical.symbol == t][["date", "close"]]
-                .set_index("date")
-                .rename(columns={"close": t})
+        all_tickers = set()
+        for inventory in daily_inventories.values():
+            all_tickers.update(inventory.keys())
+
+        daily_prices = {}
+        for ticker in all_tickers:
+            daily_prices[ticker] = historical[historical.symbol == ticker][
+                ["date", "close"]
+            ]
+            daily_prices[ticker][f"{ticker}_quantity"] = daily_prices[ticker].apply(
+                lambda x: daily_inventories[x.date.strftime("%Y%m%d")][ticker], axis=1
             )
+            daily_prices[ticker] = (
+                daily_prices[ticker]
+                .set_index("date")
+                .rename(columns={"close": f"{ticker}_close"})
+            )
+
+        return daily_prices
 
     def eval_nav(self, date: datetime, historical: pd.DataFrame):
         return 0
