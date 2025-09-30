@@ -22,6 +22,10 @@ from typing import List
 log = Logger(__file__)
 
 
+class InvalidDataException(Exception):
+    pass
+
+
 def concat_dataframes(
     df1: pd.DataFrame,
     df2: pd.DataFrame,
@@ -72,9 +76,14 @@ def preprocess_profile(profile: dict, symbol: str, region: str, updated_at: date
     profile["long_business_summary"] = profile.pop("longBusinessSummary")
 
     if "close" not in profile:
-        profile["close"] = profile[
-            "previousClose"
-        ]  # Not sure if these two are the same
+        if "previousClose" in profile:
+            profile["close"] = profile[
+                "previousClose"
+            ]  # Not sure if these two are the same
+        else:
+            raise InvalidDataException(
+                f"{symbol} is missing 'close' and 'previousClose'. Could be delisted."
+            )
     if profile["quote_type"] == "ETF":
         profile["market_cap"] = profile.pop("totalAssets")
     else:
@@ -172,6 +181,12 @@ def refresh_tickers_and_historical_data(
                 tickers.loc[row_indexer, "updated_at"] = datetime.utcnow()
                 # TODO: Define enum instead of using string literals
                 tickers.loc[row_indexer, "status"] = "delisted"
+                tickers.to_parquet(tickers_target_path)
+            except InvalidDataException as e:
+                log.warn(f"{e}")
+                row_indexer = tickers.symbol == symbol
+                tickers.loc[row_indexer, "updated_at"] = datetime.utcnow()
+                tickers.loc[row_indexer, "status"] = "invalid"
                 tickers.to_parquet(tickers_target_path)
             except Exception as e:
                 log.warn(f"{symbol}: {e}")

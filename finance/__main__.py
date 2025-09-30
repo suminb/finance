@@ -46,7 +46,7 @@ def refresh_tickers(
     from finance.ext.warehouse import refresh_tickers_and_historical_data
 
     tickers = pd.read_parquet(tickers_source)
-    tickers = tickers[tickers.status != "delisted"]
+    tickers = tickers[(tickers.status != "delisted") & (tickers.status != "invalid")]
     if strategy == "all":
         symbols_ = tickers["symbol"].to_list()
     elif strategy == "oldest":
