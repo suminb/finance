@@ -1,12 +1,7 @@
 Logbook>=0.12.5
-SQLAlchemy>=1.0.12
 click>=8.0,<9.0
-psycopg2-binary>=2.7.5
-temporaluuid64>=0.1.1
 requests>=2.9.1
-xmltodict>=0.10.1
 beautifulsoup4>=4.4.1
-alembic>=0.9.7
 boto3>=1.5.26
 pandas>=1.0,<2.0
 pandas-datareader>=0.7.4,<1.0

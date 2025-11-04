@@ -5,13 +5,11 @@ import re
 import types
 
 import pytest
-from finance.models import Asset
 from finance.utils import (
     DictReader,
     date_range,
     date_to_datetime,
     extract_numbers,
-    insert_stock_record,
     parse_date,
     parse_datetime,
     parse_decimal,
@@ -129,32 +127,6 @@ def test_extract_numbers():
 
     with pytest.raises(TypeError):
         extract_numbers(b"\x00")
-
-
-def test_insert_stock_record(session, account_stock, account_checking):
-    data = {
-        "date": parse_date("2016-06-30"),
-        "sequence": 1,
-        "category1": "장내매수",
-        "category2": "매수",
-        "code": "005380",
-        "name": "현대차",
-        "unit_price": 136000,
-        "quantity": 10,
-        "subtotal": 1360000,
-        "interest": 0,
-        "fees": 200,
-        "late_fees": 0,
-        "channel": "",
-        "final_amount": 1670200,
-    }
-    asset = Asset.create(type="stock", code="005380.KS", description="현대차")
-    record = insert_stock_record(data, account_stock, account_checking)
-
-    # TODO: Automate this process
-    session.delete(record)
-    session.delete(asset)
-    session.commit()
 
 
 def test_parse_date():

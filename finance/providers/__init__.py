@@ -1,11 +1,9 @@
-from finance.providers.kofia import Kofia
 from finance.providers.miraeasset import Miraeasset
 from finance.providers.provider import AssetValueProvider, Provider, RecordProvider
 
 
 __all__ = [
     "AssetValueProvider",
-    "Kofia",
     "Miraeasset",
     "Provider",
     "RecordProvider",

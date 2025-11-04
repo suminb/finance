@@ -1,246 +1,18 @@
+"""CLI commands for finance data processing (no database dependency)."""
 import os
+from typing import List
 
 import click
-from click.testing import CliRunner
 from logbook import Logger
-from sqlalchemy.exc import IntegrityError
-
-from finance.importers import (
-    import_stock_values as import_stock_values_,
-)  # Avoid name clashes
-from finance.models import (
-    Account,
-    AccountType,
-    Asset,
-    AssetType,
-    AssetValue,
-    Base,
-    engine,
-    get_asset_by_fund_code,
-    Granularity,
-    Portfolio,
-    session,
-    Transaction,
-    User,
-)
-from finance.providers import Kofia
-from finance.utils import (
-    extract_numbers,
-    insert_stock_record,
-    parse_date,
-    parse_stock_records,
-)
-
-from typing import List
 
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 log = Logger("finance")
 
 
-def insert_stock_assets():
-    """NOTE: This is a temporary workaround. All stock informaion shall be
-    fetched automatically on the fly.
-    """
-    rows = [
-        ("036570.KS", "NCsoft Corporation"),
-        ("145210.KS", "SAEHWA IMC"),
-        ("069080.KQ", "Webzen"),
-        ("053800.KQ", "Ahnlab Inc."),
-        ("017670.KS", "SK Telecom Co. Ltd."),
-        ("005380.KS", "Hyundai Motor Company"),
-        ("056080.KQ", "Yujin Robot Co., Ltd."),
-        ("069500.KS", "KODEX 200"),
-        ("009830.KS", "한화케미칼"),
-    ]
-
-    for code, description in rows:
-        log.info("Inserting {} ({})...", code, description)
-        yield Asset.create(
-            type="stock", code=code, description=description, ignore_if_exists=True
-        )
-
-
 @click.group()
 def cli():
+    """Finance data processing CLI."""
     pass
-
-
-@cli.command()
-def create_all():
-    """Creates necessary database tables."""
-    Base.metadata.create_all(engine)
-
-
-@cli.command()
-def drop_all():
-    """Drops all database tables."""
-    Base.metadata.drop_all(engine)
-
-
-def create_account(type_: AccountType, institution: str, number: str, user):
-    return Account.create(
-        type=type_,
-        name="Test account",
-        institution=institution,
-        number=number,
-        user=user,
-        ignore_if_exists=True,
-    )
-
-
-def create_asset(type_: AssetType, code: str, description: str):
-    return Asset.create(
-        type=type_, code=code, description=description, ignore_if_exists=True
-    )
-
-
-@cli.command()
-def insert_test_data():
-    """Inserts some sample data for testing."""
-    user = User.create(
-        family_name="Byeon",
-        given_name="Sumin",
-        email="suminb@gmail.com",
-        ignore_if_exists=True,
-    )
-
-    account_checking = create_account(AccountType.checking, "Shinhan", "checking", user)
-    account_stock = create_account(AccountType.investment, "Mirae Asset", "stock", user)
-
-    asset_krw = create_asset(AssetType.currency, "KRW", "Korean Won")
-    create_asset(AssetType.currency, "USD", "United States Dollar")
-
-    for _ in insert_stock_assets():
-        pass
-
-    create_asset(AssetType.security, "KR5223941018", "KB S&P500")
-    create_asset(AssetType.security, "KR5229221225", "이스트스프링차이나")
-
-    portfolio = Portfolio()
-    portfolio.base_asset = asset_krw
-    portfolio.add_accounts(account_checking, account_stock)
-
-
-@cli.command()
-def import_sp500_asset_values():
-    runner = CliRunner()
-    runner.invoke(
-        import_fund, ["KR5223941018", "2015-01-01", "2016-06-01"], catch_exceptions=True
-    )
-
-
-@cli.command()
-def import_sp500_records():
-    """Import S&P500 fund sample data. Expects a tab seprated value document."""
-    account_checking = Account.get(id=1001)
-    account_sp500 = Account.get(id=7001)
-    asset_krw = Asset.query.filter_by(name="KRW").first()
-    asset_sp500 = Asset.query.filter_by(name="KB S&P500").first()
-
-    # Expected number of columns
-    expected_col_count = 6
-
-    with open("sample-data/sp500.csv") as fin:
-        # Skip the first row (headers)
-        headers = next(fin)
-        col_count = len(headers.split())
-        if col_count != expected_col_count:
-            raise Exception(
-                "Expected number of columns = {}, "
-                "actual number of columns = {}".format(expected_col_count, col_count)
-            )
-
-        for line in fin:
-            cols = line.split("\t")
-            if len(cols) != expected_col_count:
-                continue
-            date = parse_date(cols[0], "%Y.%m.%d")
-            _type = cols[1]
-            quantity_krw, quantity_sp500 = [int(extract_numbers(v)) for v in cols[3:5]]
-
-            log.info(", ".join([c.strip() for c in cols]))
-
-            if not (_type == "일반입금" or _type == "일반신규"):
-                log.info("Record type '{}' will be ignored", _type)
-                continue
-
-            with Transaction.create() as t:
-                # NOTE: The actual deposit date and the buying date generally
-                # differ by a few days. Need to figure out how to parse this
-                # properly from the raw data.
-                try:
-                    deposit(account_checking, asset_krw, -quantity_krw, date, t)
-                except IntegrityError:
-                    log.warn("Identical record exists")
-                    session.rollback()
-
-                try:
-                    deposit(account_sp500, asset_sp500, quantity_sp500, date, t)
-                except IntegrityError:
-                    log.warn("Identical record exists")
-                    session.rollback()
-
-
-# NOTE: This will probably be called by AWS Lambda
-# TODO: Load data from stdin
-@cli.command()
-@click.argument("code")
-@click.argument("from-date")
-@click.argument("to-date")
-def import_fund(code, from_date, to_date):
-    """Imports fund data from KOFIA.
-
-    :param code: e.g., KR5223941018
-    :param from_date: e.g., 2016-01-01
-    :param to_date: e.g., 2016-02-28
-    """
-    provider = Kofia()
-    asset = get_asset_by_fund_code(code)
-
-    # FIXME: Target asset should also be determined by asset.data.code
-    base_asset = Asset.query.filter_by(name="KRW").first()
-
-    data = provider.fetch_data(code, parse_date(from_date), parse_date(to_date))
-    for date, unit_price, quantity in data:
-        log.info("Import data on {}", date)
-        unit_price /= 1000.0
-        try:
-            AssetValue.create(
-                asset=asset,
-                base_asset=base_asset,
-                evaluated_at=date,
-                close=unit_price,
-                granularity=Granularity.day,
-                source="kofia",
-            )
-        except IntegrityError:
-            log.warn("Identical record has been found for {}. Skipping.", date)
-            session.rollback()
-
-
-@cli.command()
-@click.argument("code")
-def import_stock_values(code):
-    """Import stock price information."""
-    # NOTE: We assume all Asset records are already in the database, but
-    # this is a temporary workaround. We should implement some mechanism to
-    # automatically insert an Asset record when it is not found.
-
-    stdin = click.get_text_stream("stdin")
-    for _ in import_stock_values_(stdin, code):
-        pass
-
-
-# TODO: Load data from stdin
-@cli.command()
-@click.argument("filename")
-def import_stock_records(filename):
-    """Parses exported data from the Shinhan HTS."""
-    account_bank = Account.query.filter(Account.name == "신한 입출금").first()
-    account_stock = Account.query.filter(Account.name == "신한 주식").first()
-    with open(filename) as fin:
-        for parsed in parse_stock_records(fin):
-            insert_stock_record(parsed, account_stock, account_bank)
 
 
 @cli.command()
@@ -254,7 +26,6 @@ def import_stock_records(filename):
 )
 @click.option("-k", "--sample-count", default=25)
 @click.option("--symbols", type=str)
-# TODO: Take a list of symbols as a parameter
 def refresh_tickers(
     tickers_source: str,
     historical_source: str,

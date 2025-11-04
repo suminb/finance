@@ -248,62 +248,6 @@ def parse_stock_records(stream):
         }
 
 
-def insert_stock_record(data: dict, stock_account: object, bank_account: object):
-    if data["category2"] in ["매도", "매수"]:
-        return insert_stock_trading_record(data, stock_account)
-    elif data["category2"] in ["제휴입금", "매매대금출금"]:
-        return insert_stock_transfer_record(data, bank_account)
-    else:
-        log.info("Skipping {} record...", data["category2"])
-        return None
-
-
-def insert_stock_trading_record(data: dict, stock_account: object):
-    """Inserts a stock trading (i.e., buying or selling stocks) records."""
-    from finance.models import Asset, deposit
-
-    if data["category1"].startswith("장내"):
-        code_suffix = ".KS"
-    elif data["category1"].startswith("코스닥"):
-        code_suffix = ".KQ"
-    else:
-        code_suffix = ""
-        raise ValueError(
-            "code_suffix could not be determined with the category '{}'"
-            "".format(data["category1"])
-        )
-
-    code = data["code"] + code_suffix
-
-    asset = Asset.get_by_symbol(code)
-    if asset is None:
-        raise ValueError(
-            "Asset object could not be retrived with code '{}'".format(code)
-        )
-
-    return deposit(stock_account, asset, data["quantity"], data["date"])
-
-
-def insert_stock_transfer_record(data: dict, bank_account: object):
-    """Inserts a transfer record between a bank account and a stock account."""
-    from finance.models import Asset, deposit
-
-    # FIXME: Not a good idea to use a hard coded value
-    asset_krw = Asset.query.filter(Asset.name == "KRW").first()
-
-    subtotal = data["subtotal"]
-    date = data["date"]
-
-    if data["name"] == "증거금이체":
-        # Transfer from a bank account to a stock account
-        return deposit(bank_account, asset_krw, -subtotal, date)
-    elif data["name"] == "매매대금정산":
-        # Transfer from a stock account to a bank account
-        return deposit(bank_account, asset_krw, subtotal, date)
-    else:
-        raise ValueError("Unrecognized transfer type '{}'".format(data["name"]))
-
-
 def serialize_datetime(obj):
     """JSON serializer for objects not serializable by default json code. This
     may be used as follows:
