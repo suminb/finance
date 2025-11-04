@@ -1,7 +1,7 @@
 import csv
 from datetime import datetime, time, timedelta
 import json
-from math import nan
+from math import nan as math_nan
 import os
 
 import boto3
@@ -11,7 +11,7 @@ from logbook import Logger
 # depencencies
 
 log = Logger("finance")
-nan = float("NaN")
+nan = math_nan
 
 
 def date_range(start, end, step=1):

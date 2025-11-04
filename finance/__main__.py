@@ -179,14 +179,14 @@ def prescreen(
         log.info("Mapping sector indicies...")
         prescreening = prescreening.with_columns(
             pl.col("combination_indices")
-            .apply(partial(map_sector_indices, tickers, sector_index_map))
+            .map_elements(partial(map_sector_indices, tickers, sector_index_map))  # type: ignore[attr-defined]
             .alias("sector_indices")
         )
 
         log.info("Determining if duplicated sectors exist...")
         prescreening = prescreening.with_columns(
             pl.col("sector_indices")
-            .apply(lambda x: len(set(x)) != len(x))
+            .map_elements(lambda x: len(set(x)) != len(x))  # type: ignore[attr-defined]
             .alias("has_duplicated_sectors")
         )
 
