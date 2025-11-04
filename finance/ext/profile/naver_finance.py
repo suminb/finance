@@ -1,3 +1,5 @@
+from typing import Optional
+
 from bs4 import BeautifulSoup
 import requests
 
@@ -11,7 +13,7 @@ class NaverProfile(BaseProfile):
 
     def __init__(self, symbol: str):
         super(NaverProfile, self).__init__(symbol)
-        self.soup: BeautifulSoup | None = None
+        self.soup: Optional[BeautifulSoup] = None
 
     @property
     def url(self):
