@@ -840,14 +840,3 @@ class Record(CRUDMixin, Base):  # type: ignore
         super(self.__class__, self).__init__(*args, **kwargs)
 
 
-class DartReport(CRUDMixin, Base):  # type: ignore
-    """NOTE: We need a more generic name for this..."""
-
-    __tablename__ = "dart_report"
-
-    registered_at = Column(DateTime(timezone=False))
-    title = Column(String)
-    entity_id = Column(Integer)
-    entity = Column(String)
-    reporter = Column(String)
-    content = Column(Text)
