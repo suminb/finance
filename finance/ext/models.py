@@ -95,7 +95,7 @@ class Portfolio:
         # dates: pd.Series = historical.groupby("date").head(1).date
         daily_inventories = {
             date.strftime("%Y%m%d"): inventory
-            for date, inventory in pf.eval_daily_inventories(from_date, to_date)
+            for date, inventory in self.eval_daily_inventories(from_date, to_date)
         }
 
         all_tickers = set()
