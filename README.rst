@@ -47,10 +47,8 @@ NOTE: 제가 주로 사용하는 에디터인 vim 에서 한글 타이핑이 불
   - 주식: `야후 파이낸스 <http://finance.yahoo.com>`_\ 에서 받아옵니다. 20분
     지연된 정보이긴 하지만, 일 단위 가격을 받아오는 것이기 때문에 지연 시간은
     중요하지 않습니다.
-  - 펀드: 금융투자협회(KOFIA)에 공시된 정보를 받아옵니다.
 
 - `수익률 계산 <https://github.com/suminb/finance/wiki/%EC%88%98%EC%9D%B5%EB%A5%A0-%EA%B3%84%EC%82%B0>`_
-- `전자공시데이터(DART) 가져오기 <https://github.com/suminb/finance/issues/1>`_
 
 앞으로 할 일, 하지 않을 일
 --------------------------
@@ -122,31 +120,6 @@ Fetch Company Profiles From Naver Finance
    -494
    >>> profile.bps
    4290
-
-Fetch Financial Statements From DART (전자공시)
-***********************************************
-
-.. code::
-
-   from finance.ext.dart import FinancialStatementRequest
-
-   fs = FinancialStatementRequest()
-   statements = fs.fetch(
-       "00788773", 2020, "11012", "OFS",
-       categorization_level1_key="fs_name",
-       categorization_level2_key="account_name")
-
-   statements["포괄손익계산서"]["당기순이익"].amount
-
-   balance_sheet = statements["재무상태표"]
-   debt_ratio = balance_sheet["부채총계"].amount / balance_sheet["자본총계"].amount
-
-.. code::
-
-   from finance.ext.dart import get_listed_corporations, search_corporations
-
-   get_listed_corporations()
-   search_corporations("NAVER")
 
 Some Technical Details
 ----------------------

@@ -1,3 +1,5 @@
+from typing import Optional
+
 from bs4 import BeautifulSoup
 import requests
 
@@ -11,7 +13,7 @@ class NaverProfile(BaseProfile):
 
     def __init__(self, symbol: str):
         super(NaverProfile, self).__init__(symbol)
-        self.soup = None
+        self.soup: Optional[BeautifulSoup] = None
 
     @property
     def url(self):
@@ -40,11 +42,15 @@ class NaverProfile(BaseProfile):
         self.outstanding_shares = int(outstanding_shares_raw.replace(",", ""))
 
         eps_tag = soup.find(id="_eps")
+        if eps_tag is None:
+            raise ValueError("Could not find EPS element on page")
         self.eps = int(eps_tag.text.replace(",", ""))
 
         # For some reason they provide `#_pbr` tag but do not provide `#_bps`,
         # we have to find the value by exploring siblings of `#_pbr`.
         pbr_tag = soup.find(id="_pbr")
+        if pbr_tag is None:
+            raise ValueError("Could not find PBR element on page")
         siblings = pbr_tag.next_siblings
         # This could break at any moment. We need to find a more robust way to
         # handle this.

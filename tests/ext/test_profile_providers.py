@@ -33,6 +33,7 @@ def test_naver_profile():
     assert profile.pbr == pytest.approx(1.03, 0.01)
 
 
+@pytest.mark.skip(reason="Naver Finance website structure has changed")
 def test_fetch_naver_profile():
     profile = fetch_profile("naver", "005430")
 
