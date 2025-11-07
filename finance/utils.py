@@ -4,7 +4,6 @@ import json
 from math import nan as math_nan
 import os
 
-import boto3
 from logbook import Logger
 
 # NOTE: finance.models should not be imported here in order to avoid circular
@@ -91,6 +90,14 @@ def load_stock_codes(fin):
     for code, name in reader:
         if code != "N/A":
             yield code, name
+
+
+def make_dates(from_date: datetime, to_date: datetime):
+    """Returns a generator of consecutive dates"""
+    cursor = from_date
+    while cursor < to_date:
+        yield cursor
+        cursor += timedelta(days=1)
 
 
 def make_request_import_stock_values_message(code, start_time, end_time):

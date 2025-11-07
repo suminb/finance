@@ -1,6 +1,7 @@
 """
 Extracts company profiles
 """
+
 from finance.ext.profile.naver_finance import fetch_naver_profile
 
 

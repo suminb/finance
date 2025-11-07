@@ -1,0 +1,27 @@
+portfolio:
+  inventory:
+    QQQ: 6
+    SCHD: 70
+    SCHH: 10
+    TLT: 15
+  target_weights:
+    QQQ: 2
+    SCHD: 6
+    SCHH: 1
+    TLT: 1
+transactions:
+  - date: 2020-01-03
+    ticker: QQQ
+    quantity: 6
+  - date: 2020-01-03
+    ticker: SCHD
+    quantity: 70
+  - date: 2020-01-03
+    ticker: SCHH
+    quantity: 10
+  - date: 2020-01-03
+    ticker: TLT
+    quantity: 16
+  - date: 2023-10-15
+    ticker: TLT
+    quantity: -1

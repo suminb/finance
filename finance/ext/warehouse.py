@@ -22,6 +22,10 @@ from typing import List
 log = Logger(__file__)
 
 
+class InvalidDataException(Exception):
+    pass
+
+
 def concat_dataframes(
     df1: pd.DataFrame,
     df2: pd.DataFrame,
@@ -72,9 +76,14 @@ def preprocess_profile(profile: dict, symbol: str, region: str, updated_at: date
     profile["long_business_summary"] = profile.pop("longBusinessSummary")
 
     if "close" not in profile:
-        profile["close"] = profile[
-            "previousClose"
-        ]  # Not sure if these two are the same
+        if "previousClose" in profile:
+            profile["close"] = profile[
+                "previousClose"
+            ]  # Not sure if these two are the same
+        else:
+            raise InvalidDataException(
+                f"{symbol} is missing 'close' and 'previousClose'. Could be delisted."
+            )
     if profile["quote_type"] == "ETF":
         profile["market_cap"] = profile.pop("totalAssets")
     else:
@@ -173,6 +182,12 @@ def refresh_tickers_and_historical_data(
                 # TODO: Define enum instead of using string literals
                 tickers.loc[row_indexer, "status"] = "delisted"
                 tickers.to_parquet(tickers_target_path)
+            except InvalidDataException as e:
+                log.warn(f"{e}")
+                row_indexer = tickers.symbol == symbol
+                tickers.loc[row_indexer, "updated_at"] = datetime.utcnow()
+                tickers.loc[row_indexer, "status"] = "invalid"
+                tickers.to_parquet(tickers_target_path)
             except Exception as e:
                 log.warn(f"{symbol}: {e}")
                 with open(skip_marker_path, "w") as fout:
@@ -269,98 +284,3 @@ def map_sector_indices(
     sector_values = (tickers[i]["sector"][0] for i in combination_indices)
     return [sector_index_map[s] for s in sector_values]
     # return [sectors.index(s) for s in sector_values]
-
-
-class Portfolio:
-    # TODO: Get rid of dependencies on DataFrame
-    def __init__(
-        self,
-        inventory: dict,
-        current_prices: dict,
-        target_weights: dict,
-    ):
-        self.inventory = inventory  # ticker: quantity
-        self.current_prices = current_prices  # ticker: price
-        self.target_weights = self.normalize_weights(target_weights)  # ticker: weight
-
-    @property
-    def asset_values(self):
-        return {t: self.current_prices[t] * q for t, q in self.inventory.items()}
-
-    @property
-    def net_asset_value(self):
-        return sum(self.asset_values.values())
-
-    @property
-    def current_weights(self):
-        """Calculate the weights of the current holdings based on the current price."""
-        nav = self.net_asset_value
-        return {t: v / nav for t, v in self.asset_values.items()}
-
-    def normalize_weights(self, weights: dict):
-        net_weight = sum(weights.values())
-        return {t: v / net_weight for t, v in weights.items()}
-
-    def calc_diff(self):
-        """Calculate the difference between the target weights and the current ones."""
-        cw = self.current_weights
-        tw = self.target_weights
-        all_keys = set(list(cw.keys()) + list(tw.keys()))
-
-        def diff(t, cw, tw):
-            cw.setdefault(t, 0)
-            tw.setdefault(t, 0)
-            return cw[t] - tw[t]
-
-        return {t: diff(t, cw, tw) for t in all_keys}
-
-    # TODO: Incorporate tax and fees
-    def make_rebalancing_plan(self):
-        """
-        Negative diff means we're short of that asset, so we need to buy more; whereas positive diff means we need to sell some.
-        Positive values in rebalance plans means the quantity of the asset to be purchased.
-        """
-        nav = self.net_asset_value
-        diff = self.calc_diff()
-
-        def plan(t, diff):
-            return round((nav * -diff[t]) / self.current_prices[t])
-
-        return {t: plan(t, diff) for t in diff if t != "_USD"}
-
-    # TODO: Tax on dividends?
-    # TODO: Transaction fees?
-    def apply_plan(
-        self, plan: dict, start_dt: datetime, end_dt: datetime, dividend_records: dict
-    ):
-        def apply(t, q):
-            self.inventory.setdefault(t, 0)
-            while self.inventory["_USD"] - self.current_prices[t] * q < 0:
-                if q > 0:
-                    q -= 1
-                else:
-                    q += 1
-            self.inventory["_USD"] -= self.current_prices[t] * q
-            if self.inventory["_USD"] < 0:
-                raise ValueError(f"USD balance cannot be negative: {t}, {q}")
-            return self.inventory[t] + q
-
-        # 'close' is actually 'adj close', which already includes dividends/stock split/capital gains
-        # self.inventory["_USD"] += self.calc_dividends_sum(start_dt, end_dt, dividend_records) * 0.85
-        self.inventory = {t: apply(t, q) for t, q in plan.items()} | {
-            "_USD": self.inventory["_USD"]
-        }
-        return self.inventory
-
-    def calc_dividends_sum(
-        self, start_dt: datetime, end_dt: datetime, dividend_records: dict
-    ) -> float:
-        div_sum = 0.0
-        for t, q in self.inventory.items():
-            if t in dividend_records:
-                for div_dt, div_amount in dividend_records[t]:
-                    if start_dt <= div_dt < end_dt:
-                        if q < 0:
-                            raise ValueError(f"Quantity cannot be negative: {t}, {q}")
-                        div_sum += div_amount * q
-        return div_sum
