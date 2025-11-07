@@ -87,7 +87,74 @@ Daily Net Asset Values
 Usage
 -----
 
-(TODO: 사용법 계속 채워넣기)
+Refresh Tickers and Historical Data
+************************************
+
+The ``refresh-tickers`` command downloads daily price data for tickers and updates
+both the ticker metadata and historical price data. It has four subcommands for
+different use cases:
+
+**Refresh Specific Symbols** (``static``)
+
+Download data for specific ticker symbols:
+
+.. code::
+
+   finance refresh-tickers static SPY IVI QQQ --output US.parquet
+
+Options:
+
+- ``--output, -o``: Output parquet file for historical data (required)
+- ``--tickers``: Input/output tickers parquet file (default: ``tickers.parquet``)
+- ``--staging-dir``: Staging directory for intermediate files (default: ``.``)
+- ``--region, -r``: Region code, e.g., US, KR (default: ``US``)
+
+**Refresh Oldest Tickers** (``oldest``)
+
+Refresh the N most stale tickers based on the ``updated_at`` timestamp:
+
+.. code::
+
+   finance refresh-tickers oldest --count 30 --output US.parquet
+
+Options:
+
+- ``--count, -n``: Number of oldest tickers to refresh (default: 25)
+- ``--output, -o``: Output parquet file for historical data (required)
+- ``--tickers``: Input/output tickers parquet file (default: ``tickers.parquet``)
+- ``--staging-dir``: Staging directory for intermediate files (default: ``.``)
+- ``--region, -r``: Region code (default: ``US``)
+
+**Refresh Random Sample** (``random``)
+
+Refresh a random sample of tickers:
+
+.. code::
+
+   finance refresh-tickers random --count 50 --output US.parquet
+
+Options:
+
+- ``--count, -n``: Number of random tickers to sample (default: 25)
+- ``--output, -o``: Output parquet file for historical data (required)
+- ``--tickers``: Input/output tickers parquet file (default: ``tickers.parquet``)
+- ``--staging-dir``: Staging directory for intermediate files (default: ``.``)
+- ``--region, -r``: Region code (default: ``US``)
+
+**Refresh All Tickers** (``all``)
+
+Refresh all tickers in the database (use with caution):
+
+.. code::
+
+   finance refresh-tickers all --output US.parquet
+
+Options:
+
+- ``--output, -o``: Output parquet file for historical data (required)
+- ``--tickers``: Input/output tickers parquet file (default: ``tickers.parquet``)
+- ``--staging-dir``: Staging directory for intermediate files (default: ``.``)
+- ``--region, -r``: Region code (default: ``US``)
 
 Search For Listings On Naver Finance
 ************************************

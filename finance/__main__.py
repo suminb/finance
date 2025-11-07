@@ -1,4 +1,5 @@
 """CLI commands for finance data processing (no database dependency)."""
+
 import os
 from typing import List
 
@@ -15,59 +16,148 @@ def cli():
     pass
 
 
-@cli.command()
-@click.argument("tickers_source")
-@click.argument("historical_source")
-@click.argument("tickers_target")
-@click.argument("historical_target")
-@click.option("-r", "--region", default="US", help="Region")
-@click.option(
-    "-s", "--strategy", default="oldest", help="all | oldest | random | static"
-)
-@click.option("-k", "--sample-count", default=25)
-@click.option("--symbols", type=str)
-def refresh_tickers(
-    tickers_source: str,
-    historical_source: str,
-    tickers_target: str,
-    historical_target: str,
-    region,
-    strategy: str,
-    sample_count: int,
-    symbols: str,
-):
-    """Refreshes tickers and historical data.
+@cli.group()
+def refresh_tickers():
+    """Refreshes tickers and historical data."""
+    pass
 
-    :param source: Source file name
-    :param symbols: Comma separated strings (without spaces in between)
-    """
-    import random
+
+def _refresh_tickers_common(
+    region: str,
+    tickers_input: str,
+    historical_output: str,
+    staging_dir: str,
+    symbols_list: List[str],
+):
+    """Common logic for all refresh-tickers subcommands."""
     import pandas as pd
     from finance.ext.warehouse import refresh_tickers_and_historical_data
 
-    tickers = pd.read_parquet(tickers_source)
+    tickers = pd.read_parquet(tickers_input)
     tickers = tickers[(tickers.status != "delisted") & (tickers.status != "invalid")]
-    if strategy == "all":
-        symbols_ = tickers["symbol"].to_list()
-    elif strategy == "oldest":
-        symbols_ = tickers.sort_values("updated_at")["symbol"].to_list()
-        symbols_ = symbols_[:sample_count]
-    elif strategy == "random":
-        symbols_ = tickers["symbol"].to_list()
-        symbols_ = random.sample(symbols_, sample_count)
-    elif strategy == "static":
-        symbols_ = symbols.split(",")
-    else:
-        raise NotImplementedError(f"Strategy: {strategy}")
+
+    # Use tickers_input as output if not specified otherwise
+    tickers_output = tickers_input
 
     refresh_tickers_and_historical_data(
         region,
         tickers,
-        historical_source,
-        tickers_target,
-        historical_target,
-        symbols_,
+        staging_dir,
+        tickers_output,
+        historical_output,
+        symbols_list,
     )
+
+
+@refresh_tickers.command()
+@click.argument("symbols", nargs=-1, required=True)
+@click.option(
+    "--output", "-o", required=True, help="Output parquet file for historical data"
+)
+@click.option(
+    "--tickers", default="tickers.parquet", help="Input/output tickers parquet file"
+)
+@click.option(
+    "--staging-dir", default=".", help="Staging directory for intermediate files"
+)
+@click.option("--region", "-r", default="US", help="Region code (e.g., US, KR)")
+def static(symbols: tuple, output: str, tickers: str, staging_dir: str, region: str):
+    """Refresh specific ticker symbols.
+
+    Example:
+        finance refresh-tickers static SPY IVI QQQ --output US.parquet
+    """
+    symbols_list = list(symbols)
+    _refresh_tickers_common(region, tickers, output, staging_dir, symbols_list)
+
+
+@refresh_tickers.command()
+@click.option("--count", "-n", default=25, help="Number of random tickers to sample")
+@click.option(
+    "--output", "-o", required=True, help="Output parquet file for historical data"
+)
+@click.option(
+    "--tickers", default="tickers.parquet", help="Input/output tickers parquet file"
+)
+@click.option(
+    "--staging-dir", default=".", help="Staging directory for intermediate files"
+)
+@click.option("--region", "-r", default="US", help="Region code (e.g., US, KR)")
+def random(count: int, output: str, tickers: str, staging_dir: str, region: str):
+    """Refresh a random sample of tickers.
+
+    Example:
+        finance refresh-tickers random --count 50 --output US.parquet
+    """
+    import random as random_module
+    import pandas as pd
+
+    tickers_df = pd.read_parquet(tickers)
+    tickers_df = tickers_df[
+        (tickers_df.status != "delisted") & (tickers_df.status != "invalid")
+    ]
+    symbols_list = tickers_df["symbol"].to_list()
+    symbols_list = random_module.sample(symbols_list, count)
+
+    _refresh_tickers_common(region, tickers, output, staging_dir, symbols_list)
+
+
+@refresh_tickers.command()
+@click.option("--count", "-n", default=25, help="Number of oldest tickers to refresh")
+@click.option(
+    "--output", "-o", required=True, help="Output parquet file for historical data"
+)
+@click.option(
+    "--tickers", default="tickers.parquet", help="Input/output tickers parquet file"
+)
+@click.option(
+    "--staging-dir", default=".", help="Staging directory for intermediate files"
+)
+@click.option("--region", "-r", default="US", help="Region code (e.g., US, KR)")
+def oldest(count: int, output: str, tickers: str, staging_dir: str, region: str):
+    """Refresh the oldest (most stale) tickers based on updated_at timestamp.
+
+    Example:
+        finance refresh-tickers oldest --count 30 --output US.parquet
+    """
+    import pandas as pd
+
+    tickers_df = pd.read_parquet(tickers)
+    tickers_df = tickers_df[
+        (tickers_df.status != "delisted") & (tickers_df.status != "invalid")
+    ]
+    symbols_list = tickers_df.sort_values("updated_at")["symbol"].to_list()
+    symbols_list = symbols_list[:count]
+
+    _refresh_tickers_common(region, tickers, output, staging_dir, symbols_list)
+
+
+@refresh_tickers.command()
+@click.option(
+    "--output", "-o", required=True, help="Output parquet file for historical data"
+)
+@click.option(
+    "--tickers", default="tickers.parquet", help="Input/output tickers parquet file"
+)
+@click.option(
+    "--staging-dir", default=".", help="Staging directory for intermediate files"
+)
+@click.option("--region", "-r", default="US", help="Region code (e.g., US, KR)")
+def all(output: str, tickers: str, staging_dir: str, region: str):
+    """Refresh all tickers in the database.
+
+    Example:
+        finance refresh-tickers all --output US.parquet
+    """
+    import pandas as pd
+
+    tickers_df = pd.read_parquet(tickers)
+    tickers_df = tickers_df[
+        (tickers_df.status != "delisted") & (tickers_df.status != "invalid")
+    ]
+    symbols_list = tickers_df["symbol"].to_list()
+
+    _refresh_tickers_common(region, tickers, output, staging_dir, symbols_list)
 
 
 @cli.command()
