@@ -104,16 +104,18 @@ class Portfolio:
 
         daily_prices = {}
         for ticker in all_tickers:
-            daily_prices[ticker] = historical[historical.symbol == ticker][
-                ["date", "close"]
-            ]
-            daily_prices[ticker][f"{ticker}_quantity"] = daily_prices[ticker].apply(
-                lambda x: daily_inventories[x.date.strftime("%Y%m%d")][ticker], axis=1
+            df = historical[historical.symbol == ticker][["date", "close"]].copy()
+
+            # Skip tickers with no historical data in the date range
+            if df.empty:
+                continue
+
+            df[f"{ticker}_quantity"] = df.apply(
+                lambda x: daily_inventories[x.date.strftime("%Y%m%d")].get(ticker, 0),
+                axis=1,
             )
-            daily_prices[ticker] = (
-                daily_prices[ticker]
-                .set_index("date")
-                .rename(columns={"close": f"{ticker}_close"})
+            daily_prices[ticker] = df.set_index("date").rename(
+                columns={"close": f"{ticker}_close"}
             )
 
         return daily_prices
