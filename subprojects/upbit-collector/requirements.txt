@@ -1,0 +1,4 @@
+aiohttp>=3.7.4,<4.0
+aiofiles>=0.7.0,<1.0
+websockets>=10.1,<11.0
+temporaluuid64>=0.1.3,<1.0
