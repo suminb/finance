@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import puppeteer from 'puppeteer'
+import { getCachedHoldings, saveHoldings, ETFProfile } from '@/lib/db'
 
 interface ETFHolding {
   symbol: string
@@ -11,7 +12,123 @@ interface ETFHolding {
 interface ETFHoldingsResponse {
   symbol: string
   holdings: ETFHolding[]
+  cached?: boolean
   error?: string
+}
+
+function extractProfileData($: any): ETFProfile {
+  const profile: ETFProfile = {}
+  
+  // Extract from Vitals section
+  $('.ticker-assets .row').each((_: any, row: any) => {
+    const $row = $(row)
+    const label = $row.find('span:first-child').text().trim()
+    const value = $row.find('span:last-child').text().trim()
+    
+    switch (label) {
+      case 'Issuer':
+        profile.issuer = value
+        break
+      case 'Brand':
+        profile.brand = value
+        break
+      case 'Structure':
+        profile.structure = value
+        break
+      case 'Expense Ratio':
+        const expenseMatch = value.match(/(\d+\.?\d*)%/)
+        if (expenseMatch) {
+          profile.expense_ratio = parseFloat(expenseMatch[1]) / 100 // Convert to decimal
+        }
+        break
+      case 'Inception':
+        try {
+          profile.inception_date = new Date(value)
+        } catch (e) {
+          // Invalid date
+        }
+        break
+      case 'Index Tracked':
+        profile.index_tracked = value
+        break
+    }
+  })
+  
+  // Extract home page
+  const homePageLink = $('.ticker-assets .row:contains("ETF Home Page") a').attr('href')
+  if (homePageLink) {
+    profile.home_page = homePageLink
+  }
+  
+  // Extract ETF Database Themes
+  $('h3.h4:contains("ETF Database Themes")').parent().find('.ticker-assets .row').each((_: any, row: any) => {
+    const $row = $(row)
+    const label = $row.find('span:first-child').text().trim()
+    const value = $row.find('span:last-child').text().trim()
+    
+    switch (label) {
+      case 'Category':
+        profile.category = value
+        break
+      case 'Asset Class':
+        profile.asset_class = value
+        break
+      case 'Asset Class Size':
+        profile.asset_class_size = value
+        break
+      case 'Asset Class Style':
+        profile.asset_class_style = value
+        break
+      case 'Sector (General)':
+        profile.sector_general = value
+        break
+      case 'Sector (Specific)':
+        profile.sector_specific = value
+        break
+      case 'Region (General)':
+        profile.region_general = value
+        break
+      case 'Region (Specific)':
+        profile.region_specific = value
+        break
+    }
+  })
+  
+  // Extract trading data
+  $('.trading-data li, ul.list-unstyled li').each((_: any, li: any) => {
+    const $li = $(li)
+    const label = $li.find('span:first-child').text().trim()
+    const value = $li.find('span:last-child').text().trim()
+    
+    switch (label) {
+      case 'AUM':
+        // Parse values like "$382,989.0 M" 
+        const aumMatch = value.match(/\$?([\d,]+\.?\d*)\s*([MBK])?/)
+        if (aumMatch) {
+          let aum = parseFloat(aumMatch[1].replace(/,/g, ''))
+          const unit = aumMatch[2]
+          if (unit === 'M') aum *= 1000000
+          if (unit === 'B') aum *= 1000000000
+          if (unit === 'K') aum *= 1000
+          profile.aum = Math.round(aum)
+        }
+        break
+      case 'Shares':
+        // Parse values like "654.1 M"
+        const sharesMatch = value.match(/([\d,]+\.?\d*)\s*([MBK])?/)
+        if (sharesMatch) {
+          let shares = parseFloat(sharesMatch[1].replace(/,/g, ''))
+          const unit = sharesMatch[2]
+          if (unit === 'M') shares *= 1000000
+          if (unit === 'B') shares *= 1000000000
+          if (unit === 'K') shares *= 1000
+          profile.shares_outstanding = Math.round(shares)
+        }
+        break
+    }
+  })
+  
+  return profile
 }
 
 export async function GET(request: NextRequest) {
@@ -26,6 +143,30 @@ export async function GET(request: NextRequest) {
   }
 
   const normalizedTicker = ticker.toUpperCase().trim()
+  
+  // Check cache first (24 hour TTL by default)
+  const cacheMaxAgeHours = parseInt(process.env.CACHE_MAX_AGE_HOURS || '24')
+  
+  try {
+    console.log(`Checking cache for ${normalizedTicker}...`)
+    const cachedHoldings = await getCachedHoldings(normalizedTicker, cacheMaxAgeHours)
+    
+    if (cachedHoldings && cachedHoldings.length > 0) {
+      console.log(`✓ Cache hit for ${normalizedTicker} (${cachedHoldings.length} holdings)`)
+      return NextResponse.json({
+        symbol: normalizedTicker,
+        holdings: cachedHoldings,
+        cached: true,
+      } as ETFHoldingsResponse)
+    }
+    
+    console.log(`✗ Cache miss for ${normalizedTicker}, proceeding to scrape...`)
+  } catch (cacheError) {
+    console.error('✗ Cache error, falling back to scraping:', cacheError)
+    console.error('Database URL set?', !!(process.env.DATABASE_URL || process.env.SBF_DB_URL))
+  }
+
+  // Cache miss or error - proceed with scraping
   let browser = null
 
   try {
@@ -134,6 +275,10 @@ export async function GET(request: NextRequest) {
     const cheerioModule = await import('cheerio')
     const cheerio = 'default' in cheerioModule ? cheerioModule.default : cheerioModule
     const $ = cheerio.load(html)
+
+    // Extract profile data
+    const profile = extractProfileData($)
+    console.log(`Extracted profile for ${normalizedTicker}:`, Object.keys(profile).length, 'fields')
 
     const holdings: ETFHolding[] = []
     
@@ -272,9 +417,23 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    const sortedHoldings = uniqueHoldings.sort((a, b) => b.weight - a.weight)
+
+    // Save to cache with profile data
+    try {
+      console.log(`Attempting to save ${sortedHoldings.length} holdings for ${normalizedTicker} to database...`)
+      await saveHoldings(normalizedTicker, sortedHoldings, profile)
+      console.log(`✓ Successfully cached ${sortedHoldings.length} holdings and profile for ${normalizedTicker}`)
+    } catch (saveError) {
+      console.error('✗ Error saving to cache:', saveError)
+      console.error('Full error:', saveError instanceof Error ? saveError.stack : saveError)
+      // Continue anyway - we still have the scraped data
+    }
+
     return NextResponse.json({
       symbol: normalizedTicker,
-      holdings: uniqueHoldings.sort((a, b) => b.weight - a.weight),
+      holdings: sortedHoldings,
+      cached: false,
     } as ETFHoldingsResponse)
   } catch (error) {
     if (browser) {

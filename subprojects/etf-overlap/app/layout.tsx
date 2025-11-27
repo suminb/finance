@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'ETF Overlap',
-  description: 'ETF Overlap Analysis Tool',
+  title: 'ETF Overlap Analysis',
+  description: 'Compare multiple ETFs and visualize their weighted overlap',
 }
 
 export default function RootLayout({
