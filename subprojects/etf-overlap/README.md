@@ -11,11 +11,13 @@ A Next.js web application for analyzing ETF overlaps.
 ### Installation
 
 1. Install dependencies:
+
 ```bash
 npm install
 ```
 
 2. Set up the database:
+
 ```bash
 # Copy example environment file
 cp .env.example .env.local
@@ -118,6 +120,7 @@ etf-overlap/
 ## Alternative Data Sources
 
 The current implementation scrapes ETFdb.com (free, no API key). Other options:
+
 - **API Ninjas** - Free tier (first 3 holdings only)
 - **AInvest API** - Free tier (top 10 holdings only)
 - **Alpha Vantage** - Free tier (limited)
@@ -125,4 +128,3 @@ The current implementation scrapes ETFdb.com (free, no API key). Other options:
 - **Yahoo Finance** - Unofficial, may require scraping
 
 To switch data sources, modify `app/api/etf-holdings/route.ts` with your preferred provider's endpoint and response format.
-

@@ -6,25 +6,27 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "next": "^14.0.0",
     "cheerio": "^1.0.0-rc.12",
+    "next": "^14.0.0",
+    "pg": "^8.11.0",
     "puppeteer": "^21.6.0",
-    "pg": "^8.11.0"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@types/cheerio": "^0.22.31",
     "@types/node": "^20.0.0",
+    "@types/pg": "^8.10.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
-    "typescript": "^5.0.0",
     "eslint": "^8.0.0",
     "eslint-config-next": "^14.0.0",
-    "@types/cheerio": "^0.22.31",
-    "@types/pg": "^8.10.0"
+    "prettier": "^3.7.1",
+    "typescript": "^5.0.0"
   }
 }
-
