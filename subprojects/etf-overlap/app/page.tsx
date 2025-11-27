@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import ETFAutocomplete from '@/components/ETFAutocomplete'
 
 interface SharedHolding {
   symbol: string
@@ -99,31 +100,14 @@ function DonutChart({ overlap, total }: { overlap: number; total: number }) {
 }
 
 export default function OverlapPage() {
-  const [tickers, setTickers] = useState<string[]>([''])
+  const [tickers, setTickers] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<OverlapMatrixResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [selectedDetail, setSelectedDetail] = useState<OverlapDetail | null>(null)
 
-  const addTickerInput = () => {
-    setTickers([...tickers, ''])
-  }
-
-  const removeTickerInput = (index: number) => {
-    const newTickers = tickers.filter((_, i) => i !== index)
-    setTickers(newTickers.length > 0 ? newTickers : [''])
-  }
-
-  const updateTicker = (index: number, value: string) => {
-    const newTickers = [...tickers]
-    newTickers[index] = value.toUpperCase()
-    setTickers(newTickers)
-  }
-
   const calculateOverlap = async () => {
-    const validTickers = tickers.filter(t => t.trim().length > 0)
-    
-    if (validTickers.length < 2) {
+    if (tickers.length < 2) {
       setError('Please enter at least 2 ETF tickers')
       return
     }
@@ -133,7 +117,7 @@ export default function OverlapPage() {
     setData(null)
 
     try {
-      const response = await fetch(`/api/overlap?tickers=${validTickers.join(',')}`)
+      const response = await fetch(`/api/overlap?tickers=${tickers.join(',')}`)
       const result: OverlapMatrixResponse = await response.json()
 
       if (!response.ok || result.error) {
@@ -186,62 +170,17 @@ export default function OverlapPage() {
 
       <div style={{ marginBottom: '2rem' }}>
         <h3 style={{ marginBottom: '1rem' }}>Enter ETF Tickers</h3>
-        {tickers.map((ticker, index) => (
-          <div key={index} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center' }}>
-            <input
-              type="text"
-              value={ticker}
-              onChange={(e) => updateTicker(index, e.target.value)}
-              placeholder={`ETF ${index + 1} (e.g., QQQ)`}
-              style={{
-                padding: '0.75rem',
-                fontSize: '1rem',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                minWidth: '200px',
-              }}
-              disabled={loading}
-            />
-            {tickers.length > 1 && (
-              <button
-                onClick={() => removeTickerInput(index)}
-                style={{
-                  padding: '0.75rem',
-                  fontSize: '1rem',
-                  backgroundColor: '#ef4444',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                }}
-                disabled={loading}
-              >
-                Remove
-              </button>
-            )}
-          </div>
-        ))}
         
-        <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-          <button
-            onClick={addTickerInput}
-            style={{
-              padding: '0.75rem 1.5rem',
-              fontSize: '1rem',
-              backgroundColor: '#10b981',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
-            disabled={loading}
-          >
-            + Add ETF
-          </button>
-          
+        <ETFAutocomplete
+          selectedETFs={tickers}
+          onChange={setTickers}
+          disabled={loading}
+        />
+        
+        <div style={{ marginTop: '1rem' }}>
           <button
             onClick={calculateOverlap}
-            disabled={loading}
+            disabled={loading || tickers.length < 2}
             style={{
               padding: '0.75rem 1.5rem',
               fontSize: '1rem',
@@ -249,12 +188,17 @@ export default function OverlapPage() {
               color: 'white',
               border: 'none',
               borderRadius: '4px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.6 : 1,
+              cursor: loading || tickers.length < 2 ? 'not-allowed' : 'pointer',
+              opacity: loading || tickers.length < 2 ? 0.6 : 1,
             }}
           >
             {loading ? 'Calculating...' : 'Calculate Overlap'}
           </button>
+          {tickers.length < 2 && tickers.length > 0 && (
+            <span style={{ marginLeft: '1rem', color: '#9ca3af', fontSize: '0.875rem' }}>
+              Add at least 2 ETFs to compare
+            </span>
+          )}
         </div>
       </div>
 

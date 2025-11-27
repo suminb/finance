@@ -43,9 +43,16 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ### How to Use
 
-1. Enter 2 or more ETF tickers (e.g., QQQ, SPY, VOO)
-2. Click "Calculate Overlap"
-3. View the heatmap showing weighted overlap percentages
+1. **Type ETF tickers or names** in the autocomplete input:
+   - Start typing and select from suggestions (e.g., "QQQ", "Invesco")
+   - Press **Space** or **Enter** to add as a tag
+   - Use **Backspace** to remove the last tag
+   - Click **×** on tags to remove them
+2. **Add 2 or more ETFs** (shown as blue tags)
+3. Click **"Calculate Overlap"**
+4. View the **heatmap** showing weighted overlap percentages
+5. **Click any cell** in the heatmap to see detailed overlapping holdings
+6. View the **Core Overlap** section to see holdings shared by ALL selected ETFs
 
 **Note**: The first time you compare ETFs, the app will scrape ETFdb.com for their holdings (takes ~5-15 seconds per ETF). Subsequent comparisons will be instant thanks to PostgreSQL caching.
 
@@ -70,12 +77,16 @@ etf-overlap/
 ├── app/                       # Next.js App Router
 │   ├── api/                   # API routes
 │   │   ├── etf-holdings/      # Fetch ETF holdings (scraping)
-│   │   └── overlap/           # Calculate overlap matrix
+│   │   ├── overlap/           # Calculate overlap matrix
+│   │   └── search-etfs/       # Search ETFs for autocomplete
 │   ├── page.tsx               # Main overlap analysis page
 │   ├── layout.tsx             # Root layout
 │   └── globals.css            # Global styles
+├── components/                # React components
+│   └── ETFAutocomplete.tsx    # Autocomplete input with tags
 ├── lib/                       # Utilities
-│   └── db.ts                  # Database functions
+│   ├── db.ts                  # Database functions
+│   └── etf-list.ts            # Popular ETFs list
 ├── db/                        # Database schema & migrations
 ├── public/                    # Static assets
 ├── next.config.js             # Next.js configuration
@@ -94,7 +105,10 @@ etf-overlap/
 
 ## Features
 
+- **Smart Autocomplete**: Type-ahead search for ETF tickers and names with tag-based input
 - **Overlap Analysis**: Compare multiple ETFs with weighted overlap heatmap
+- **Core Overlap View**: See holdings shared by ALL selected ETFs (N-way intersection)
+- **Pairwise Details**: Click any heatmap cell to see detailed overlap between two ETFs
 - **Weighted Calculation**: Uses portfolio weight percentages for accurate overlap
 - **Visual Heatmap**: Color-coded matrix showing overlap intensity
 - **Automatic Caching**: PostgreSQL-backed caching for fast comparisons
