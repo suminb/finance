@@ -227,5 +227,52 @@ def report(root: str, historical: str, output):
     click.echo("Wrote {}".format(destination))
 
 
+@cli.command()
+@click.argument("statement", type=click.Path(exists=True, dir_okay=False))
+@click.option("--root", default=DEFAULT_ROOT, show_default=True)
+@click.option("--historical", default=DEFAULT_HISTORICAL, show_default=True)
+def check(statement: str, root: str, historical: str):
+    """Reconcile the replayed inventory against a real 잔고 statement.
+
+    STATEMENT is a YAML file in the same shape as seed.yaml.
+    """
+    from datetime import datetime, time, timezone
+
+    import pandas as pd
+
+    from nav import check as check_module
+    from nav import seed as seed_module
+
+    p, symbol_map, account_seed, transactions, portfolio = _load_state(root)
+    actual = seed_module.load(statement, symbol_map)
+    when = datetime.combine(actual.seed_date, time(0, 0, 0)).replace(tzinfo=timezone.utc)
+
+    differences = check_module.compare(portfolio, actual, when)
+    if differences:
+        click.echo("Differences as of {}:".format(actual.seed_date))
+        for difference in differences:
+            click.echo(
+                "  {:<12} computed {:>14,.4f}  actual {:>14,.4f}  delta {:>+14,.4f}".format(
+                    difference.ticker, difference.computed, difference.actual, difference.delta
+                )
+            )
+    else:
+        click.echo("Reconciled: no differences as of {}.".format(actual.seed_date))
+
+    if os.path.exists(historical):
+        moves = check_module.suspicious_moves(
+            pd.read_parquet(historical), _held_tickers(account_seed, transactions)
+        )
+        if moves:
+            click.echo("\nPossible corporate actions (single-day moves over 40%):")
+            for move in moves:
+                click.echo(
+                    "  {:<12} {}  {:+.1%}".format(move["symbol"], move["date"], move["ratio"])
+                )
+
+    if differences:
+        raise SystemExit(1)
+
+
 if __name__ == "__main__":
     cli()

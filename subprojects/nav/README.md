@@ -1,6 +1,8 @@
 # NAV — 일일 순자산 추적 (Daily Net Asset Value)
 
-Status: design approved 2026-09-14, not yet implemented.
+Status: implemented (`subprojects/nav`, branch `subproject/nav`). `symbols.yaml`
+and `categories.yaml` ship as starters, not yet reconciled against a real 0650
+export — see Symbol resolution and Transaction taxonomy, below.
 
 ## Purpose
 
@@ -53,7 +55,7 @@ extended there. nav owns only what is specific to 미래에셋 and to presentati
 | --- | --- |
 | Inventory replay, NAV series, multi-currency cash, FX | `finance/ext/models.py` (`Portfolio`) |
 | Price/FX fetching and parquet warehouse | `finance/ext/warehouse.py` (existing, unchanged) |
-| 0650 CSV parsing | `finance/providers/miraeasset.py` (existing, unchanged) |
+| 0650 CSV parsing | `finance/providers/miraeasset.py` (existing, modified) |
 | 0650 → transactions bridge, 거래종류 taxonomy, symbol map | `subprojects/nav/nav/` |
 | CLI and HTML report | `subprojects/nav/nav/` |
 
@@ -120,6 +122,13 @@ dict is the seed for this file, extended with a currency column.
 25-column 거래내역조회 (0650) export. nav consumes its `Record` objects and
 normalizes them.
 
+`finance/providers/miraeasset.py` was modified, not used as-is: the hand-rolled
+`line.split(",")` could not parse quoted fields containing thousands
+separators, and is replaced with `csv.reader`. `Record.quantity` is widened
+from `Integer` to `Decimal` to hold fractional overseas share quantities.
+`finance/providers/record.py` gained comma-tolerant `Decimal`/`Integer` fields
+to match (a plain `int(value)`/`decimal.Decimal(value)` rejects `"1,234"`).
+
 Deduplication is on `(created_at, seq)`. Re-importing the same file is a no-op
 and overlapping exports are safe, so the user never has to track which date
 ranges have already been imported.
@@ -141,6 +150,11 @@ mappings carries the comment `FIXME: This is a dangerous assumption (could've
 been BRK-A)`, which is precisely what guessing produces. A NAV series that is
 silently wrong is worse than one that refuses to build.
 
+The committed `symbols.yaml` is seeded from `name_code_mappings` in
+`finance/providers/miraeasset.py`, but its own header comment says it has NOT
+been reconciled against a live account export, so it may still be missing
+names the account actually holds.
+
 ### 3. Transaction taxonomy
 
 `categories.yaml` maps each 거래종류 string to the name of a handler:
@@ -152,14 +166,16 @@ silently wrong is worse than one that refuses to build.
 - {category: 입금,     handler: cash_in}
 - {category: 출금,     handler: cash_out}
 - {category: 배당금,   handler: dividend}
-- {category: 환전,     handler: fx_exchange}
 ```
 
-The handlers — `buy`, `sell`, `cash_in`, `cash_out`, `dividend`,
-`fx_exchange`, `interest`, `fee`, `noop` — are ordinary Python functions taking
-a normalized record and returning inventory deltas. `buy` yields
+The handlers — `buy`, `sell`, `cash_in`, `cash_out`, `dividend`, `interest`,
+`fee`, `noop` — are ordinary Python functions taking a normalized record and
+returning inventory deltas. `buy` yields
 `{ticker: +quantity, _CCY: -(amount + fees + tax)}`; `dividend` yields
-`{_CCY: +(amount - tax)}`; and so on.
+`{_CCY: +(amount - tax)}`; and so on. There is no `fx_exchange` handler: 환전
+is a pair of rows, one per currency, and each row maps independently to
+`cash_out` (the paying currency) or `cash_in` (the receiving currency) — see
+below.
 
 The YAML deliberately holds no arithmetic. What varies per deployment is which
 Korean string means what, and that belongs in data; the arithmetic is fixed and
@@ -171,16 +187,22 @@ An unrecognized `handler` name is an error, exactly as an unmapped `category`
 is.
 
 The actual 거래종류 vocabulary of a 미래에셋 export is not documented and is not
-assumed here. The first implementation step is `nav categories`, which prints
-the distinct 거래종류 values in a real export with counts and a sample row
-each; `categories.yaml` is then filled from observed data.
+assumed here. `nav categories` prints the distinct 거래종류 values in a real
+export with counts and a sample row each, and is meant to drive
+`categories.yaml`. That step has not actually been run against a live
+account export: the committed `categories.yaml` is a five-entry starter
+covering only the redacted test fixture (its header comment says so), and
+`nav import` will report any 거래종류 it does not recognize.
 
 An unhandled 거래종류 is a hard error, never a silent skip. Skipping a category
 produces a NAV that is quietly wrong, which is the failure mode this whole
 design is organized against.
 
-환전 is the one category needing two cash legs (KRW down, USD up or the
-reverse) and is modeled as such.
+환전 is the one 거래종류 that needs two cash legs (KRW down, USD up or the
+reverse), and it gets them from two ordinary rows rather than a dedicated
+handler: the export already emits 환전 as a pair of rows, one per currency,
+and `categories.yaml` maps the paying row to `cash_out` and the receiving row
+to `cash_in`. No handler needs to know about FX at all.
 
 ### 4. Replay
 
@@ -238,12 +260,13 @@ its lazy-import-inside-command pattern.
 | `nav sync` | Fetch missing closes and FX, recompute `data/nav_daily.parquet`. |
 | `nav show [--date]` | Terminal output: NAV in KRW and USD, change vs. prior day, holdings with weights. Uses `rich`, already a dependency. |
 | `nav report [-o nav.html]` | Write the self-contained dashboard. |
-| `nav check <잔고.csv>` | Reconcile computed positions against a real 잔고 export; report per-symbol differences. |
-
-The 잔고 export format is undocumented and, like the 거래종류 vocabulary, is
-determined from a real file rather than assumed. `nav check` is last in the
-implementation order for that reason.
+| `nav check <statement.yaml>` | Reconcile computed positions against a real 잔고, given as a YAML file in the same shape as `seed.yaml`; report per-symbol differences. |
 | `nav rebuild` | Delete `data/`, re-derive from `imports/` and the YAML files. |
+
+The 잔고 export format is undocumented, so the statement is supplied as YAML in
+the same shape as `seed.yaml` rather than as a broker CSV. Transcribing a few
+positions is a minute's work, it is done rarely, and it keeps reconciliation
+independent of a format that has never been observed.
 
 ## Dashboard
 
@@ -311,8 +334,9 @@ guarding the taxonomy table against regressions.
 **Stock splits.** yfinance closes are split-adjusted; replayed quantities are
 not. A split after the seed date makes NAV jump incorrectly. nav does not
 correct this automatically — it detects it: `nav check` diffs computed
-positions against a real 잔고 export, and any single-day per-symbol price move
-beyond ±40% is flagged as a suspected corporate action.
+positions against a real 잔고 statement (YAML, in the `seed.yaml` shape), and
+any single-day per-symbol price move beyond ±40% is flagged as a suspected
+corporate action.
 
 **Seeded history.** NAV history begins at `seed_date`. Earlier history would
 require replaying from account inception, which is only correct if the export
@@ -327,19 +351,37 @@ so the staleness is visible.
 
 ## Upstream changes to `finance/ext/models.py`
 
-Three gaps in `Portfolio` are filled as part of this work. All are additive;
-existing callers keep working.
+More landed here than originally scoped. All of it is additive; existing
+callers keep working.
 
-1. `eval_nav()` currently reads `return 0`. Implement it, and add a daily NAV
-   series alongside the existing `eval_daily_inventories()`.
-2. Cash is single-currency: `_USD` is hardcoded in `apply_plan()` and excluded
-   by name in `make_rebalancing_plan()`. Generalize to a set of cash
-   pseudo-tickers so `_KRW` works too.
-3. No FX. Add rate lookup so a mixed-currency inventory can be summed into one
-   base currency.
+- `is_cash()` / `CASH_PREFIX`, replacing the hardcoded `_USD` check in
+  `apply_plan()` and the by-name exclusion in `make_rebalancing_plan()`, so
+  any underscore-prefixed pseudo-ticker (`_KRW` included) is recognized as
+  cash.
+- A `base_currency` constructor parameter with a derived `cash_ticker`
+  attribute, so a `Portfolio` knows which pseudo-ticker is its own cash
+  without the caller repeating `"_" + currency` everywhere.
+- `eval_nav()`, which previously read `return 0`, actually implemented: net
+  asset value at a point in time from an already-single-currency price dict.
+- `eval_daily_nav_series()`, a daily NAV series alongside the existing
+  `eval_daily_inventories()`.
+- `MissingPriceException`, raised by `eval_nav()`/`eval_daily_nav_series()`
+  instead of letting a bare `KeyError` escape when a ticker has no price.
+- `QUANTITY_EPSILON`, replacing an exact float-zero comparison: repeated
+  float `+=` on a fully-closed position lands on something like `1e-13`
+  rather than exact zero, so valuation now treats anything within this
+  tolerance of zero as closed instead of demanding a price for it.
+- A pure `_replay_transactions()` helper factored out of `eval_inventory()`,
+  so valuing a historical date (as `eval_nav()` routinely does on a live
+  `Portfolio`) no longer clobbers `self.inventory` as a side effect.
+- A fix to `eval_inventory()`'s default argument: it was
+  `evaluated_at=datetime.now(timezone.utc)`, a mutable default bound once at
+  import time, which froze "now" for the lifetime of the process. It is now
+  evaluated per call.
 
-`finance/ext/warehouse.py` and `finance/providers/miraeasset.py` are used as-is
-and are not modified.
+`finance/ext/warehouse.py` is used as-is and is not modified.
+`finance/providers/miraeasset.py` and `finance/providers/record.py` were
+modified — see Ingest, above.
 
 The parent README lists 총 자산 가치 추적 under 잠시 뒤로 미루어둔 주제. This
 work resumes it.
@@ -355,5 +397,8 @@ work resumes it.
 7. `nav report`.
 8. `nav check`.
 
-Step 1 gates steps 2 and 3: the taxonomy is derived from a real export, not
-assumed.
+Step 1 was meant to gate steps 2 and 3, deriving the taxonomy from a real
+export rather than assuming it. In practice steps 2-8 were built and tested
+against the redacted fixture without step 1 ever being run against a live
+account export, so `categories.yaml` and `symbols.yaml` remain starters —
+see Symbol resolution and Transaction taxonomy, above.
