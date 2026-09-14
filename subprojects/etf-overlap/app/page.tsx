@@ -83,22 +83,6 @@ function DonutChart({ overlap, total }: { overlap: number; total: number }) {
           cx={radius}
           cy={radius}
         />
-        {/* Center text */}
-        <text
-          x="50%"
-          y="50%"
-          textAnchor="middle"
-          dy=".3em"
-          style={{
-            fontSize: "28px",
-            fontWeight: "bold",
-            fill: "#0070f3",
-            transform: "rotate(90deg)",
-            transformOrigin: "center",
-          }}
-        >
-          {overlap.toFixed(1)}%
-        </text>
       </svg>
       <div style={{ textAlign: "center" }}>
         <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
@@ -634,54 +618,6 @@ export default function OverlapPage() {
                 </div>
               ))}
             </div>
-          </div>
-
-          {/* Interpretation guide */}
-          <div
-            style={{
-              marginTop: "2rem",
-              padding: "1rem",
-              backgroundColor: "#eff6ff",
-              borderRadius: "8px",
-              border: "1px solid #bfdbfe",
-            }}
-          >
-            <h3
-              style={{
-                marginBottom: "0.5rem",
-                fontSize: "1rem",
-                color: "#1e40af",
-              }}
-            >
-              📊 How to Read This
-            </h3>
-            <ul
-              style={{
-                marginLeft: "1.5rem",
-                color: "#1e40af",
-                lineHeight: "1.6",
-              }}
-            >
-              <li>
-                <strong>High overlap (60-100%)</strong>: Very similar holdings -
-                minimal diversification benefit
-              </li>
-              <li>
-                <strong>Medium overlap (30-60%)</strong>: Some shared exposure
-                with room for diversification
-              </li>
-              <li>
-                <strong>Low overlap (0-30%)</strong>: Different holdings - good
-                diversification potential
-              </li>
-              <li>
-                <strong>Diagonal (100%)</strong>: Each ETF compared to itself
-              </li>
-              <li>
-                <strong>💡 Click any cell</strong> to see detailed overlapping
-                holdings
-              </li>
-            </ul>
           </div>
 
           {/* Detailed overlap view */}
