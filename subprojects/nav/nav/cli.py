@@ -151,5 +151,40 @@ def rebuild(root: str, historical: str, fetch: bool):
     ctx.invoke(sync, root=root, historical=historical, fetch=fetch)
 
 
+@cli.command()
+@click.option("--root", default=DEFAULT_ROOT, show_default=True)
+@click.option("--historical", default=DEFAULT_HISTORICAL, show_default=True)
+@click.option("--date", "as_of", default=None, help="YYYY-MM-DD (defaults to the latest).")
+def show(root: str, historical: str, as_of):
+    """Print today's NAV, the change since yesterday, and the holdings."""
+    from datetime import datetime, timezone
+
+    import pandas as pd
+    from rich.console import Console
+
+    from nav import display, ingest, prices as prices_module, valuation
+
+    p, symbol_map, account_seed, transactions, portfolio = _load_state(root)
+    frame = ingest.load_frame(p["nav_daily"])
+    if frame is None:
+        raise click.ClickException("No NAV data. Run `nav sync` first.")
+
+    when = (
+        pd.Timestamp(frame.iloc[-1]["date"]).to_pydatetime()
+        if as_of is None
+        else datetime.strptime(as_of, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    )
+    summary = display.summarize(frame, when=when)
+
+    history = pd.read_parquet(historical)
+    tickers = _held_tickers(account_seed, transactions)
+    price_table, _ = prices_module.build_price_table(
+        history, tickers, symbol_map, [when], "KRW", extra_currencies=["USD"]
+    )
+    holdings = valuation.holdings_at(portfolio, when, price_table[when])
+
+    Console().print(display.render(summary, holdings))
+
+
 if __name__ == "__main__":
     cli()
