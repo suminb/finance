@@ -22,6 +22,21 @@ COLUMNS = [
 ]
 
 
+class UnrepresentableCurrencyError(ValueError):
+    """A cash balance the fixed output columns cannot show.
+
+    COLUMNS carries exactly two cash columns, cash_krw and cash_usd, while
+    nav_krw sums the whole inventory. A balance in any third currency would
+    therefore be counted in the total and missing from the breakdown, so the
+    two would not agree -- a report that does not sum to its own total is
+    precisely the silent wrongness this design exists to prevent.
+
+    A holding priced in a third currency is fine and needs no error: it is
+    converted into the base currency and lands in holdings_krw with the rest.
+    Only *cash* has a per-currency column to fall out of.
+    """
+
+
 def daily_dates(start: date_type, end: date_type) -> List[datetime]:
     """Every day from start to end inclusive, as UTC midnights.
 
@@ -78,12 +93,35 @@ def build(
     """NAV per day, in the base currency and in the reporting currency."""
     base_cash = cash_ticker(base)
     report_cash = cash_ticker(report_currency)
+    representable = {base_cash, report_cash}
 
     rows = []
     for when in dates:
         prices = prices_by_date[when]
         inventory = portfolio.eval_inventory(when)
         rate = prices[report_cash]
+
+        unrepresentable = sorted(
+            ticker
+            for ticker, quantity in inventory.items()
+            if is_cash(ticker)
+            and ticker not in representable
+            and abs(quantity) >= QUANTITY_EPSILON
+        )
+        if unrepresentable:
+            raise UnrepresentableCurrencyError(
+                "Cash held in {} on {}, but the daily series has columns only "
+                "for {} and {}. That balance would be counted in nav_{} and "
+                "missing from the breakdown, so the two would not agree. "
+                "Convert it, or add a column for it to valuation.COLUMNS and "
+                "build().".format(
+                    ", ".join(t.lstrip("_") for t in unrepresentable),
+                    pd.Timestamp(when).date(),
+                    base,
+                    report_currency,
+                    base.lower(),
+                )
+            )
 
         holdings = 0.0
         for ticker, quantity in inventory.items():

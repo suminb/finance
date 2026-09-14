@@ -134,3 +134,64 @@ def test_daily_dates_accepts_a_single_day_range():
     assert valuation.daily_dates(date(2026, 9, 9), date(2026, 9, 9)) == [
         datetime(2026, 9, 9, tzinfo=timezone.utc)
     ]
+
+
+def test_build_refuses_a_cash_balance_it_cannot_show():
+    """A JPY balance would be inside nav_krw and absent from the breakdown.
+
+    COLUMNS has cash_krw and cash_usd and nothing else, while nav_krw sums the
+    whole inventory, so a third cash currency makes the report disagree with
+    its own total. symbols.yaml ships `넥슨 일본 -> 3659.T, JPY`, so this is a
+    reachable state, not a hypothetical one.
+    """
+    legs = [
+        Portfolio.Transaction(utc(1), "_KRW", 1000000.0),
+        Portfolio.Transaction(utc(1), "_USD", 500.0),
+        Portfolio.Transaction(utc(1), "_JPY", 30000.0),
+    ]
+    pf = Portfolio({}, {}, legs, base_currency="KRW")
+    prices = {utc(1): {"_KRW": 1.0, "_USD": 1300.0, "_JPY": 9.0}}
+
+    with pytest.raises(valuation.UnrepresentableCurrencyError) as excinfo:
+        valuation.build(pf, [utc(1)], prices, {utc(1): []})
+    assert "JPY" in str(excinfo.value)
+    assert "KRW" in str(excinfo.value) and "USD" in str(excinfo.value)
+
+
+def test_build_ignores_a_third_currency_that_has_been_fully_spent():
+    """A closed JPY balance is float residue, not money; it must not block."""
+    legs = [
+        Portfolio.Transaction(utc(1), "_KRW", 1000000.0),
+        Portfolio.Transaction(utc(1), "_USD", 500.0),
+        Portfolio.Transaction(utc(1), "_JPY", 30000.0),
+        Portfolio.Transaction(utc(1), "_JPY", -30000.0 + QUANTITY_EPSILON / 10),
+    ]
+    pf = Portfolio({}, {}, legs, base_currency="KRW")
+    prices = {utc(1): {"_KRW": 1.0, "_USD": 1300.0, "_JPY": 9.0}}
+
+    frame = valuation.build(pf, [utc(1)], prices, {utc(1): []})
+    assert frame.iloc[0]["cash_krw"] == 1000000.0
+    assert frame.iloc[0]["cash_usd"] == 500.0
+
+
+def test_build_values_a_holding_in_a_third_currency_without_complaint():
+    """Only *cash* has a per-currency column to fall out of.
+
+    A JPY-denominated holding is converted into the base currency by the
+    price table and lands in holdings_krw with everything else, so it is
+    represented correctly and must not raise.
+    """
+    legs = [
+        Portfolio.Transaction(utc(1), "3659.T", 100.0),
+        Portfolio.Transaction(utc(1), "_KRW", 1000000.0),
+    ]
+    pf = Portfolio({}, {}, legs, base_currency="KRW")
+    # 3659.T at JPY 2,500 x JPY/KRW 9.0 = KRW 22,500 per share.
+    prices = {utc(1): {"3659.T": 22500.0, "_KRW": 1.0, "_USD": 1300.0}}
+
+    frame = valuation.build(pf, [utc(1)], prices, {utc(1): []})
+    row = frame.iloc[0]
+    assert row["holdings_krw"] == 100 * 22500.0
+    assert row["nav_krw"] == 100 * 22500.0 + 1000000.0
+    assert row["cash_krw"] == 1000000.0
+    assert row["cash_usd"] == 0.0

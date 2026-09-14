@@ -87,6 +87,40 @@ def held_tickers(account_seed, transactions) -> List[str]:
     return sorted(tickers)
 
 
+def account_currencies(
+    account_seed,
+    transactions,
+    symbol_map,
+    base: str = BASE_CURRENCY,
+    report: str = REPORT_CURRENCY,
+) -> List[str]:
+    """Every currency this account actually deals in.
+
+    This was `extra_currencies=["USD"]`, hardcoded at four call sites, while
+    the shipped symbols.yaml already carries `넥슨 일본 -> 3659.T, JPY`. A
+    holding priced in an unlisted currency would have had no rate fetched and
+    no rate in the price table, so it could not be valued at all.
+
+    Derived instead from the data: the seed's cash keys, the currency of every
+    row in the ledger (a 입금 in JPY creates a `_JPY` balance whether or not a
+    JPY ticker is held), and the currency of every held ticker -- plus the base
+    and reporting currencies, which are always needed.
+    """
+    currencies = {base, report}
+    currencies |= set(account_seed.cash)
+    currencies |= {t.currency for t in transactions if t.currency}
+    for ticker in held_tickers(account_seed, transactions):
+        try:
+            currencies.add(symbol_map.currency_of(ticker))
+        except KeyError:
+            raise click.ClickException(
+                "{} is held but is no longer listed in symbols.yaml, so its "
+                "currency is unknown. Restore the entry, or rebuild after "
+                "correcting it.".format(ticker)
+            ) from None
+    return sorted(currencies)
+
+
 def read_historical(path: str):
     """The shared parquet price warehouse.
 

@@ -253,6 +253,20 @@ NAV_USD(d) = NAV_KRW(d) / fx(USD, d)
 
 Both are stored so the report does not re-derive them.
 
+The set of currencies to price is derived from the account, not hardcoded:
+the seed's cash keys, the currency of every row in the ledger, and the
+currency of every held ticker, plus KRW and USD. `symbols.yaml` already ships
+`넥슨 일본 → 3659.T, JPY`, and a holding in a third currency is valued
+correctly — it is converted at its own rate and lands in `holdings_krw` with
+everything else.
+
+*Cash* in a third currency is different, and is refused rather than dropped.
+The daily series has one column per currency (`cash_krw`, `cash_usd`) while
+`nav_krw` sums the whole inventory, so a JPY balance would be inside the
+total and missing from the breakdown. A report that does not sum to its own
+total is the failure mode this design exists to prevent, so `nav sync` stops
+and names the currency. Supporting one means adding its column here.
+
 A missing close — market holiday, trading halt, delisting — carries forward the
 last known price and marks the day with the affected symbols in a `stale`
 column. KR and US market calendars differ, so on most days one side is stale by

@@ -115,9 +115,9 @@ def sync(root: str, historical: str, fetch: bool):
     if not tickers:
         raise click.ClickException("No holdings found; check seed.yaml and imports.")
 
+    currencies = state.account_currencies(account_seed, transactions, symbol_map)
     needed = prices_module.required_symbols(
-        tickers, symbol_map, state.BASE_CURRENCY,
-        extra_currencies=[state.REPORT_CURRENCY],
+        tickers, symbol_map, state.BASE_CURRENCY, extra_currencies=currencies
     )
     if fetch:
         click.echo("Fetching {} symbols...".format(len(needed)))
@@ -136,12 +136,15 @@ def sync(root: str, historical: str, fetch: bool):
         ) from None
     price_table, stale = prices_module.build_price_table(
         history, tickers, symbol_map, dates, state.BASE_CURRENCY,
-        extra_currencies=[state.REPORT_CURRENCY],
+        extra_currencies=currencies,
     )
-    frame = valuation.build(
-        portfolio, dates, price_table, stale,
-        base=state.BASE_CURRENCY, report_currency=state.REPORT_CURRENCY,
-    )
+    try:
+        frame = valuation.build(
+            portfolio, dates, price_table, stale,
+            base=state.BASE_CURRENCY, report_currency=state.REPORT_CURRENCY,
+        )
+    except valuation.UnrepresentableCurrencyError as error:
+        raise click.ClickException(str(error)) from None
     if frame.empty:
         # Belt and braces behind daily_dates' own check: persisting an empty
         # series is what wedged the account, so never write one.
@@ -231,7 +234,9 @@ def show(root: str, historical: str, as_of):
     tickers = state.held_tickers(account_seed, transactions)
     price_table, _ = prices_module.build_price_table(
         history, tickers, symbol_map, [when], state.BASE_CURRENCY,
-        extra_currencies=[state.REPORT_CURRENCY],
+        extra_currencies=state.account_currencies(
+            account_seed, transactions, symbol_map
+        ),
     )
     holdings = valuation.holdings_at(portfolio, when, price_table[when])
 
@@ -263,7 +268,10 @@ def report(root: str, historical: str, output):
     history = state.read_historical(historical)
     price_table, _ = prices_module.build_price_table(
         history, state.held_tickers(account_seed, transactions), symbol_map, [when],
-        state.BASE_CURRENCY, extra_currencies=[state.REPORT_CURRENCY],
+        state.BASE_CURRENCY,
+        extra_currencies=state.account_currencies(
+            account_seed, transactions, symbol_map
+        ),
     )
     holdings = valuation.holdings_at(portfolio, when, price_table[when])
 

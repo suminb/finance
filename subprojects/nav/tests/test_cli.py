@@ -191,7 +191,7 @@ def test_report_writes_a_self_contained_html_file_from_real_data(tmp_path):
     html = output_path.read_text(encoding="utf-8")
     start = html.index('id="nav-data">') + len('id="nav-data">')
     end = html.index("</script>", start)
-    payload = json.loads(html[start:end])  # raises if a numpy scalar leaked through
+    payload = json.loads(html[start:end])  # raises if the escaping broke the block
 
     assert payload["summary"]["nav_krw"] == 2115000.0
     assert payload["holdings"][0]["ticker"] == "AAPL"
@@ -670,3 +670,57 @@ def test_sync_without_a_historical_warehouse_says_what_creates_it(tmp_path):
     )
 
     assert_clean_error(result, "No price history", "nav sync")
+
+
+def test_sync_with_a_three_currency_seed_refuses_rather_than_omitting(tmp_path):
+    """A JPY cash balance end to end: nav_krw would include it, cash_krw and
+
+    cash_usd would not, and the breakdown would not sum to its own total.
+    Loud failure is the point; a plausible wrong number is the enemy.
+    """
+    root = tmp_path / "root"
+    (root / "data").mkdir(parents=True)
+    (root / "symbols.yaml").write_text(
+        yaml.safe_dump(
+            [
+                {"name": "APPLE", "ticker": "AAPL", "currency": "USD"},
+                {"name": "NEXON", "ticker": "3659.T", "currency": "JPY"},
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (root / "categories.yaml").write_text(yaml.safe_dump([]), encoding="utf-8")
+    (root / "seed.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "seed_date": utc(1).date(),
+                "positions": [{"ticker": "AAPL", "quantity": 10}],
+                "cash": {"KRW": 100000, "USD": 100, "JPY": 30000},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    historical_path = tmp_path / "historical.parquet"
+    pd.DataFrame(
+        [
+            {"symbol": "AAPL", "date": pd.Timestamp("2026-09-01"), "close": 150.0},
+            {"symbol": "USDKRW=X", "date": pd.Timestamp("2026-09-01"), "close": 1300.0},
+            # Present only because account_currencies derived JPY from the
+            # seed's cash keys; with the old hardcoded ["USD"] this rate would
+            # never have been asked for.
+            {"symbol": "JPYKRW=X", "date": pd.Timestamp("2026-09-01"), "close": 9.0},
+        ]
+    ).to_parquet(historical_path, index=False)
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "sync", "--no-fetch",
+            "--root", str(root),
+            "--historical", str(historical_path),
+        ],
+    )
+
+    assert_clean_error(result, "JPY", "breakdown", "would not agree")
+    assert not (root / "data" / "nav_daily.parquet").exists()
