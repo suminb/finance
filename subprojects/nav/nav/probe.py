@@ -6,7 +6,6 @@ does not match that parser's expectations -- finding out how the export is
 actually shaped is the whole point.
 """
 
-import codecs
 import csv
 from collections import Counter
 from dataclasses import dataclass
@@ -26,7 +25,7 @@ class CategorySummary:
 
 def read_rows(path: str, encoding: str = DEFAULT_ENCODING) -> Tuple[List[str], List[List[str]]]:
     """Reads a 0650 export into a header list and a list of row lists."""
-    with codecs.open(path, "r", encoding=encoding) as fin:
+    with open(path, "r", encoding=encoding) as fin:
         reader = csv.reader(fin)
         headers = [h.strip() for h in next(reader)]
         rows = [[c.strip() for c in row] for row in reader if any(c.strip() for c in row)]
