@@ -130,23 +130,25 @@ def sync(root: str, historical: str, fetch: bool):
 
 @cli.command()
 @click.option("--root", default=DEFAULT_ROOT, show_default=True)
+@click.option("--historical", default=DEFAULT_HISTORICAL, show_default=True)
+@click.option("--fetch/--no-fetch", default=True, help="Fetch missing prices from Yahoo.")
 @click.confirmation_option(prompt="Delete data/ and rebuild from imports/?")
-def rebuild(root: str):
+def rebuild(root: str, historical: str, fetch: bool):
     """Delete derived data and rebuild it from imports/ and the YAML files."""
     import glob
     import shutil
-
-    data_dir = os.path.join(root, "data")
-    if os.path.isdir(data_dir):
-        shutil.rmtree(data_dir)
 
     exports = sorted(glob.glob(os.path.join(root, "imports", "*.csv")))
     if not exports:
         raise click.ClickException("No exports found under {}/imports".format(root))
 
+    data_dir = os.path.join(root, "data")
+    if os.path.isdir(data_dir):
+        shutil.rmtree(data_dir)
+
     ctx = click.get_current_context()
     ctx.invoke(import_, paths=tuple(exports), root=root)
-    ctx.invoke(sync, root=root, historical=DEFAULT_HISTORICAL, fetch=True)
+    ctx.invoke(sync, root=root, historical=historical, fetch=fetch)
 
 
 if __name__ == "__main__":

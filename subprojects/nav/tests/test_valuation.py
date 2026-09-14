@@ -2,7 +2,7 @@ from datetime import date, datetime, timezone
 
 import pytest
 
-from finance.ext.models import Portfolio
+from finance.ext.models import QUANTITY_EPSILON, Portfolio
 from nav import valuation
 
 
@@ -80,3 +80,39 @@ def test_holdings_at_omits_closed_positions():
     pf = Portfolio({}, {}, legs, base_currency="KRW")
     tickers = {h["ticker"] for h in valuation.holdings_at(pf, utc(2), {"_KRW": 1.0})}
     assert tickers == {"_KRW"}
+
+
+def _residual_portfolio():
+    """A position that nets to a float residual within QUANTITY_EPSILON.
+
+    Mirrors the kind of leftover (e.g. 1e-13) that repeated float addition
+    produces on a fully-closed position, per QUANTITY_EPSILON's docstring in
+    finance.ext.models.
+    """
+    residual = QUANTITY_EPSILON / 10
+    legs = [
+        Portfolio.Transaction(utc(1), "AAPL", 10.0),
+        Portfolio.Transaction(utc(1), "AAPL", -10.0 + residual),
+        Portfolio.Transaction(utc(1), "_KRW", 100.0),
+    ]
+    return Portfolio({}, {}, legs, base_currency="KRW")
+
+
+def test_holdings_at_omits_a_residual_quantity_within_epsilon():
+    tickers = {
+        h["ticker"]
+        for h in valuation.holdings_at(
+            _residual_portfolio(), utc(2), {"_KRW": 1.0, "AAPL": 150.0}
+        )
+    }
+    assert tickers == {"_KRW"}
+
+
+def test_build_holdings_krw_excludes_a_residual_quantity_within_epsilon():
+    prices = {"AAPL": 150.0, "_KRW": 1.0, "_USD": 1300.0}
+    frame = valuation.build(
+        _residual_portfolio(), [utc(2)], {utc(2): prices}, {utc(2): []}
+    )
+    row = frame.iloc[0]
+    assert row["holdings_krw"] == pytest.approx(0.0)
+    assert row["nav_krw"] == pytest.approx(100.0)

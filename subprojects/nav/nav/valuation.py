@@ -6,7 +6,7 @@ from typing import Dict, Iterable, List
 
 import pandas as pd
 
-from finance.ext.models import Portfolio, is_cash
+from finance.ext.models import QUANTITY_EPSILON, Portfolio, is_cash
 
 from nav.model import cash_ticker
 
@@ -38,7 +38,7 @@ def holdings_at(portfolio: Portfolio, when: datetime, prices: Dict[str, float]) 
     inventory = portfolio.eval_inventory(when)
     rows = []
     for ticker, quantity in inventory.items():
-        if quantity == 0:
+        if abs(quantity) < QUANTITY_EPSILON:
             continue
         value = prices[ticker] * quantity
         rows.append(
@@ -76,7 +76,7 @@ def build(
 
         holdings = 0.0
         for ticker, quantity in inventory.items():
-            if quantity == 0 or is_cash(ticker):
+            if abs(quantity) < QUANTITY_EPSILON or is_cash(ticker):
                 continue
             holdings += prices[ticker] * quantity
 
