@@ -37,11 +37,38 @@ def paths(root: str) -> dict:
     }
 
 
+def require_file(path: str, what: str, hint: str) -> str:
+    """A missing input file is a first-run certainty, not an exceptional case.
+
+    Left to itself each of these exits on a bare FileNotFoundError traceback
+    with nothing on stdout, which tells a first-time user neither which of the
+    three files is missing nor what to put in it.
+    """
+    if not os.path.exists(path):
+        raise click.ClickException("{} not found: {}. {}".format(what, path, hint))
+    return path
+
+
 def load_state(root: str):
     """Everything needed to value the account: maps, seed, transactions."""
     from nav import categories, ingest, replay, seed as seed_module, symbols
 
     p = paths(root)
+    require_file(
+        p["symbols"], "symbols.yaml", "It maps each 종목명 to a ticker and a currency."
+    )
+    require_file(
+        p["categories"],
+        "categories.yaml",
+        "It maps each 거래종류 to a handler; `nav categories <export>` prints the "
+        "vocabulary to fill it from.",
+    )
+    require_file(
+        p["seed"],
+        "seed.yaml",
+        "It holds the opening 잔고 every later figure is replayed from. "
+        "Copy {} and fill it in.".format(os.path.join(root, "seed.example.yaml")),
+    )
     symbol_map = symbols.load(p["symbols"])
     category_map = categories.load(p["categories"])
     account_seed = seed_module.load(p["seed"], symbol_map)
@@ -61,6 +88,17 @@ def held_tickers(account_seed, transactions) -> List[str]:
 
 
 def read_historical(path: str):
+    """The shared parquet price warehouse.
+
+    Absent, pyarrow raises its own error about a path it was handed, which
+    says nothing about what creates the file.
+    """
     import pandas as pd
 
+    if not os.path.exists(path):
+        raise click.ClickException(
+            "No price history at {}. `nav sync` creates it by fetching closes "
+            "and FX from Yahoo; `--historical PATH` points at another "
+            "warehouse.".format(path)
+        )
     return pd.read_parquet(path)

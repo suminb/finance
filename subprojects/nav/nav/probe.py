@@ -23,17 +23,51 @@ class CategorySummary:
     sample: Dict[str, str]
 
 
+class MalformedExportError(Exception):
+    """The file is not a readable 0650 export.
+
+    Every one of these used to escape as a raw traceback -- a UnicodeDecodeError
+    for a file that has been through Excel and come back as UTF-8, a bare
+    StopIteration for an empty file, a `ValueError: '거래종류' is not in list`
+    for a file whose header is not a 0650 header at all. Discovering the shape
+    of an export is what this module is for, so its failures have to say what
+    was wrong with the file.
+    """
+
+
 def read_rows(path: str, encoding: str = DEFAULT_ENCODING) -> Tuple[List[str], List[List[str]]]:
     """Reads a 0650 export into a header list and a list of row lists."""
-    with open(path, "r", encoding=encoding) as fin:
-        reader = csv.reader(fin)
-        headers = [h.strip() for h in next(reader)]
-        rows = [[c.strip() for c in row] for row in reader if any(c.strip() for c in row)]
+    try:
+        with open(path, "r", encoding=encoding) as fin:
+            reader = csv.reader(fin)
+            try:
+                headers = [h.strip() for h in next(reader)]
+            except StopIteration:
+                raise MalformedExportError(
+                    "{} is empty: no header row to read.".format(path)
+                ) from None
+            rows = [
+                [c.strip() for c in row] for row in reader if any(c.strip() for c in row)
+            ]
+    except UnicodeDecodeError as error:
+        raise MalformedExportError(
+            "{} is not {}-encoded ({}). 미래에셋 exports 0650 as euc-kr, but a "
+            "round-trip through Excel usually re-saves it as UTF-8 or cp949; "
+            "pass --encoding utf-8 (or --encoding cp949) if that is what "
+            "happened.".format(path, encoding, error.reason)
+        ) from None
     return headers, rows
 
 
 def summarize_categories(headers: List[str], rows: List[List[str]]) -> List[CategorySummary]:
     """Counts distinct 거래종류 values, keeping one sample row for each."""
+    if CATEGORY_COLUMN not in headers:
+        raise MalformedExportError(
+            "No {} column; this does not look like a 거래내역조회 (0650) export. "
+            "Columns found: {}".format(
+                CATEGORY_COLUMN, ", ".join(headers) if headers else "(none)"
+            )
+        )
     index = headers.index(CATEGORY_COLUMN)
     counts: Counter = Counter(row[index] for row in rows)
     samples: Dict[str, Dict[str, str]] = {}

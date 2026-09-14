@@ -11,8 +11,29 @@ from nav.cli import cli
 from nav.symbols import Symbol, SymbolMap
 
 
+SAMPLE = "subprojects/nav/tests/samples/miraeasset_0650_sample.csv"
+
+
 def utc(day):
     return datetime(2026, 9, day, tzinfo=timezone.utc)
+
+
+def assert_clean_error(result, *fragments):
+    """The failure reached the user as a message, not as an escaped exception.
+
+    `"Traceback" not in result.output` cannot fail: CliRunner captures an
+    uncaught exception in `result.exception` and never writes it to
+    `result.output`. What actually distinguishes the two cases is the
+    exception object -- click turns a ClickException into SystemExit(1) after
+    printing "Error: ...", while anything else arrives intact.
+    """
+    assert result.exit_code != 0, result.output
+    assert isinstance(result.exception, SystemExit), (
+        "expected a ClickException, but {!r} escaped".format(result.exception)
+    )
+    assert "Error: " in result.output, result.output
+    for fragment in fragments:
+        assert fragment in result.output, result.output
 
 
 def _build_show_root(tmp_path):
@@ -129,10 +150,7 @@ def test_show_with_an_unknown_date_is_a_clean_error(tmp_path):
         ],
     )
 
-    assert result.exit_code != 0
-    assert "Traceback" not in result.output
-    assert "2026-09-01" in result.output
-    assert "2026-09-02" in result.output
+    assert_clean_error(result, "2026-09-01", "2026-09-02")
 
 
 def test_report_writes_a_self_contained_html_file_from_real_data(tmp_path):
@@ -285,3 +303,245 @@ def test_rebuild_checks_for_exports_before_deleting_data(tmp_path):
     assert result.exit_code != 0
     assert data_dir.exists()
     assert marker.exists()
+
+
+# --------------------------------------------------------------------------
+# `nav import`: the designed workflow, and the ways a first run goes wrong.
+# --------------------------------------------------------------------------
+
+
+def _import_root(tmp_path, symbols_yaml=None, categories_yaml=None):
+    """A root holding just the two YAML maps `nav import` needs."""
+    root = tmp_path / "root"
+    root.mkdir(exist_ok=True)
+    if symbols_yaml is not None:
+        (root / "symbols.yaml").write_text(symbols_yaml, encoding="utf-8")
+    if categories_yaml is not None:
+        (root / "categories.yaml").write_text(categories_yaml, encoding="utf-8")
+    return root
+
+
+FULL_SYMBOLS = (
+    "- {name: 애플, ticker: AAPL, currency: USD}\n"
+    "- {name: 삼성전자보통주, ticker: 005930.KS, currency: KRW}\n"
+)
+FULL_CATEGORIES = (
+    "- {category: 현금매수, handler: buy}\n"
+    "- {category: 배당금, handler: dividend}\n"
+    "- {category: 출금, handler: cash_out}\n"
+)
+
+
+def test_import_writes_the_transaction_table_and_is_idempotent(tmp_path):
+    """`nav import` end to end against the committed 0650 fixture.
+
+    Re-running it must report the same total with nothing new, which is the
+    idempotency the (date, seq) key exists to provide.
+    """
+    root = _import_root(tmp_path, FULL_SYMBOLS, FULL_CATEGORIES)
+    runner = CliRunner()
+
+    first = runner.invoke(cli, ["import", SAMPLE, "--root", str(root)])
+    assert first.exit_code == 0, first.output
+    assert "4 rows read, 4 new, 4 total" in first.output
+    assert (root / "data" / "transaction.parquet").exists()
+
+    second = runner.invoke(cli, ["import", SAMPLE, "--root", str(root)])
+    assert second.exit_code == 0, second.output
+    assert "4 rows read, 0 new, 4 total" in second.output
+
+
+def test_import_with_an_unmapped_symbol_shows_the_stub_not_a_traceback(tmp_path):
+    """The interaction the README advertises, and the one a user hits most.
+
+    Buying a new holding always produces a 종목명 that symbols.yaml has never
+    seen. The whole value of that failure is the paste-ready YAML stub, which
+    used to arrive as the last line of a raw Python traceback with nothing on
+    stdout at all.
+    """
+    root = _import_root(
+        tmp_path, "- {name: 애플, ticker: AAPL, currency: USD}\n", FULL_CATEGORIES
+    )
+
+    result = CliRunner().invoke(cli, ["import", SAMPLE, "--root", str(root)])
+
+    assert_clean_error(
+        result,
+        "Unmapped 종목명",
+        "symbols.yaml",
+        "- {name: 삼성전자보통주, ticker: '???', currency: '???'}",
+    )
+    assert not (root / "data").exists()  # nothing written
+
+
+def test_import_with_an_unmapped_category_shows_the_stub(tmp_path):
+    root = _import_root(
+        tmp_path, FULL_SYMBOLS, "- {category: 현금매수, handler: buy}\n"
+    )
+
+    result = CliRunner().invoke(cli, ["import", SAMPLE, "--root", str(root)])
+
+    assert_clean_error(
+        result, "Unmapped 거래종류", "categories.yaml", "handler: '???'", "배당금"
+    )
+
+
+def test_import_of_a_colliding_key_is_a_clean_error(tmp_path):
+    """The Critical data-loss case reaches the user as a message, not a raise."""
+    root = _import_root(
+        tmp_path,
+        "[]\n",
+        "- {category: 출금, handler: cash_out}\n- {category: 입금, handler: cash_in}\n",
+    )
+    header = open(SAMPLE, encoding="euc-kr").readline().rstrip("\n")
+    export = tmp_path / "fx.csv"
+    export.write_text(
+        "\n".join(
+            [
+                header,
+                '2026/09/05,7,출금,환전출금,KRW,"1,300,000","1,300,000",0,,,'
+                "0,0,0,0,0,0,,110000,HTS,,,,,,",
+                '2026/09/05,7,입금,환전입금,USD,"1,000.00","1,000.00",0,,,'
+                "0,0,0,0,0,0,,110000,HTS,,,,,,",
+            ]
+        )
+        + "\n",
+        encoding="euc-kr",
+    )
+
+    result = CliRunner().invoke(cli, ["import", str(export), "--root", str(root)])
+
+    assert_clean_error(result, "거래번호", "seq=7")
+    assert not (root / "data").exists()
+
+
+def test_import_of_a_utf8_export_names_the_encoding(tmp_path):
+    """The likeliest shape of a broken export: an Excel round-trip to UTF-8."""
+    root = _import_root(tmp_path, FULL_SYMBOLS, FULL_CATEGORIES)
+    export = tmp_path / "utf8.csv"
+    export.write_bytes(
+        open(SAMPLE, "rb").read().decode("euc-kr").encode("utf-8")
+    )
+
+    result = CliRunner().invoke(cli, ["import", str(export), "--root", str(root)])
+
+    assert_clean_error(result, "not euc-kr", "iconv")
+
+
+def test_import_of_a_non_0650_file_names_the_column_count(tmp_path):
+    """finance.providers.miraeasset's 25-column assert, wrapped at the boundary."""
+    root = _import_root(tmp_path, FULL_SYMBOLS, FULL_CATEGORIES)
+    export = tmp_path / "wrong.csv"
+    export.write_text("a,b,c\n1,2,3\n", encoding="euc-kr")
+
+    result = CliRunner().invoke(cli, ["import", str(export), "--root", str(root)])
+
+    assert_clean_error(result, "0650", "25 columns")
+
+
+def test_import_without_symbols_yaml_names_the_file(tmp_path):
+    root = _import_root(tmp_path, None, FULL_CATEGORIES)
+
+    result = CliRunner().invoke(cli, ["import", SAMPLE, "--root", str(root)])
+
+    assert_clean_error(result, "symbols.yaml not found", "종목명")
+
+
+def test_import_without_categories_yaml_names_the_file(tmp_path):
+    root = _import_root(tmp_path, FULL_SYMBOLS, None)
+
+    result = CliRunner().invoke(cli, ["import", SAMPLE, "--root", str(root)])
+
+    assert_clean_error(result, "categories.yaml not found", "nav categories")
+
+
+# --------------------------------------------------------------------------
+# Missing inputs on the valuation commands.
+# --------------------------------------------------------------------------
+
+
+def test_show_without_a_seed_points_at_the_example(tmp_path):
+    root = _import_root(tmp_path, FULL_SYMBOLS, FULL_CATEGORIES)
+
+    result = CliRunner().invoke(cli, ["show", "--root", str(root)])
+
+    assert_clean_error(result, "seed.yaml not found", "seed.example.yaml")
+
+
+def test_show_without_symbols_yaml_names_the_file(tmp_path):
+    root = _import_root(tmp_path, None, FULL_CATEGORIES)
+
+    result = CliRunner().invoke(cli, ["show", "--root", str(root)])
+
+    assert_clean_error(result, "symbols.yaml not found")
+
+
+def test_show_without_a_historical_warehouse_says_what_creates_it(tmp_path):
+    root, _ = _build_show_root(tmp_path)
+
+    result = CliRunner().invoke(
+        cli,
+        ["show", "--root", str(root), "--historical", str(tmp_path / "absent.parquet")],
+    )
+
+    assert_clean_error(result, "No price history", "nav sync")
+
+
+def test_report_without_a_historical_warehouse_says_what_creates_it(tmp_path):
+    root, _ = _build_show_root(tmp_path)
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "report",
+            "--root", str(root),
+            "--historical", str(tmp_path / "absent.parquet"),
+            "--output", str(tmp_path / "nav.html"),
+        ],
+    )
+
+    assert_clean_error(result, "No price history", "nav sync")
+
+
+def test_show_with_a_malformed_date_is_a_clean_error(tmp_path):
+    """Distinct from a well-formed date with no row: strptime itself fails."""
+    root, historical_path = _build_show_root(tmp_path)
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "show",
+            "--root", str(root),
+            "--historical", str(historical_path),
+            "--date", "2026-13-45",
+        ],
+    )
+
+    assert_clean_error(result, "YYYY-MM-DD", "2026-13-45")
+
+
+def test_categories_on_a_utf8_export_names_the_encoding(tmp_path):
+    export = tmp_path / "utf8.csv"
+    export.write_bytes(open(SAMPLE, "rb").read().decode("euc-kr").encode("utf-8"))
+
+    result = CliRunner().invoke(cli, ["categories", str(export)])
+
+    assert_clean_error(result, "not euc-kr-encoded", "--encoding utf-8")
+
+
+def test_categories_on_an_empty_file_says_so(tmp_path):
+    export = tmp_path / "empty.csv"
+    export.write_text("", encoding="euc-kr")
+
+    result = CliRunner().invoke(cli, ["categories", str(export)])
+
+    assert_clean_error(result, "is empty")
+
+
+def test_categories_without_a_category_column_says_so(tmp_path):
+    export = tmp_path / "other.csv"
+    export.write_text("a,b,c\n1,2,3\n", encoding="euc-kr")
+
+    result = CliRunner().invoke(cli, ["categories", str(export)])
+
+    assert_clean_error(result, "No 거래종류 column", "0650")

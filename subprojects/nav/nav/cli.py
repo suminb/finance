@@ -23,8 +23,11 @@ def categories(path: str, encoding: str):
     """Print the 거래종류 vocabulary and numeric formats of a 0650 export."""
     from nav import probe
 
-    headers, rows = probe.read_rows(path, encoding=encoding)
-    click.echo(probe.format_report(headers, rows))
+    try:
+        headers, rows = probe.read_rows(path, encoding=encoding)
+        click.echo(probe.format_report(headers, rows))
+    except probe.MalformedExportError as error:
+        raise click.ClickException(str(error)) from None
 
 
 @cli.command(name="import")
@@ -38,15 +41,51 @@ def import_(paths, root: str):
     from nav import state
 
     p = state.paths(root)
+    state.require_file(
+        p["symbols"], "symbols.yaml", "It maps each 종목명 to a ticker and a currency."
+    )
+    state.require_file(
+        p["categories"],
+        "categories.yaml",
+        "It maps each 거래종류 to a handler; `nav categories <export>` prints the "
+        "vocabulary to fill it from.",
+    )
     symbol_map = symbols.load(p["symbols"])
     category_map = categories.load(p["categories"])
     provider = Miraeasset()
 
     transactions = []
     for path in paths:
-        transactions += ingest.normalize(
-            provider.read_records(path), symbol_map, category_map, source=path
-        )
+        # An unmapped 종목명 is the interaction this design advertises -- it
+        # happens the first time any new holding is bought -- and its whole
+        # value is the paste-ready YAML stub the exception carries. Raw, that
+        # stub arrives as the tail of a twenty-line traceback.
+        try:
+            transactions += ingest.normalize(
+                provider.read_records(path), symbol_map, category_map, source=path
+            )
+        except (
+            symbols.UnknownSymbolError,
+            categories.UnknownCategoryError,
+            ingest.DuplicateKeyError,
+        ) as error:
+            raise click.ClickException(str(error)) from None
+        except UnicodeDecodeError as error:
+            raise click.ClickException(
+                "{} is not euc-kr ({}). 미래에셋 exports 0650 as euc-kr; a "
+                "round-trip through Excel usually re-saves it as UTF-8. "
+                "Re-export it, or convert it back with `iconv -f utf-8 -t "
+                "euc-kr`.".format(path, error.reason)
+            ) from None
+        except AssertionError as error:
+            # finance.providers.miraeasset asserts a 25-column header. That
+            # assertion is the parent package's, and is left alone; it is
+            # wrapped here, at the nav boundary, where the user is.
+            raise click.ClickException(
+                "{} does not look like a 거래내역조회 (0650) export ({}). "
+                "0650 has 25 columns; `nav categories {}` prints what was "
+                "actually found.".format(path, error, path)
+            ) from None
 
     existing = ingest.load_frame(p["transaction"])
     before = 0 if existing is None else len(existing)
@@ -146,11 +185,18 @@ def show(root: str, historical: str, as_of):
     if frame is None:
         raise click.ClickException("No NAV data. Run `nav sync` first.")
 
-    when = (
-        pd.Timestamp(frame.iloc[-1]["date"]).to_pydatetime()
-        if as_of is None
-        else datetime.strptime(as_of, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-    )
+    if as_of is None:
+        when = pd.Timestamp(frame.iloc[-1]["date"]).to_pydatetime()
+    else:
+        # A well-formed date with no row is handled below; this is the other
+        # half -- a date that strptime cannot parse at all, which used to be a
+        # raw ValueError.
+        try:
+            when = datetime.strptime(as_of, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        except ValueError:
+            raise click.ClickException(
+                "--date must be YYYY-MM-DD, got {!r}.".format(as_of)
+            ) from None
     try:
         summary = display.summarize(frame, when=when)
     except KeyError:

@@ -79,7 +79,7 @@ class SymbolMap:
         try:
             return self._by_name[name]
         except KeyError:
-            raise UnknownSymbolError([name])
+            raise UnknownSymbolError([name]) from None
 
     def resolve_all(self, names: Iterable[str]) -> Dict[str, Symbol]:
         names = list(names)

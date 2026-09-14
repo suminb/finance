@@ -1,3 +1,5 @@
+import pytest
+
 from nav import probe
 
 SAMPLE = "subprojects/nav/tests/samples/miraeasset_0650_sample.csv"
@@ -44,3 +46,39 @@ def test_format_report_lists_distinct_symbol_names():
     report = probe.format_report(headers, rows)
     assert "애플" in report
     assert "삼성전자보통주" in report
+
+
+def test_read_rows_on_a_wrongly_encoded_file_says_so(tmp_path):
+    """An Excel round-trip re-saves the euc-kr export as UTF-8; that must not
+
+    surface as a bare UnicodeDecodeError traceback.
+    """
+    path = tmp_path / "utf8.csv"
+    path.write_bytes(open(SAMPLE, "rb").read().decode("euc-kr").encode("utf-8"))
+
+    with pytest.raises(probe.MalformedExportError) as excinfo:
+        probe.read_rows(str(path))
+    assert "not euc-kr-encoded" in str(excinfo.value)
+    assert "--encoding utf-8" in str(excinfo.value)
+
+
+def test_read_rows_on_an_empty_file_says_so(tmp_path):
+    """`next(reader)` on an empty file used to raise a bare StopIteration."""
+    path = tmp_path / "empty.csv"
+    path.write_text("", encoding="euc-kr")
+
+    with pytest.raises(probe.MalformedExportError, match="is empty"):
+        probe.read_rows(str(path))
+
+
+def test_summarize_categories_without_the_category_column_says_so():
+    """`headers.index(...)` used to raise `ValueError: '거래종류' is not in list`."""
+    with pytest.raises(probe.MalformedExportError) as excinfo:
+        probe.summarize_categories(["a", "b"], [["1", "2"]])
+    assert "거래종류" in str(excinfo.value)
+    assert "0650" in str(excinfo.value)
+
+
+def test_format_report_without_the_category_column_says_so():
+    with pytest.raises(probe.MalformedExportError):
+        probe.format_report(["a", "b"], [["1", "2"]])
