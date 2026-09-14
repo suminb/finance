@@ -1,0 +1,15 @@
+# 거래종류 -> handler. Handlers are defined in nav/categories.py:
+#   buy, sell, cash_in, cash_out, dividend, interest, fee, noop
+#
+# 환전 appears as a pair of rows, one per currency: map the paying row to
+# cash_out and the receiving row to cash_in.
+#
+# STARTER ENTRIES: These five cover the test fixture only. This file has NOT
+# been reconciled against a real 0650 export. nav import will report any
+# 거래종류 that is missing.
+#
+- {category: 현금매수, handler: buy}
+- {category: 현금매도, handler: sell}
+- {category: 입금, handler: cash_in}
+- {category: 출금, handler: cash_out}
+- {category: 배당금, handler: dividend}
