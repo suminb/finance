@@ -16,9 +16,20 @@ from nav.model import Leg, Transaction, cash_ticker
 class UnknownCategoryError(Exception):
     def __init__(self, categories: List[str]):
         self.categories = list(categories)
-        self.stub = "\n".join(
-            "- {category: %s, handler: ???}" % c for c in self.categories
-        )
+        # Generate stub by round-tripping through YAML to properly escape categories.
+        # Each entry is: - {category: "...", handler: '???'}
+        # where the category is quoted if it contains special characters.
+        lines = []
+        for category in self.categories:
+            # Use safe_dump to escape the category properly, preserving Unicode.
+            escaped_category = yaml.safe_dump(
+                {"category": category}, default_flow_style=True, allow_unicode=True
+            ).strip()
+            # safe_dump produces "{category: '...'}\n", we want just the quoted value
+            start = escaped_category.find("category: ") + len("category: ")
+            quoted_category = escaped_category[start:escaped_category.rfind("}")]
+            lines.append("- {{category: {}, handler: '???'}}".format(quoted_category))
+        self.stub = "\n".join(lines)
         super().__init__(
             "Unmapped 거래종류 ({}). Add to categories.yaml:\n{}".format(
                 len(self.categories), self.stub
@@ -87,15 +98,29 @@ HANDLERS: Dict[str, Callable[[Transaction], List[Leg]]] = {
 
 
 class CategoryMap:
-    def __init__(self, mapping: Dict[str, str]):
-        for category, handler in mapping.items():
+    def __init__(self, entries: Iterable[Dict[str, str]]):
+        self._mapping: Dict[str, str] = {}
+        for entry in entries:
+            category = entry["category"]
+            handler = entry["handler"]
             if handler not in HANDLERS:
                 raise ValueError(
                     "unknown handler {!r} for 거래종류 {!r}; known handlers: {}".format(
                         handler, category, ", ".join(sorted(HANDLERS))
                     )
                 )
-        self._mapping = dict(mapping)
+            # Check for duplicate categories with conflicting handlers
+            existing_handler = self._mapping.get(category)
+            if existing_handler is not None:
+                if existing_handler != handler:
+                    raise ValueError(
+                        "duplicate category '{}': handlers '{}' and '{}'".format(
+                            category, existing_handler, handler
+                        )
+                    )
+                # Exact duplicate (same category, same handler) is allowed, so just continue
+                continue
+            self._mapping[category] = handler
 
     def validate(self, categories: Iterable[str]) -> None:
         missing = sorted({c for c in categories if c not in self._mapping})
@@ -106,11 +131,11 @@ class CategoryMap:
         try:
             handler_name = self._mapping[transaction.category]
         except KeyError:
-            raise UnknownCategoryError([transaction.category])
+            raise UnknownCategoryError([transaction.category]) from None
         return HANDLERS[handler_name](transaction)
 
 
 def load(path: str) -> CategoryMap:
     with open(path, encoding="utf-8") as fin:
         entries = yaml.safe_load(fin) or []
-    return CategoryMap({e["category"]: e["handler"] for e in entries})
+    return CategoryMap(entries)
