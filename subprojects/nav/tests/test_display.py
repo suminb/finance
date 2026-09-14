@@ -47,9 +47,25 @@ def test_summarize_rejects_an_absent_date():
         display.summarize(FRAME, when=utc(9))
 
 
-def test_render_returns_something_printable():
+def test_render_shows_both_currencies_and_a_stale_symbol_not_held():
+    """The USD figure and the stale list are load-bearing, not decorative.
+
+    The stale symbol (MSFT) is deliberately absent from holdings, so its
+    appearance in the rendered text can only come from the stale
+    annotation -- not incidentally from a holdings-table row that happens
+    to share a ticker with the stale list (as AAPL would if reused here).
+    """
     from rich.console import Console
 
+    summary = {
+        "date": utc(2),
+        "nav_krw": 1100.0,
+        "nav_usd": 1.1,
+        "change_krw": 100.0,
+        "change_pct": 0.1,
+        "fx_usdkrw": 1000.0,
+        "stale": ["MSFT"],
+    }
     holdings = [
         {"ticker": "AAPL", "quantity": 10.0, "price_krw": 100.0,
          "value_krw": 1000.0, "is_cash": False, "weight": 0.9},
@@ -57,7 +73,9 @@ def test_render_returns_something_printable():
          "value_krw": 100.0, "is_cash": True, "weight": 0.1},
     ]
     console = Console(record=True, width=100)
-    console.print(display.render(display.summarize(FRAME), holdings))
+    console.print(display.render(summary, holdings))
     text = console.export_text()
     assert "AAPL" in text
     assert "1,100" in text
+    assert "1.10 USD" in text
+    assert "MSFT" in text

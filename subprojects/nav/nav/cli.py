@@ -174,7 +174,16 @@ def show(root: str, historical: str, as_of):
         if as_of is None
         else datetime.strptime(as_of, "%Y-%m-%d").replace(tzinfo=timezone.utc)
     )
-    summary = display.summarize(frame, when=when)
+    try:
+        summary = display.summarize(frame, when=when)
+    except KeyError:
+        earliest = pd.Timestamp(frame.iloc[0]["date"]).date()
+        latest = pd.Timestamp(frame.iloc[-1]["date"]).date()
+        raise click.ClickException(
+            "No NAV row for {}. Available dates: {} to {}.".format(
+                when.date(), earliest, latest
+            )
+        )
 
     history = pd.read_parquet(historical)
     tickers = _held_tickers(account_seed, transactions)
