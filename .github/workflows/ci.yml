@@ -26,9 +26,16 @@ jobs:
       run: |
         # Disable black for now...
         # black --check .
-        mypy --install-types --non-interactive --ignore-missing-imports finance
+        mypy --install-types --non-interactive --ignore-missing-imports \
+          finance subprojects/nav/nav
+    # subprojects/nav/tests was not collected here at all, so the nav
+    # subproject's tests -- the large majority of the suite -- never ran in
+    # CI. nav's own dependencies (click, pandas, pyarrow, PyYAML, rich) are
+    # already a subset of requirements.txt, so it needs no extra install;
+    # putting subprojects/nav on PYTHONPATH is enough to import it, the same
+    # way `.` is enough to import finance.
     - name: Test with pytest
       run: |
-        pytest -v tests --cov finance --cov-report term-missing
+        pytest -v tests subprojects/nav/tests --cov finance --cov-report term-missing
       env:
-        PYTHONPATH: .
+        PYTHONPATH: .:subprojects/nav

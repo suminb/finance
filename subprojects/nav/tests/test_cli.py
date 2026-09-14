@@ -610,3 +610,55 @@ def test_sync_with_a_future_seed_date_says_so_and_writes_nothing(tmp_path):
 
     assert_clean_error(result, "is in the future", "seed_date")
     assert not nav_daily.exists()
+
+
+def test_sync_builds_the_nav_series_from_a_hand_built_warehouse(tmp_path):
+    """`nav sync --no-fetch` end to end: replay -> price table -> parquet.
+
+    No network: the warehouse is the hand-built parquet _build_show_root
+    writes. The seed dates from 2026-09-01 and the run values through to
+    today, so the row count is not pinned; what is pinned is that the seed
+    date's own row carries the figure the arithmetic demands -- 10 AAPL at
+    $150 times ₩1,300 plus ₩100,000 cash -- and that the file is written.
+    """
+    root, historical_path = _build_show_root(tmp_path)
+    nav_daily = root / "data" / "nav_daily.parquet"
+    nav_daily.unlink()
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "sync", "--no-fetch",
+            "--root", str(root),
+            "--historical", str(historical_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Fetching" not in result.output  # --no-fetch really skipped it
+    assert nav_daily.exists()
+
+    frame = pd.read_parquet(nav_daily)
+    assert list(frame.columns) == valuation.COLUMNS
+    first = frame.iloc[0]
+    assert pd.Timestamp(first["date"]).date() == date(2026, 9, 1)
+    assert first["nav_krw"] == 10 * 150.0 * 1300.0 + 100000.0
+    assert first["cash_krw"] == 100000.0
+    assert first["fx_usdkrw"] == 1300.0
+    assert len(frame) == (date.today() - date(2026, 9, 1)).days + 1
+
+
+def test_sync_without_a_historical_warehouse_says_what_creates_it(tmp_path):
+    """`sync --no-fetch` used to raise pandas' own error for a missing file."""
+    root, _ = _build_show_root(tmp_path)
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "sync", "--no-fetch",
+            "--root", str(root),
+            "--historical", str(tmp_path / "absent.parquet"),
+        ],
+    )
+
+    assert_clean_error(result, "No price history", "nav sync")

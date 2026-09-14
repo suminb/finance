@@ -153,12 +153,18 @@ def build_price_table(
     currencies.add(base)
 
     close_by_symbol = {t: _close_series(historical, t) for t in tickers}
-    fx_by_currency = {}
-    for currency in currencies:
-        symbol = fx_symbol(currency, base)
-        fx_by_currency[currency] = (
-            None if symbol is None else _close_series(historical, symbol)
-        )
+    # Keyed on the symbol rather than the series so the base currency's
+    # rate-of-1 case is a `symbol is None` test. That narrows `symbol` to str
+    # for the _as_of call below, which a `series is None` test could not do
+    # even though the two are provably the same condition.
+    fx_symbols: Dict[str, Optional[str]] = {
+        currency: fx_symbol(currency, base) for currency in currencies
+    }
+    fx_series: Dict[str, pd.Series] = {
+        currency: _close_series(historical, symbol)
+        for currency, symbol in fx_symbols.items()
+        if symbol is not None
+    }
 
     prices_by_date: Dict[datetime, Dict[str, float]] = {}
     stale_by_date: Dict[datetime, List[str]] = {}
@@ -178,14 +184,14 @@ def build_price_table(
                 stale.append(ticker)
 
         rates: Dict[str, float] = {}
-        for currency, series in fx_by_currency.items():
-            if series is None:
+        for currency, symbol in fx_symbols.items():
+            if symbol is None:
                 rates[currency] = 1.0
             else:
-                rate, was_stale = _as_of(series, when, fx_symbol(currency, base))
+                rate, was_stale = _as_of(fx_series[currency], when, symbol)
                 rates[currency] = rate
                 if was_stale:
-                    stale.append(fx_symbol(currency, base))
+                    stale.append(symbol)
 
         for ticker in tickers:
             row[ticker] = closes[ticker] * rates[symbol_map.currency_of(ticker)]
