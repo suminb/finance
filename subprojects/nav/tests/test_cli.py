@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timezone
 
 import pandas as pd
@@ -132,6 +133,42 @@ def test_show_with_an_unknown_date_is_a_clean_error(tmp_path):
     assert "Traceback" not in result.output
     assert "2026-09-01" in result.output
     assert "2026-09-02" in result.output
+
+
+def test_report_writes_a_self_contained_html_file_from_real_data(tmp_path):
+    """`nav report` end to end, through the real `holdings_at` -> `build_payload`
+
+    -> `json.dumps` path, not the hand-built dicts of native floats in
+    test_report.py's fixtures. `holdings_at` and `summarize` are supposed to
+    cast every numeric field with float(...), but nothing here previously
+    caught a regression of that cast: a dropped float() would let a
+    numpy.float64 reach json.dumps and raise TypeError only once someone ran
+    `nav report` for real. This exercises that whole pipeline and confirms
+    the emitted file's inlined JSON block parses.
+    """
+    root, historical_path = _build_show_root(tmp_path)
+    output_path = tmp_path / "nav.html"
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "report",
+            "--root", str(root),
+            "--historical", str(historical_path),
+            "--output", str(output_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert output_path.exists()
+
+    html = output_path.read_text(encoding="utf-8")
+    start = html.index('id="nav-data">') + len('id="nav-data">')
+    end = html.index("</script>", start)
+    payload = json.loads(html[start:end])  # raises if a numpy scalar leaked through
+
+    assert payload["summary"]["nav_krw"] == 2115000.0
+    assert payload["holdings"][0]["ticker"] == "AAPL"
 
 
 def test_rebuild_checks_for_exports_before_deleting_data(tmp_path):

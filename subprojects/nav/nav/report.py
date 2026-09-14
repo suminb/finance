@@ -151,10 +151,21 @@ def build_payload(frame: pd.DataFrame, holdings: List[dict], summary: dict) -> d
 
 
 def render_html(payload: dict) -> str:
-    # json.dumps does not escape "/", so a "</script>" inside any string in
-    # the payload (a ticker or stale entry from user-edited symbols.yaml)
-    # would terminate the <script type="application/json"> block early and
-    # corrupt the page. Escaping "</" as "<\/" defuses that while remaining
-    # valid JSON, since JSON strings may contain an escaped solidus.
-    serialized = json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
-    return TEMPLATE.replace("__PAYLOAD__", serialized).replace("__CHARTJS__", CHART_JS)
+    # json.dumps does not escape "<", so a raw "<" inside any string in the
+    # payload (a ticker or stale entry from user-edited symbols.yaml) can
+    # corrupt the page even without a literal "</" substring: "<!--" followed
+    # by "<script" drives the HTML tokenizer into the "script data double
+    # escaped" state, in which the *legitimate* closing "</script>" of the
+    # nav-data block only demotes the state instead of closing the element,
+    # swallowing the Chart.js tag and the app script as inert text with no
+    # visible error. Escaping every "<" as its JSON unicode escape forecloses
+    # "</script", "<script" and "<!--" all at once, and round-trips through
+    # JSON.parse unchanged since < is a valid JSON escape for "<".
+    serialized = json.dumps(payload, ensure_ascii=False).replace("<", "\\u003c")
+    # Substitute __CHARTJS__ first and __PAYLOAD__ last: __CHARTJS__ never
+    # appears inside `serialized`, but the reverse order would let a payload
+    # string that happens to spell "__CHARTJS__" get rewritten into the CDN
+    # URL by the second .replace(), scanning text that already came from the
+    # (attacker- or just unluckily-named) payload -- the same root cause as
+    # the "<" hazard above, corrupting the JSON the same way.
+    return TEMPLATE.replace("__CHARTJS__", CHART_JS).replace("__PAYLOAD__", serialized)
