@@ -2,7 +2,10 @@ import os
 import pytz
 import pytest
 
-from finance.ext.models import Portfolio
+from datetime import datetime, timezone
+
+from finance.ext.exceptions import MissingPriceException
+from finance.ext.models import Portfolio, is_cash
 
 
 def assert_equals_dict_of_float(d1: dict, d2: dict):
@@ -131,3 +134,81 @@ def test_portfolio_apply_plan():
     )
     expected_usd = (target["_USD"] / sum(target.values())) * p1.net_asset_value
     assert 0.9 < p1.inventory["_USD"] / expected_usd < 1.1
+
+
+def utc(year, month, day):
+    return datetime(year, month, day, tzinfo=timezone.utc)
+
+
+def test_is_cash_recognizes_underscore_prefixed_tickers():
+    assert is_cash("_USD")
+    assert is_cash("_KRW")
+    assert not is_cash("SPY")
+
+
+def test_default_base_currency_is_usd():
+    assert Portfolio({}, {}, []).cash_ticker == "_USD"
+
+
+def test_base_currency_selects_the_cash_ticker():
+    assert Portfolio({}, {}, [], base_currency="KRW").cash_ticker == "_KRW"
+
+
+def test_rebalancing_plan_excludes_every_cash_ticker():
+    prices = {"SPY": 100.0, "_USD": 1.0, "_KRW": 1.0}
+    pf = Portfolio(prices, {"SPY": 1}, [], base_currency="KRW")
+    pf.inventory = {"SPY": 10, "_USD": 500, "_KRW": 500}
+    assert set(pf.make_rebalancing_plan()) == {"SPY"}
+
+
+def test_eval_nav_sums_positions_and_cash():
+    transactions = [
+        Portfolio.Transaction(utc(2026, 1, 1), "SPY", 10),
+        Portfolio.Transaction(utc(2026, 1, 1), "_KRW", 1000),
+    ]
+    pf = Portfolio({}, {}, transactions, base_currency="KRW")
+    nav = pf.eval_nav(utc(2026, 1, 2), {"SPY": 500.0, "_KRW": 1.0})
+    assert nav == 6000.0
+
+
+def test_eval_nav_ignores_transactions_after_the_date():
+    transactions = [
+        Portfolio.Transaction(utc(2026, 1, 1), "SPY", 10),
+        Portfolio.Transaction(utc(2026, 3, 1), "SPY", 10),
+    ]
+    pf = Portfolio({}, {}, transactions, base_currency="KRW")
+    assert pf.eval_nav(utc(2026, 2, 1), {"SPY": 100.0}) == 1000.0
+
+
+def test_eval_nav_skips_zero_quantity_holdings():
+    transactions = [
+        Portfolio.Transaction(utc(2026, 1, 1), "SPY", 10),
+        Portfolio.Transaction(utc(2026, 1, 2), "SPY", -10),
+    ]
+    pf = Portfolio({}, {}, transactions, base_currency="KRW")
+    assert pf.eval_nav(utc(2026, 1, 3), {}) == 0.0
+
+
+def test_eval_nav_raises_on_a_missing_price():
+    transactions = [Portfolio.Transaction(utc(2026, 1, 1), "SPY", 10)]
+    pf = Portfolio({}, {}, transactions, base_currency="KRW")
+    with pytest.raises(MissingPriceException, match="SPY"):
+        pf.eval_nav(utc(2026, 1, 2), {"_KRW": 1.0})
+
+
+def test_eval_daily_nav_series_walks_days():
+    transactions = [Portfolio.Transaction(utc(2026, 1, 1), "SPY", 10)]
+    pf = Portfolio({}, {}, transactions, base_currency="KRW")
+    prices_by_date = {
+        utc(2026, 1, 2): {"SPY": 100.0},
+        utc(2026, 1, 3): {"SPY": 110.0},
+    }
+    series = pf.eval_daily_nav_series(utc(2026, 1, 2), utc(2026, 1, 4), prices_by_date)
+    assert series == [(utc(2026, 1, 2), 1000.0), (utc(2026, 1, 3), 1100.0)]
+
+
+def test_eval_inventory_default_date_is_evaluated_per_call():
+    """The default used to be bound at import time, freezing 'now'."""
+    transactions = [Portfolio.Transaction(utc(2020, 1, 1), "SPY", 10)]
+    pf = Portfolio({}, {}, transactions)
+    assert pf.eval_inventory() == {"SPY": 10}

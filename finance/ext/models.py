@@ -5,8 +5,21 @@ import pandas as pd
 import yaml
 
 from finance.utils import date_to_datetime, make_dates
+from finance.ext.exceptions import MissingPriceException
 
 from typing import List
+
+# Cash is held in the inventory under an underscore-prefixed pseudo-ticker
+# (e.g. "_USD", "_KRW"). This is the same convention `nav/model.py` defines
+# independently as CASH_PREFIX -- that duplication is deliberate, since
+# `finance.ext.models` depends on pandas and `nav.model` is meant to stay
+# dependency-light.
+CASH_PREFIX = "_"
+
+
+def is_cash(ticker: str) -> bool:
+    """Cash is held in the inventory under an underscore-prefixed ticker."""
+    return ticker.startswith(CASH_PREFIX)
 
 
 class Portfolio:
@@ -35,11 +48,14 @@ class Portfolio:
         current_prices: dict,
         target_weights: dict,
         transactions: List[Transaction],
+        base_currency: str = "USD",
     ):
         self.inventory: dict[str, float] = {}  # ticker: quantity
         self.current_prices = current_prices  # ticker: price
         self.target_weights = self.normalize_weights(target_weights)  # ticker: weight
         self.transactions = transactions
+        self.base_currency = base_currency
+        self.cash_ticker = CASH_PREFIX + base_currency
 
     @property
     def asset_values(self):
@@ -56,7 +72,9 @@ class Portfolio:
         nav = self.net_asset_value
         return {t: v / nav for t, v in self.asset_values.items()}
 
-    def eval_inventory(self, evaluated_at=datetime.now(timezone.utc)) -> dict:
+    def eval_inventory(self, evaluated_at=None) -> dict:
+        if evaluated_at is None:
+            evaluated_at = datetime.now(timezone.utc)
         self.inventory = {}
         for record in self.transactions:
             if record.date <= evaluated_at:
@@ -120,8 +138,38 @@ class Portfolio:
 
         return daily_prices
 
-    def eval_nav(self, date: datetime, historical: pd.DataFrame):
-        return 0
+    def eval_nav(self, evaluated_at: datetime, prices: dict) -> float:
+        """Net asset value at a point in time.
+
+        `prices` must already be expressed in one currency; this method
+        performs no conversion. Holdings that have gone to zero are skipped so
+        that a delisted position with no price does not block valuation.
+        """
+        inventory = self.eval_inventory(evaluated_at)
+        total = 0.0
+        for ticker, quantity in inventory.items():
+            if quantity == 0:
+                continue
+            try:
+                price = prices[ticker]
+            except KeyError:
+                raise MissingPriceException(
+                    "No price for {} at {}".format(ticker, evaluated_at)
+                )
+            total += price * quantity
+        return total
+
+    def eval_daily_nav_series(
+        self, from_date: datetime, to_date: datetime, prices_by_date: dict
+    ) -> List[tuple]:
+        """NAV for each day in [from_date, to_date).
+
+        :param prices_by_date: {datetime: {ticker: price in the base currency}}
+        """
+        return [
+            (date, self.eval_nav(date, prices_by_date[date]))
+            for date in make_dates(from_date, to_date)
+        ]
 
     @classmethod
     def load_from_file(cls, path: str, current_prices: dict):
@@ -171,7 +219,7 @@ class Portfolio:
         def plan(t, diff):
             return round((nav * -diff[t]) / self.current_prices[t])
 
-        return {t: plan(t, diff) for t in diff if t != "_USD"}
+        return {t: plan(t, diff) for t in diff if not is_cash(t)}
 
     # TODO: Tax on dividends?
     # TODO: Transaction fees?
@@ -180,21 +228,23 @@ class Portfolio:
     ):
         def apply(t, q):
             self.inventory.setdefault(t, 0)
-            while self.inventory["_USD"] - self.current_prices[t] * q < 0:
+            while self.inventory[self.cash_ticker] - self.current_prices[t] * q < 0:
                 if q > 0:
                     q -= 1
                 else:
                     q += 1
-            self.inventory["_USD"] -= self.current_prices[t] * q
-            if self.inventory["_USD"] < 0:
-                raise ValueError(f"USD balance cannot be negative: {t}, {q}")
+            self.inventory[self.cash_ticker] -= self.current_prices[t] * q
+            if self.inventory[self.cash_ticker] < 0:
+                raise ValueError(
+                    f"{self.cash_ticker} balance cannot be negative: {t}, {q}"
+                )
             return self.inventory[t] + q
 
         # 'close' is actually 'adj close', which already includes
         # dividends/stock split/capital gains
-        # self.inventory["_USD"] += self.calc_dividends_sum(start_dt, end_dt, dividend_records) * 0.85
+        # self.inventory[self.cash_ticker] += self.calc_dividends_sum(start_dt, end_dt, dividend_records) * 0.85
         self.inventory = {t: apply(t, q) for t, q in plan.items()} | {
-            "_USD": self.inventory["_USD"]
+            self.cash_ticker: self.inventory[self.cash_ticker]
         }
         return self.inventory
 
