@@ -133,6 +133,16 @@ Deduplication is on `(created_at, seq)`. Re-importing the same file is a no-op
 and overlapping exports are safe, so the user never has to track which date
 ranges have already been imported.
 
+That contract depends on the key being unique *within* a single export, and
+nav checks it. Two distinct rows of one file sharing a 거래번호 — a 환전 pair
+emitted under one number, say — would otherwise have one leg silently
+discarded by the deduplication and every later NAV figure would be wrong. A
+repeat inside one export can only mean the key model is wrong, so it aborts
+the import with the offending pairs listed; a repeat *between* exports is the
+idempotency above and stays silent. Whether real 미래에셋 exports give 환전
+legs distinct 거래번호 has not been observed, which is exactly why the
+ambiguous case fails loudly rather than being guessed at.
+
 nav does not use `Record.code` or `synthesize_datetime()`. The former falls
 back to the string `"(unknown)"` on an unrecognized 종목명, and the latter adds
 `seq` seconds to a timestamp to dodge a uniqueness constraint that no longer
@@ -352,6 +362,15 @@ Ingest is tested against one redacted 0650 fixture committed to the repo.
 
 One golden test pins a known seed plus known transactions to a known NAV,
 guarding the taxonomy table against regressions.
+
+Every command has a `CliRunner` integration test against a synthetic root in
+`tmp_path` — a hand-written `symbols.yaml`/`categories.yaml`/`seed.yaml` plus
+a hand-built `historical.parquet` — so the whole pipeline runs without
+network and without touching real balances. `prices.refresh` is covered with
+a monkeypatched `fetch_historical_data`; nothing in the suite reaches Yahoo.
+
+`subprojects/nav/tests` is on the CI pytest path, and `subprojects/nav/nav`
+on the CI mypy path, alongside the parent's `tests` and `finance`.
 
 ## Known limitations
 
