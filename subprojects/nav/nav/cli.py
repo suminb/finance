@@ -1,20 +1,14 @@
-"""Command line interface for nav."""
+"""Command line interface for nav.
+
+Command definitions only. The state-assembly helpers they share live in
+`nav.state`.
+"""
 
 import os
 
 import click
 
-DEFAULT_ROOT = os.environ.get("NAV_ROOT", "subprojects/nav")
-
-
-def _paths(root):
-    return {
-        "symbols": os.path.join(root, "symbols.yaml"),
-        "categories": os.path.join(root, "categories.yaml"),
-        "seed": os.path.join(root, "seed.yaml"),
-        "transaction": os.path.join(root, "data", "transaction.parquet"),
-        "nav_daily": os.path.join(root, "data", "nav_daily.parquet"),
-    }
+from nav.state import DEFAULT_HISTORICAL, DEFAULT_ROOT
 
 
 @click.group()
@@ -39,9 +33,11 @@ def categories(path: str, encoding: str):
 def import_(paths, root: str):
     """Parse 0650 exports into data/transaction.parquet."""
     from finance.providers.miraeasset import Miraeasset
-    from nav import categories, ingest, symbols
 
-    p = _paths(root)
+    from nav import categories, ingest, symbols
+    from nav import state
+
+    p = state.paths(root)
     symbol_map = symbols.load(p["symbols"])
     category_map = categories.load(p["categories"])
     provider = Miraeasset()
@@ -63,30 +59,6 @@ def import_(paths, root: str):
     )
 
 
-DEFAULT_HISTORICAL = "historical.parquet"
-
-
-def _load_state(root: str):
-    """Everything needed to value the account: maps, seed, transactions."""
-    from nav import categories, ingest, replay, seed as seed_module, symbols
-
-    p = _paths(root)
-    symbol_map = symbols.load(p["symbols"])
-    category_map = categories.load(p["categories"])
-    account_seed = seed_module.load(p["seed"], symbol_map)
-
-    frame = ingest.load_frame(p["transaction"])
-    transactions = [] if frame is None else ingest.from_frame(frame)
-    portfolio = replay.build_portfolio(account_seed, transactions, category_map)
-    return p, symbol_map, account_seed, transactions, portfolio
-
-
-def _held_tickers(account_seed, transactions):
-    tickers = set(account_seed.positions)
-    tickers |= {t.ticker for t in transactions if t.ticker}
-    return sorted(tickers)
-
-
 @cli.command()
 @click.option("--root", default=DEFAULT_ROOT, show_default=True)
 @click.option("--historical", default=DEFAULT_HISTORICAL, show_default=True)
@@ -95,30 +67,33 @@ def sync(root: str, historical: str, fetch: bool):
     """Refresh prices and recompute the daily NAV series."""
     import datetime as dt
 
-    import pandas as pd
-
     from nav import ingest
     from nav import prices as prices_module
-    from nav import valuation
+    from nav import state, valuation
 
-    p, symbol_map, account_seed, transactions, portfolio = _load_state(root)
-    tickers = _held_tickers(account_seed, transactions)
+    p, symbol_map, account_seed, transactions, portfolio = state.load_state(root)
+    tickers = state.held_tickers(account_seed, transactions)
     if not tickers:
         raise click.ClickException("No holdings found; check seed.yaml and imports.")
 
     needed = prices_module.required_symbols(
-        tickers, symbol_map, "KRW", extra_currencies=["USD"]
+        tickers, symbol_map, state.BASE_CURRENCY,
+        extra_currencies=[state.REPORT_CURRENCY],
     )
     if fetch:
         click.echo("Fetching {} symbols...".format(len(needed)))
         prices_module.refresh(needed, historical)
 
-    history = pd.read_parquet(historical)
+    history = state.read_historical(historical)
     dates = valuation.daily_dates(account_seed.seed_date, dt.date.today())
     price_table, stale = prices_module.build_price_table(
-        history, tickers, symbol_map, dates, "KRW", extra_currencies=["USD"]
+        history, tickers, symbol_map, dates, state.BASE_CURRENCY,
+        extra_currencies=[state.REPORT_CURRENCY],
     )
-    frame = valuation.build(portfolio, dates, price_table, stale)
+    frame = valuation.build(
+        portfolio, dates, price_table, stale,
+        base=state.BASE_CURRENCY, report_currency=state.REPORT_CURRENCY,
+    )
     ingest.save_frame(frame, p["nav_daily"])
     latest = frame.iloc[-1]
     click.echo(
@@ -162,9 +137,11 @@ def show(root: str, historical: str, as_of):
     import pandas as pd
     from rich.console import Console
 
-    from nav import display, ingest, prices as prices_module, valuation
+    from nav import display, ingest
+    from nav import prices as prices_module
+    from nav import state, valuation
 
-    p, symbol_map, account_seed, transactions, portfolio = _load_state(root)
+    p, symbol_map, account_seed, transactions, portfolio = state.load_state(root)
     frame = ingest.load_frame(p["nav_daily"])
     if frame is None:
         raise click.ClickException("No NAV data. Run `nav sync` first.")
@@ -185,10 +162,11 @@ def show(root: str, historical: str, as_of):
             )
         )
 
-    history = pd.read_parquet(historical)
-    tickers = _held_tickers(account_seed, transactions)
+    history = state.read_historical(historical)
+    tickers = state.held_tickers(account_seed, transactions)
     price_table, _ = prices_module.build_price_table(
-        history, tickers, symbol_map, [when], "KRW", extra_currencies=["USD"]
+        history, tickers, symbol_map, [when], state.BASE_CURRENCY,
+        extra_currencies=[state.REPORT_CURRENCY],
     )
     holdings = valuation.holdings_at(portfolio, when, price_table[when])
 
@@ -203,20 +181,21 @@ def report(root: str, historical: str, output):
     """Write a self-contained HTML dashboard."""
     import pandas as pd
 
-    from nav import display, ingest, prices as prices_module
+    from nav import display, ingest
+    from nav import prices as prices_module
     from nav import report as report_module
-    from nav import valuation
+    from nav import state, valuation
 
-    p, symbol_map, account_seed, transactions, portfolio = _load_state(root)
+    p, symbol_map, account_seed, transactions, portfolio = state.load_state(root)
     frame = ingest.load_frame(p["nav_daily"])
     if frame is None:
         raise click.ClickException("No NAV data. Run `nav sync` first.")
 
     when = pd.Timestamp(frame.iloc[-1]["date"]).to_pydatetime()
-    history = pd.read_parquet(historical)
+    history = state.read_historical(historical)
     price_table, _ = prices_module.build_price_table(
-        history, _held_tickers(account_seed, transactions), symbol_map, [when],
-        "KRW", extra_currencies=["USD"],
+        history, state.held_tickers(account_seed, transactions), symbol_map, [when],
+        state.BASE_CURRENCY, extra_currencies=[state.REPORT_CURRENCY],
     )
     holdings = valuation.holdings_at(portfolio, when, price_table[when])
 
@@ -242,8 +221,9 @@ def check(statement: str, root: str, historical: str):
 
     from nav import check as check_module
     from nav import seed as seed_module
+    from nav import state
 
-    p, symbol_map, account_seed, transactions, portfolio = _load_state(root)
+    p, symbol_map, account_seed, transactions, portfolio = state.load_state(root)
     actual = seed_module.load(statement, symbol_map)
     when = datetime.combine(actual.seed_date, time(0, 0, 0)).replace(tzinfo=timezone.utc)
 
@@ -261,7 +241,8 @@ def check(statement: str, root: str, historical: str):
 
     if os.path.exists(historical):
         moves = check_module.suspicious_moves(
-            pd.read_parquet(historical), _held_tickers(account_seed, transactions)
+            pd.read_parquet(historical),
+            state.held_tickers(account_seed, transactions),
         )
         if moves:
             click.echo("\nPossible corporate actions (single-day moves over 40%):")

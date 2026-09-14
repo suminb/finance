@@ -3,9 +3,10 @@
 import json
 import os
 from collections import Counter
+from datetime import datetime as datetime_type
 from datetime import timezone
 from decimal import Decimal
-from typing import Iterable, List, Optional, Tuple
+from typing import Iterable, List, Optional, Sequence, Tuple
 
 import pandas as pd
 
@@ -47,7 +48,11 @@ class DuplicateKeyError(Exception):
     repeated *across* files stays silent, which is the idempotency contract.
     """
 
-    def __init__(self, keys: List[Tuple[object, object]], source: Optional[str] = None):
+    def __init__(
+        self,
+        keys: Sequence[Tuple[datetime_type, int]],
+        source: Optional[str] = None,
+    ):
         self.keys = list(keys)
         self.source = source
         listed = ", ".join(
