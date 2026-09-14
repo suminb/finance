@@ -59,8 +59,18 @@ def test_html_inlines_the_payload():
 
 
 def test_html_has_no_unsubstituted_placeholder():
+    """Both of the template's real placeholders were substituted.
+
+    This asserted `"{{" not in html`, which the template never contained --
+    its placeholders are __PAYLOAD__ and __CHARTJS__ -- so it could not fail
+    however badly substitution broke. Naming them makes it a real check, and
+    the ordering between them is load-bearing: __CHARTJS__ is substituted
+    first so that a payload which happens to spell "__CHARTJS__" cannot be
+    rewritten into the CDN URL afterwards.
+    """
     html = report.render_html(payload())
-    assert "{{" not in html
+    assert "__PAYLOAD__" not in html
+    assert "__CHARTJS__" not in html
 
 
 def test_html_pins_an_exact_chart_library_version():

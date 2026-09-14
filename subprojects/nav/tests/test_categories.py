@@ -147,15 +147,16 @@ def test_fee_debits_cash_with_amount_and_costs(category_map_with_all_handlers):
 
 
 def test_unknown_category_stub_is_valid_yaml(category_map):
-    # Test that the stub generated for unknown categories is valid YAML
-    try:
+    # pytest.raises, not a bare try/except: with the assertions inside an
+    # except block, a legs_for() that stopped raising would make this test
+    # pass having executed nothing at all. Its two siblings below already do
+    # it this way.
+    with pytest.raises(categories.UnknownCategoryError) as excinfo:
         category_map.legs_for(make("권리락"))
-    except categories.UnknownCategoryError as e:
-        # Parse the stub back to verify it's valid YAML
-        parsed = yaml.safe_load(e.stub)
-        assert len(parsed) == 1
-        assert parsed[0]["category"] == "권리락"
-        assert parsed[0]["handler"] == "???"
+    parsed = yaml.safe_load(excinfo.value.stub)
+    assert len(parsed) == 1
+    assert parsed[0]["category"] == "권리락"
+    assert parsed[0]["handler"] == "???"
 
 
 def test_unknown_category_stub_with_special_characters_is_valid_yaml(category_map):

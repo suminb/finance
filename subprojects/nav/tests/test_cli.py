@@ -154,15 +154,23 @@ def test_show_with_an_unknown_date_is_a_clean_error(tmp_path):
 
 
 def test_report_writes_a_self_contained_html_file_from_real_data(tmp_path):
-    """`nav report` end to end, through the real `holdings_at` -> `build_payload`
+    """`nav report` end to end, through the real `holdings_at` ->
 
-    -> `json.dumps` path, not the hand-built dicts of native floats in
-    test_report.py's fixtures. `holdings_at` and `summarize` are supposed to
-    cast every numeric field with float(...), but nothing here previously
-    caught a regression of that cast: a dropped float() would let a
-    numpy.float64 reach json.dumps and raise TypeError only once someone ran
-    `nav report` for real. This exercises that whole pipeline and confirms
-    the emitted file's inlined JSON block parses.
+    `build_payload` -> `json.dumps` path, rather than test_report.py's
+    hand-built dicts of native floats.
+
+    Its docstring used to claim this guards against a dropped `float()` cast
+    letting a numpy.float64 reach json.dumps. That regression cannot happen:
+    np.float64 subclasses float, so json.dumps serializes it fine. (What
+    would actually break is a np.int64 or a pd.Timestamp, neither of which
+    this pipeline produces.)
+
+    What the test does guard is real, so it stays: an exact NAV figure
+    (2,115,000 KRW = 10 AAPL at $150 x 1,300, plus 100,000 KRW cash) pinned
+    all the way from seed.yaml and a parquet warehouse through replay,
+    valuation, holdings_at and build_payload to the JSON actually inlined in
+    the emitted file -- and that that JSON block parses out of the HTML at
+    all, which is what the </script>-escaping could break.
     """
     root, historical_path = _build_show_root(tmp_path)
     output_path = tmp_path / "nav.html"

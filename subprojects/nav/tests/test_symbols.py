@@ -83,21 +83,22 @@ def test_stub_with_adversarial_names_is_parseable(tmp_path):
         "Mixed: Korean, 종목",         # multiple special chars with Korean
     ]
 
+    # pytest.raises, not a bare try/except: with the assertions inside an
+    # except block, a resolve() that stopped raising would make this test pass
+    # having executed nothing at all.
     for name in adversarial_names:
-        try:
+        with pytest.raises(symbols.UnknownSymbolError) as excinfo:
             smap.resolve(name)
-        except symbols.UnknownSymbolError as e:
-            # Try to parse the generated stub
-            parsed = yaml.safe_load(e.stub)
-            assert parsed is not None, f"Stub failed to parse for name: {name}"
-            assert len(parsed) == 1, f"Stub should have one entry for name: {name}"
-            # Most important: verify the name roundtrips exactly
-            assert parsed[0]["name"] == name, (
-                f"Name was mangled. Original: {name!r}, "
-                f"parsed: {parsed[0]['name']!r}"
-            )
-            assert parsed[0]["ticker"] == "???", "Ticker placeholder should be quoted"
-            assert parsed[0]["currency"] == "???", "Currency placeholder should be quoted"
+        parsed = yaml.safe_load(excinfo.value.stub)
+        assert parsed is not None, f"Stub failed to parse for name: {name}"
+        assert len(parsed) == 1, f"Stub should have one entry for name: {name}"
+        # Most important: verify the name roundtrips exactly
+        assert parsed[0]["name"] == name, (
+            f"Name was mangled. Original: {name!r}, "
+            f"parsed: {parsed[0]['name']!r}"
+        )
+        assert parsed[0]["ticker"] == "???", "Ticker placeholder should be quoted"
+        assert parsed[0]["currency"] == "???", "Currency placeholder should be quoted"
 
 
 def test_duplicate_name_with_different_ticker_is_rejected(tmp_path):
