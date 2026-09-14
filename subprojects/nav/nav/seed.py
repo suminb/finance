@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import date as date_type
+from datetime import datetime
 from decimal import Decimal
 from typing import Dict
 
@@ -24,7 +25,16 @@ def load(path: str, symbol_map: SymbolMap) -> Seed:
     if "seed_date" not in content:
         raise ValueError("seed_date is required in {}".format(path))
     seed_date = content["seed_date"]
-    if not isinstance(seed_date, date_type):
+    # datetime is a subclass of date, so a bare isinstance(seed_date, date)
+    # check would silently accept a timestamp with a time component (e.g. a
+    # value pasted straight from a 잔고 export). Reject that explicitly with
+    # type() so only a true date passes.
+    if isinstance(seed_date, datetime):
+        raise ValueError(
+            "seed_date must not have a time component, got {!r}; "
+            "drop the time and keep only the date".format(seed_date)
+        )
+    if type(seed_date) is not date_type:
         raise ValueError("seed_date must be a date, got {!r}".format(seed_date))
 
     positions: Dict[str, Decimal] = {}

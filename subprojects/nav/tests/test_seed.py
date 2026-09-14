@@ -58,6 +58,12 @@ def test_missing_seed_date_is_rejected(tmp_path, symbol_map):
         seed.load(write(tmp_path, text), symbol_map)
 
 
+def test_seed_date_with_a_time_component_is_rejected(tmp_path, symbol_map):
+    text = "seed_date: 2026-09-14 10:30:00\npositions: []\ncash: {KRW: 0}\n"
+    with pytest.raises(ValueError, match="time component"):
+        seed.load(write(tmp_path, text), symbol_map)
+
+
 def test_empty_positions_are_allowed(tmp_path, symbol_map):
     text = "seed_date: 2026-09-14\npositions: []\ncash: {KRW: 100}\n"
     assert seed.load(write(tmp_path, text), symbol_map).positions == {}
