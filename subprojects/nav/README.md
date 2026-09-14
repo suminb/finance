@@ -373,10 +373,8 @@ callers keep working.
   without the caller repeating `"_" + currency` everywhere.
 - `eval_nav()`, which previously read `return 0`, actually implemented: net
   asset value at a point in time from an already-single-currency price dict.
-- `eval_daily_nav_series()`, a daily NAV series alongside the existing
-  `eval_daily_inventories()`.
-- `MissingPriceException`, raised by `eval_nav()`/`eval_daily_nav_series()`
-  instead of letting a bare `KeyError` escape when a ticker has no price.
+- `MissingPriceException`, raised by `eval_nav()` instead of letting a bare
+  `KeyError` escape when a ticker has no price.
 - `QUANTITY_EPSILON`, replacing an exact float-zero comparison: repeated
   float `+=` on a fully-closed position lands on something like `1e-13`
   rather than exact zero, so valuation now treats anything within this

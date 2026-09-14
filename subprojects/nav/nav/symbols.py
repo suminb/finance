@@ -91,9 +91,6 @@ class SymbolMap:
     def currency_of(self, ticker: str) -> str:
         return self._currency_by_ticker[ticker]
 
-    def tickers(self) -> List[str]:
-        return sorted(self._currency_by_ticker)
-
 
 def load(path: str) -> SymbolMap:
     with open(path, encoding="utf-8") as fin:

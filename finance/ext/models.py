@@ -78,6 +78,17 @@ class Portfolio:
         nav = self.net_asset_value
         return {t: v / nav for t, v in self.asset_values.items()}
 
+    @staticmethod
+    def _accumulate(inventory: dict, record: Transaction) -> None:
+        """Adds one transaction's quantity into `inventory`, in place.
+
+        The single copy of this arithmetic. `_replay_transactions` used to
+        inline it while `apply_transaction` kept its own copy, leaving two
+        implementations of the same rule free to drift apart.
+        """
+        inventory.setdefault(record.ticker, 0)
+        inventory[record.ticker] += record.quantity
+
     def _replay_transactions(self, evaluated_at: datetime) -> dict:
         """Replays transactions up to and including `evaluated_at` and
         returns the resulting inventory, without touching `self.inventory`.
@@ -91,8 +102,7 @@ class Portfolio:
         inventory: dict = {}
         for record in self.transactions:
             if record.date <= evaluated_at:
-                inventory.setdefault(record.ticker, 0)
-                inventory[record.ticker] += record.quantity
+                self._accumulate(inventory, record)
         return inventory
 
     def eval_inventory(self, evaluated_at=None) -> dict:
@@ -102,9 +112,14 @@ class Portfolio:
         return self.inventory
 
     def apply_transaction(self, record: Transaction):
-        """Reflects the given transaction record to the inventory."""
-        self.inventory.setdefault(record.ticker, 0)
-        self.inventory[record.ticker] += record.quantity
+        """Reflects the given transaction record to the inventory.
+
+        Nothing inside `Portfolio` calls this any more -- replay goes through
+        `_replay_transactions`, which must not mutate `self.inventory` -- but
+        it stays public for any external caller, sharing `_accumulate` with
+        the replay path so the two cannot diverge.
+        """
+        self._accumulate(self.inventory, record)
 
     def eval_daily_inventories(self, from_date: datetime, to_date: datetime):
         """
@@ -184,24 +199,6 @@ class Portfolio:
                 ) from None
             total += price * quantity
         return total
-
-    def eval_daily_nav_series(
-        self, from_date: datetime, to_date: datetime, prices_by_date: dict
-    ) -> List[tuple]:
-        """NAV for each day in [from_date, to_date).
-
-        :param prices_by_date: {datetime: {ticker: price in the base currency}}
-        """
-        result = []
-        for date in make_dates(from_date, to_date):
-            try:
-                prices = prices_by_date[date]
-            except KeyError:
-                raise MissingPriceException(
-                    "No prices for {}".format(date)
-                ) from None
-            result.append((date, self.eval_nav(date, prices)))
-        return result
 
     @classmethod
     def load_from_file(cls, path: str, current_prices: dict):

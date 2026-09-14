@@ -197,17 +197,6 @@ def test_eval_nav_raises_on_a_missing_price():
         pf.eval_nav(utc(2026, 1, 2), {"_KRW": 1.0})
 
 
-def test_eval_daily_nav_series_walks_days():
-    transactions = [Portfolio.Transaction(utc(2026, 1, 1), "SPY", 10)]
-    pf = Portfolio({}, {}, transactions, base_currency="KRW")
-    prices_by_date = {
-        utc(2026, 1, 2): {"SPY": 100.0},
-        utc(2026, 1, 3): {"SPY": 110.0},
-    }
-    series = pf.eval_daily_nav_series(utc(2026, 1, 2), utc(2026, 1, 4), prices_by_date)
-    assert series == [(utc(2026, 1, 2), 1000.0), (utc(2026, 1, 3), 1100.0)]
-
-
 def test_eval_inventory_default_date_is_evaluated_per_call():
     """The default used to be bound at import time, freezing 'now'.
 
@@ -247,25 +236,6 @@ def test_eval_nav_does_not_mutate_inventory():
     assert pf.inventory == {"SPY": 999, "_KRW": 42}
 
 
-def test_eval_daily_nav_series_does_not_mutate_inventory():
-    """Same hazard for the walking version: it must not leave
-    `self.inventory` at whatever the last iterated date happened to be."""
-    transactions = [Portfolio.Transaction(utc(2020, 1, 1), "SPY", 10)]
-    pf = Portfolio({}, {}, transactions, base_currency="KRW")
-    pf.inventory = {"SPY": 999, "_KRW": 42}
-    prices_by_date = {utc(2020, 6, 1): {"SPY": 100.0}, utc(2020, 6, 2): {"SPY": 100.0}}
-    pf.eval_daily_nav_series(utc(2020, 6, 1), utc(2020, 6, 3), prices_by_date)
-    assert pf.inventory == {"SPY": 999, "_KRW": 42}
-
-
-def test_eval_daily_nav_series_raises_on_a_missing_date():
-    transactions = [Portfolio.Transaction(utc(2026, 1, 1), "SPY", 10)]
-    pf = Portfolio({}, {}, transactions, base_currency="KRW")
-    prices_by_date = {utc(2026, 1, 2): {"SPY": 100.0}}  # 2026-01-03 missing
-    with pytest.raises(MissingPriceException, match="2026-01-03"):
-        pf.eval_daily_nav_series(utc(2026, 1, 2), utc(2026, 1, 4), prices_by_date)
-
-
 def test_eval_nav_treats_a_float_residual_as_closed():
     transactions = [
         Portfolio.Transaction(utc(2026, 1, 1), "SPY", 10),
@@ -283,3 +253,19 @@ def test_eval_nav_values_a_negative_quantity_with_its_sign():
     transactions = [Portfolio.Transaction(utc(2026, 1, 1), "SPY", -10)]
     pf = Portfolio({}, {}, transactions, base_currency="KRW")
     assert pf.eval_nav(utc(2026, 1, 2), {"SPY": 100.0}) == -1000.0
+
+
+def test_apply_transaction_still_mutates_the_live_inventory():
+    """No caller inside Portfolio uses this any more, but it stays public.
+
+    It now shares `_accumulate` with `_replay_transactions` rather than
+    keeping a second copy of the setdefault/+= rule, so this pins the
+    behaviour an external caller depends on: it mutates `self.inventory`
+    in place, creating the entry if absent and adding to it if present.
+    """
+    pf = Portfolio({}, {}, [], base_currency="KRW")
+    pf.apply_transaction(Portfolio.Transaction(utc(2026, 1, 1), "SPY", 10))
+    assert pf.inventory == {"SPY": 10}
+    pf.apply_transaction(Portfolio.Transaction(utc(2026, 1, 2), "SPY", -4))
+    pf.apply_transaction(Portfolio.Transaction(utc(2026, 1, 2), "_KRW", 500))
+    assert pf.inventory == {"SPY": 6, "_KRW": 500}
