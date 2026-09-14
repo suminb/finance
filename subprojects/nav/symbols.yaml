@@ -1,8 +1,10 @@
 # 종목명 -> ticker + currency.
 # Several names may map to one ticker: 미래에셋 truncates 종목명
 # inconsistently between export vintages.
-# Regenerate nothing by hand-editing blindly -- add entries as
-# `nav import` reports them.
+# Seeded from finance/providers/miraeasset.py name_code_mappings; NOT YET reconciled
+# against a live account export (0650), so names the account actually holds may be missing.
+# When `nav import` reports an unmapped name, paste the YAML stub it generates below
+# and run again. Do not blindly edit by hand.
 - {name: 삼성전자보통주, ticker: 005930.KS, currency: KRW}
 - {name: 이마트보통주, ticker: 139480.KS, currency: KRW}
 - {name: 하나금융9호기업인수목적, ticker: 261200.KQ, currency: KRW}

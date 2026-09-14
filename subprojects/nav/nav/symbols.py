@@ -22,9 +22,22 @@ class Symbol:
 class UnknownSymbolError(Exception):
     def __init__(self, names: List[str]):
         self.names = list(names)
-        self.stub = "\n".join(
-            "- {name: %s, ticker: ???, currency: ???}" % name for name in self.names
-        )
+        # Generate stub by round-tripping through YAML to properly escape names.
+        # Each entry is: - {name: "...", ticker: ???, currency: ???}
+        # where the name is quoted if it contains special characters.
+        lines = []
+        for name in self.names:
+            # Use safe_dump to escape the name properly, preserving Unicode.
+            # Extract the quoted form from the dumped YAML.
+            escaped_name = yaml.safe_dump(
+                {"name": name}, default_flow_style=True, allow_unicode=True
+            ).strip()
+            # safe_dump produces "{name: '...'}\n", we want just the quoted value
+            # Extract the value after "name: "
+            start = escaped_name.find("name: ") + len("name: ")
+            quoted_name = escaped_name[start:escaped_name.rfind("}")]
+            lines.append("- {{name: {}, ticker: '???', currency: '???'}}".format(quoted_name))
+        self.stub = "\n".join(lines)
         super().__init__(
             "Unmapped 종목명 ({}). Add to symbols.yaml:\n{}".format(
                 len(self.names), self.stub
@@ -37,6 +50,21 @@ class SymbolMap:
         self._by_name: Dict[str, Symbol] = {}
         self._currency_by_ticker: Dict[str, str] = {}
         for symbol in symbols:
+            # Check for duplicate names with conflicting mappings
+            existing_symbol = self._by_name.get(symbol.name)
+            if existing_symbol is not None:
+                if (existing_symbol.ticker != symbol.ticker or
+                    existing_symbol.currency != symbol.currency):
+                    raise ValueError(
+                        "duplicate name '{}': ({}, {}) and ({}, {})".format(
+                            symbol.name,
+                            existing_symbol.ticker, existing_symbol.currency,
+                            symbol.ticker, symbol.currency
+                        )
+                    )
+                # Exact duplicate (same name, ticker, currency) is allowed, so just continue
+                continue
+
             self._by_name[symbol.name] = symbol
             existing = self._currency_by_ticker.get(symbol.ticker)
             if existing is not None and existing != symbol.currency:
