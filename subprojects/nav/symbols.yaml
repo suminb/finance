@@ -1,0 +1,43 @@
+# 종목명 -> ticker + currency.
+# Several names may map to one ticker: 미래에셋 truncates 종목명
+# inconsistently between export vintages.
+# Regenerate nothing by hand-editing blindly -- add entries as
+# `nav import` reports them.
+- {name: 삼성전자보통주, ticker: 005930.KS, currency: KRW}
+- {name: 이마트보통주, ticker: 139480.KS, currency: KRW}
+- {name: 하나금융9호기업인수목적, ticker: 261200.KQ, currency: KRW}
+- {name: 대신밸런스제8호기업인수목적, ticker: 336570.KQ, currency: KRW}
+- {name: 이베스트기업인수목적5호, ticker: 349720.KQ, currency: KRW}
+- {name: NH-Amundi HANARO 글로벌럭셔리S&P 증권상장지, ticker: 354350.KS, currency: KRW}
+- {name: 넥슨 일본, ticker: 3659.T, currency: JPY}
+- {name: 애플, ticker: AAPL, currency: USD}
+- {name: AMD, ticker: AMD, currency: USD}
+- {name: Advanced Micro Devic, ticker: AMD, currency: USD}
+- {name: Advanced Micro Devices  Inc., ticker: AMD, currency: USD}
+- {name: 아마존닷컴, ticker: AMZN, currency: USD}
+- {name: 아마존 닷컴, ticker: AMZN, currency: USD}
+- {name: ARK Web x.0 ETF, ticker: ARKW, currency: USD}
+- {name: 보잉, ticker: BA, currency: USD}
+- {name: 버크셔해서웨이.B, ticker: BRK-B, currency: USD}
+- {name: Credit Suisse High Y, ticker: DHY, currency: USD}
+- {name: CREDIT SUISSE HIGH YIELD BOND FU, ticker: DHY, currency: USD}
+- {name: Empire State Realty Trust  Inc., ticker: ESRT, currency: USD}
+- {name: Empire State Realty, ticker: ESRT, currency: USD}
+- {name: EMPIRE ST RLTY TR INC, ticker: ESRT, currency: USD}
+- {name: ISHARES MSCI HONG KONG FUND, ticker: EWH, currency: USD}
+- {name: ISHARES IBOXX $ INVESTMENT GRADE, ticker: LQD, currency: USD}
+- {name: CLOUDFLARE INC, ticker: NET, currency: USD}
+- {name: Direxion Daily Gold, ticker: NUGT, currency: USD}
+- {name: 엔비디아, ticker: NVDA, currency: USD}
+- {name: OXFORD LANE CAPITAL, ticker: OXLC, currency: USD}
+- {name: 옥스포드 래인 캐피탈, ticker: OXLC, currency: USD}
+- {name: 스타벅스, ticker: SBUX, currency: USD}
+- {name: SCHWAB US BROAD MARKET ETF, ticker: SCHB, currency: USD}
+- {name: SPDR S&P 500, ticker: SPY, currency: USD}
+- {name: PROETF ULTRA S&P 500, ticker: SSO, currency: USD}
+- {name: ISHARES 20+Y TREASURY BOND ETF, ticker: TLT, currency: USD}
+- {name: 테슬라 모터스, ticker: TSLA, currency: USD}
+- {name: UNITED STATES OIL FUND, ticker: USO, currency: USD}
+- {name: VANGUARD TAX-EXEMPT BOND ETF, ticker: VTEB, currency: USD}
+- {name: VANGUARD SHORT-TERM INFLATION-PR, ticker: VTIP, currency: USD}
+- {name: VANGUARD EMERGING MARKETS GOVERN, ticker: VWOB, currency: USD}
