@@ -161,7 +161,6 @@ names the account actually holds.
 
 ```yaml
 - {category: 현금매수, handler: buy}
-- {category: 매수,     handler: buy}
 - {category: 현금매도, handler: sell}
 - {category: 입금,     handler: cash_in}
 - {category: 출금,     handler: cash_out}

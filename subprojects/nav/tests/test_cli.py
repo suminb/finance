@@ -171,6 +171,99 @@ def test_report_writes_a_self_contained_html_file_from_real_data(tmp_path):
     assert payload["holdings"][0]["ticker"] == "AAPL"
 
 
+def _build_check_root(tmp_path):
+    """A synthetic root + historical file for exercising `nav check` end to end.
+
+    No transactions are imported, so the replayed inventory at any date on or
+    after the seed date is exactly the seed's positions and cash -- the
+    statement is what varies between tests. `historical.parquet` has a single
+    close per symbol (deliberately not two), so `suspicious_moves` always
+    skips it and the "Possible corporate actions" section never fires here;
+    that keeps these tests focused on `compare`'s wiring through the CLI.
+    """
+    root = tmp_path / "root"
+    (root / "data").mkdir(parents=True)
+
+    (root / "symbols.yaml").write_text(
+        yaml.safe_dump([{"name": "APPLE", "ticker": "AAPL", "currency": "USD"}]),
+        encoding="utf-8",
+    )
+    (root / "categories.yaml").write_text(yaml.safe_dump([]), encoding="utf-8")
+    (root / "seed.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "seed_date": utc(1).date(),
+                "positions": [{"ticker": "AAPL", "quantity": 10}],
+                "cash": {"KRW": 100000, "USD": 0},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    historical_path = tmp_path / "historical.parquet"
+    pd.DataFrame(
+        [{"symbol": "AAPL", "date": pd.Timestamp("2026-09-01"), "close": 150.0}]
+    ).to_parquet(historical_path, index=False)
+
+    return root, historical_path
+
+
+def _write_statement(path, **kwargs):
+    defaults = dict(
+        seed_date=utc(1).date(),
+        positions=[{"ticker": "AAPL", "quantity": 10}],
+        cash={"KRW": 100000, "USD": 0},
+    )
+    defaults.update(kwargs)
+    path.write_text(yaml.safe_dump(defaults), encoding="utf-8")
+
+
+def test_check_reports_no_differences_and_exits_zero(tmp_path):
+    """A statement that agrees with the replay: clean exit, no diff table."""
+    root, historical_path = _build_check_root(tmp_path)
+    statement_path = tmp_path / "statement.yaml"
+    _write_statement(statement_path)
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "check", str(statement_path),
+            "--root", str(root),
+            "--historical", str(historical_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Reconciled: no differences as of 2026-09-01." in result.output
+    assert "Differences as of" not in result.output
+    assert "Possible corporate actions" not in result.output
+
+
+def test_check_reports_a_mismatch_and_exits_nonzero(tmp_path):
+    """A statement that disagrees with the replay: diff table printed, exit 1."""
+    root, historical_path = _build_check_root(tmp_path)
+    statement_path = tmp_path / "statement.yaml"
+    _write_statement(statement_path, positions=[{"ticker": "AAPL", "quantity": 20}])
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "check", str(statement_path),
+            "--root", str(root),
+            "--historical", str(historical_path),
+        ],
+    )
+
+    assert result.exit_code == 1, result.output
+    assert "Differences as of 2026-09-01:" in result.output
+    assert "Reconciled" not in result.output
+    assert "AAPL" in result.output
+    assert "10.0000" in result.output  # computed
+    assert "20.0000" in result.output  # actual
+    assert "+10.0000" in result.output  # delta
+    assert "_KRW" not in result.output  # cash agrees; only AAPL should differ
+
+
 def test_rebuild_checks_for_exports_before_deleting_data(tmp_path):
     """A rebuild that cannot proceed must not have already destroyed data/.
 
