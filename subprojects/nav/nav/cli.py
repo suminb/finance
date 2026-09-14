@@ -195,5 +195,37 @@ def show(root: str, historical: str, as_of):
     Console().print(display.render(summary, holdings))
 
 
+@cli.command()
+@click.option("--root", default=DEFAULT_ROOT, show_default=True)
+@click.option("--historical", default=DEFAULT_HISTORICAL, show_default=True)
+@click.option("--output", "-o", default=None, help="Defaults to <root>/nav.html")
+def report(root: str, historical: str, output):
+    """Write a self-contained HTML dashboard."""
+    import pandas as pd
+
+    from nav import display, ingest, prices as prices_module
+    from nav import report as report_module
+    from nav import valuation
+
+    p, symbol_map, account_seed, transactions, portfolio = _load_state(root)
+    frame = ingest.load_frame(p["nav_daily"])
+    if frame is None:
+        raise click.ClickException("No NAV data. Run `nav sync` first.")
+
+    when = pd.Timestamp(frame.iloc[-1]["date"]).to_pydatetime()
+    history = pd.read_parquet(historical)
+    price_table, _ = prices_module.build_price_table(
+        history, _held_tickers(account_seed, transactions), symbol_map, [when],
+        "KRW", extra_currencies=["USD"],
+    )
+    holdings = valuation.holdings_at(portfolio, when, price_table[when])
+
+    payload = report_module.build_payload(frame, holdings, display.summarize(frame))
+    destination = output or os.path.join(root, "nav.html")
+    with open(destination, "w", encoding="utf-8") as fout:
+        fout.write(report_module.render_html(payload))
+    click.echo("Wrote {}".format(destination))
+
+
 if __name__ == "__main__":
     cli()
