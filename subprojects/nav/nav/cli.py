@@ -124,7 +124,16 @@ def sync(root: str, historical: str, fetch: bool):
         prices_module.refresh(needed, historical)
 
     history = state.read_historical(historical)
-    dates = valuation.daily_dates(account_seed.seed_date, dt.date.today())
+    today = dt.date.today()
+    try:
+        dates = valuation.daily_dates(account_seed.seed_date, today)
+    except ValueError:
+        raise click.ClickException(
+            "seed_date {} is in the future (today is {}), so there is no day "
+            "to value. Correct seed_date in {}.".format(
+                account_seed.seed_date, today, p["seed"]
+            )
+        ) from None
     price_table, stale = prices_module.build_price_table(
         history, tickers, symbol_map, dates, state.BASE_CURRENCY,
         extra_currencies=[state.REPORT_CURRENCY],
@@ -133,6 +142,13 @@ def sync(root: str, historical: str, fetch: bool):
         portfolio, dates, price_table, stale,
         base=state.BASE_CURRENCY, report_currency=state.REPORT_CURRENCY,
     )
+    if frame.empty:
+        # Belt and braces behind daily_dates' own check: persisting an empty
+        # series is what wedged the account, so never write one.
+        raise click.ClickException(
+            "The NAV series came out empty; nothing was written. Check "
+            "seed_date in {}.".format(p["seed"])
+        )
     ingest.save_frame(frame, p["nav_daily"])
     latest = frame.iloc[-1]
     click.echo(
@@ -182,7 +198,10 @@ def show(root: str, historical: str, as_of):
 
     p, symbol_map, account_seed, transactions, portfolio = state.load_state(root)
     frame = ingest.load_frame(p["nav_daily"])
-    if frame is None:
+    if frame is None or frame.empty:
+        # `.empty` as well as None: an empty nav_daily.parquet on disk is
+        # not "data", and testing only for None let the file's mere
+        # existence route past this message into an IndexError.
         raise click.ClickException("No NAV data. Run `nav sync` first.")
 
     if as_of is None:
@@ -234,7 +253,10 @@ def report(root: str, historical: str, output):
 
     p, symbol_map, account_seed, transactions, portfolio = state.load_state(root)
     frame = ingest.load_frame(p["nav_daily"])
-    if frame is None:
+    if frame is None or frame.empty:
+        # `.empty` as well as None: an empty nav_daily.parquet on disk is
+        # not "data", and testing only for None let the file's mere
+        # existence route past this message into an IndexError.
         raise click.ClickException("No NAV data. Run `nav sync` first.")
 
     when = pd.Timestamp(frame.iloc[-1]["date"]).to_pydatetime()

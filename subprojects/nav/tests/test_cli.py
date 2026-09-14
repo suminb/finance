@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 import pandas as pd
 import yaml
@@ -545,3 +545,68 @@ def test_categories_without_a_category_column_says_so(tmp_path):
     result = CliRunner().invoke(cli, ["categories", str(export)])
 
     assert_clean_error(result, "No 거래종류 column", "0650")
+
+
+def test_show_with_an_empty_nav_file_offers_the_way_out(tmp_path):
+    """An empty nav_daily.parquet on disk is not NAV data.
+
+    The guard used to test `frame is None`, so a persisted empty frame -- what
+    a future seed_date produced -- made the file's mere existence route past
+    this message into an IndexError, with no way out but deleting data/.
+    """
+    root, historical_path = _build_show_root(tmp_path)
+    empty = pd.DataFrame([], columns=valuation.COLUMNS)
+    ingest.save_frame(empty, str(root / "data" / "nav_daily.parquet"))
+
+    result = CliRunner().invoke(
+        cli, ["show", "--root", str(root), "--historical", str(historical_path)]
+    )
+
+    assert_clean_error(result, "No NAV data", "nav sync")
+
+
+def test_report_with_an_empty_nav_file_offers_the_way_out(tmp_path):
+    root, historical_path = _build_show_root(tmp_path)
+    empty = pd.DataFrame([], columns=valuation.COLUMNS)
+    ingest.save_frame(empty, str(root / "data" / "nav_daily.parquet"))
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "report",
+            "--root", str(root),
+            "--historical", str(historical_path),
+            "--output", str(tmp_path / "nav.html"),
+        ],
+    )
+
+    assert_clean_error(result, "No NAV data", "nav sync")
+
+
+def test_sync_with_a_future_seed_date_says_so_and_writes_nothing(tmp_path):
+    """The whole wedge, end to end: a mistyped year in hand-authored YAML."""
+    root, historical_path = _build_show_root(tmp_path)
+    nav_daily = root / "data" / "nav_daily.parquet"
+    nav_daily.unlink()
+    (root / "seed.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "seed_date": date(2999, 9, 1),
+                "positions": [{"ticker": "AAPL", "quantity": 10}],
+                "cash": {"KRW": 100000, "USD": 0},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "sync", "--no-fetch",
+            "--root", str(root),
+            "--historical", str(historical_path),
+        ],
+    )
+
+    assert_clean_error(result, "is in the future", "seed_date")
+    assert not nav_daily.exists()

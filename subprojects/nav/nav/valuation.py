@@ -23,7 +23,18 @@ COLUMNS = [
 
 
 def daily_dates(start: date_type, end: date_type) -> List[datetime]:
-    """Every day from start to end inclusive, as UTC midnights."""
+    """Every day from start to end inclusive, as UTC midnights.
+
+    An empty range is a hard error rather than an empty list. The only way to
+    reach one is a seed_date after today -- a mistyped year in hand-authored
+    YAML -- and returning [] let `sync` persist an empty nav_daily.parquet and
+    only then die on `frame.iloc[-1]`, leaving a file on disk that made every
+    later `nav show` fail its way past the friendly "run `nav sync` first".
+    """
+    if end < start:
+        raise ValueError(
+            "empty date range: end {} is before start {}".format(end, start)
+        )
     days = (end - start).days
     return [
         datetime.combine(start + timedelta(days=i), time(0, 0, 0)).replace(

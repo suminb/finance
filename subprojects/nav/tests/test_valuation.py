@@ -116,3 +116,21 @@ def test_build_holdings_krw_excludes_a_residual_quantity_within_epsilon():
     row = frame.iloc[0]
     assert row["holdings_krw"] == pytest.approx(0.0)
     assert row["nav_krw"] == pytest.approx(100.0)
+
+
+def test_daily_dates_rejects_an_end_before_the_start():
+    """A seed_date after today must not quietly produce an empty series.
+
+    Returning [] here let `sync` build an empty frame, persist it, and only
+    then die on iloc[-1] -- after which nav_daily.parquet existed but was
+    empty, and every command's "run `nav sync` first" guard was bypassed.
+    """
+    with pytest.raises(ValueError, match="empty date range"):
+        valuation.daily_dates(date(2026, 9, 10), date(2026, 9, 9))
+
+
+def test_daily_dates_accepts_a_single_day_range():
+    """The boundary the check must not swallow: start == end is one day."""
+    assert valuation.daily_dates(date(2026, 9, 9), date(2026, 9, 9)) == [
+        datetime(2026, 9, 9, tzinfo=timezone.utc)
+    ]
