@@ -107,3 +107,109 @@ def test_a_date_before_any_close_raises(symbol_map):
         prices.build_price_table(
             HISTORICAL, ["AAPL"], symbol_map, [datetime(2025, 1, 1, tzinfo=timezone.utc)], "KRW"
         )
+
+
+# --------------------------------------------------------------------------
+# refresh(): the only function that writes the shared repo-root warehouse.
+# Its yfinance call is monkeypatched away -- no test here touches the network.
+# --------------------------------------------------------------------------
+
+
+def _fetched(symbol, region, day, close, updated_at="2026-09-10"):
+    """A frame shaped like finance.ext.warehouse.preprocess_historical_data's."""
+    return pd.DataFrame(
+        [
+            {
+                "date": pd.Timestamp(day),
+                "close": close,
+                "region": region,
+                "symbol": symbol,
+                "updated_at": pd.Timestamp(updated_at),
+            }
+        ]
+    )
+
+
+@pytest.fixture
+def fake_fetch(monkeypatch):
+    """Records every (symbol, region, period) refresh asks for."""
+    calls = []
+
+    def fetch(symbol, region="US", period="5y"):
+        calls.append((symbol, region, period))
+        return _fetched(symbol, region, "2026-09-02", 100.0 + len(calls))
+
+    monkeypatch.setattr("finance.ext.warehouse.fetch_historical_data", fetch)
+    return calls
+
+
+def test_refresh_creates_the_warehouse_when_there_is_none(tmp_path, fake_fetch):
+    """The `existing is None` branch, plus the makedirs of a missing parent."""
+    path = tmp_path / "nested" / "historical.parquet"
+
+    result = prices.refresh(["AAPL", "005930.KS"], str(path), delay_factor=0)
+
+    assert path.exists()
+    assert [c[0] for c in fake_fetch] == ["AAPL", "005930.KS"]
+    assert [c[1] for c in fake_fetch] == ["US", "KR"]  # region_for, per symbol
+    stored = pd.read_parquet(path)
+    assert set(stored["symbol"]) == {"AAPL", "005930.KS"}
+    assert len(result) == len(stored) == 2
+
+
+def test_refresh_merges_into_an_existing_warehouse(tmp_path, fake_fetch):
+    """An unrelated stored row survives; a re-fetched one is replaced, not doubled."""
+    path = tmp_path / "historical.parquet"
+    pd.concat(
+        [
+            _fetched("MSFT", "US", "2026-09-02", 400.0, updated_at="2026-09-01"),
+            _fetched("AAPL", "US", "2026-09-02", 1.0, updated_at="2026-09-01"),
+        ],
+        ignore_index=True,
+    ).to_parquet(path, index=False)
+
+    result = prices.refresh(["AAPL"], str(path), delay_factor=0)
+
+    stored = pd.read_parquet(path)
+    assert sorted(stored["symbol"]) == ["AAPL", "MSFT"]
+    aapl = stored[stored["symbol"] == "AAPL"]
+    assert len(aapl) == 1
+    assert float(aapl.iloc[0]["close"]) == 101.0  # the freshly fetched close
+    assert len(result) == 2
+
+
+def test_refresh_without_symbols_and_without_a_warehouse_raises(tmp_path, fake_fetch):
+    with pytest.raises(ValueError, match="No symbols to refresh"):
+        prices.refresh([], str(tmp_path / "historical.parquet"), delay_factor=0)
+    assert fake_fetch == []
+
+
+def test_refresh_spaces_out_its_yfinance_calls(tmp_path, fake_fetch, monkeypatch):
+    """A 30-ticker account used to make 30 back-to-back yfinance calls per sync.
+
+    The parent's own bulk fetcher sleeps between symbols; this asserts the
+    equivalent, and that the wait comes between calls rather than before the
+    first or after the last.
+    """
+    slept = []
+    monkeypatch.setattr("time.sleep", lambda seconds: slept.append(seconds))
+
+    prices.refresh(["AAPL", "MSFT", "005930.KS"], str(tmp_path / "h.parquet"))
+
+    assert len(slept) == 2  # three symbols, two gaps
+    assert all(0 <= s <= prices.DEFAULT_DELAY_FACTOR for s in slept)
+
+
+def test_refresh_can_be_told_not_to_wait(tmp_path, fake_fetch, monkeypatch):
+    slept = []
+    monkeypatch.setattr("time.sleep", lambda seconds: slept.append(seconds))
+
+    prices.refresh(["AAPL", "MSFT"], str(tmp_path / "h.parquet"), delay_factor=0)
+
+    assert slept == []
+
+
+def test_refresh_asks_for_the_documented_period(tmp_path, fake_fetch):
+    """README's 5y cap is a real constraint on how old a seed_date may be."""
+    prices.refresh(["AAPL"], str(tmp_path / "h.parquet"), delay_factor=0)
+    assert fake_fetch[0][2] == prices.FETCH_PERIOD == "5y"

@@ -52,15 +52,47 @@ def required_symbols(
     return sorted(needed)
 
 
-def refresh(symbols_to_fetch: Iterable[str], historical_path: str) -> pd.DataFrame:
-    """Fetches each symbol's history and merges it into the warehouse file."""
+DEFAULT_DELAY_FACTOR = 2.0
+
+# `finance.ext.warehouse.fetch_historical_data`'s own default. Named here
+# because it bounds how far back a NAV series can start: a seed_date older
+# than this has no closes to value its opening positions against, and the
+# failure surfaces much later, as _as_of's "No close for X at or before ...".
+FETCH_PERIOD = "5y"
+
+
+def refresh(
+    symbols_to_fetch: Iterable[str],
+    historical_path: str,
+    delay_factor: float = DEFAULT_DELAY_FACTOR,
+) -> pd.DataFrame:
+    """Fetches each symbol's history and merges it into the warehouse file.
+
+    Each symbol is refetched in full (`period="5y"`) and the warehouse
+    deduplicates on (date, region, symbol) afterwards; nothing here works out
+    which dates are already held. That is wasteful but self-healing -- a
+    revised or backfilled close replaces the stored one -- and at the scale of
+    one personal account it costs seconds.
+
+    It does mean one yfinance call per held symbol per `nav sync`, so calls
+    are spaced by up to `delay_factor` seconds, matching
+    `finance.ext.warehouse.refresh_tickers_and_historical_data`. Pass
+    `delay_factor=0` to disable the wait (tests, or a single symbol).
+    """
+    import random
+    import time
+
     from finance.ext.warehouse import concat_dataframes, fetch_historical_data
 
     existing = (
         pd.read_parquet(historical_path) if os.path.exists(historical_path) else None
     )
-    for symbol in symbols_to_fetch:
-        fetched = fetch_historical_data(symbol, region=region_for(symbol))
+    for index, symbol in enumerate(symbols_to_fetch):
+        if index and delay_factor:
+            time.sleep(random.random() * delay_factor)
+        fetched = fetch_historical_data(
+            symbol, region=region_for(symbol), period=FETCH_PERIOD
+        )
         existing = fetched if existing is None else concat_dataframes(existing, fetched)
 
     if existing is None:

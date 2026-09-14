@@ -227,8 +227,19 @@ yfinance into the shared parquet warehouse. nav requests:
 FX is therefore just another symbol in the same warehouse, fetched and cached
 by the same code. No separate FX subsystem exists.
 
-Only missing dates are fetched; the warehouse deduplicates on
-`(date, region, symbol)`.
+Every symbol is refetched in full on every `nav sync` — `period="5y"`, the
+warehouse's own default — and the warehouse deduplicates on
+`(date, region, symbol)` afterwards. Nothing works out which dates are
+already held. That is wasteful, but self-healing: a revised or backfilled
+close replaces the stored one rather than being skipped as already-present.
+Calls are spaced by a randomized delay of up to two seconds, matching
+`finance.ext.warehouse.refresh_tickers_and_historical_data`, so a
+thirty-holding account does not hit Yahoo thirty times back to back.
+
+The `5y` window is a real constraint on how far back a NAV series can start.
+A `seed_date` more than five years old has no close to value its opening
+positions against, and the failure surfaces late and obscurely, as
+`No close for <ticker> at or before <date>`.
 
 ### 6. Valuation
 
