@@ -1,5 +1,6 @@
 import codecs
 import csv
+import decimal
 from datetime import timedelta
 
 from finance.providers.provider import Provider
@@ -215,7 +216,7 @@ class Record(object):
                 yield v.strftime(DATE_OUTPUT_FORMAT)
             elif k == "unit_price":
                 yield float(v)
-            elif isinstance(v, (int, float)):
+            elif isinstance(v, (int, float, decimal.Decimal)):
                 yield v
             else:
                 yield str(v)
