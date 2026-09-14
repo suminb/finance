@@ -16,6 +16,12 @@ from typing import List
 # dependency-light.
 CASH_PREFIX = "_"
 
+# Quantities accumulate through repeated float addition (see
+# `apply_transaction`), so a fully-closed position can land on something
+# like 1e-13 instead of exact zero. Treat anything within this tolerance of
+# zero as closed, so valuation doesn't demand a price for it.
+QUANTITY_EPSILON = 1e-9
+
 
 def is_cash(ticker: str) -> bool:
     """Cash is held in the inventory under an underscore-prefixed ticker."""
@@ -72,13 +78,27 @@ class Portfolio:
         nav = self.net_asset_value
         return {t: v / nav for t, v in self.asset_values.items()}
 
+    def _replay_transactions(self, evaluated_at: datetime) -> dict:
+        """Replays transactions up to and including `evaluated_at` and
+        returns the resulting inventory, without touching `self.inventory`.
+
+        This is the pure query half of `eval_inventory`; use it (rather than
+        `eval_inventory`) wherever a caller needs a historical inventory
+        without also resetting the instance's current inventory as a side
+        effect -- e.g. `eval_nav`, which is routinely asked to value past
+        dates on a live `Portfolio` instance.
+        """
+        inventory: dict = {}
+        for record in self.transactions:
+            if record.date <= evaluated_at:
+                inventory.setdefault(record.ticker, 0)
+                inventory[record.ticker] += record.quantity
+        return inventory
+
     def eval_inventory(self, evaluated_at=None) -> dict:
         if evaluated_at is None:
             evaluated_at = datetime.now(timezone.utc)
-        self.inventory = {}
-        for record in self.transactions:
-            if record.date <= evaluated_at:
-                self.apply_transaction(record)
+        self.inventory = self._replay_transactions(evaluated_at)
         return self.inventory
 
     def apply_transaction(self, record: Transaction):
@@ -142,20 +162,26 @@ class Portfolio:
         """Net asset value at a point in time.
 
         `prices` must already be expressed in one currency; this method
-        performs no conversion. Holdings that have gone to zero are skipped so
-        that a delisted position with no price does not block valuation.
+        performs no conversion. Holdings within `QUANTITY_EPSILON` of zero
+        are skipped (by magnitude, not sign, so a short position is still
+        valued) so that a delisted or fully-closed position with no price
+        does not block valuation.
+
+        This queries a historical inventory via `_replay_transactions`
+        rather than `eval_inventory`, so evaluating a past date does not
+        clobber `self.inventory` as a side effect.
         """
-        inventory = self.eval_inventory(evaluated_at)
+        inventory = self._replay_transactions(evaluated_at)
         total = 0.0
         for ticker, quantity in inventory.items():
-            if quantity == 0:
+            if abs(quantity) < QUANTITY_EPSILON:
                 continue
             try:
                 price = prices[ticker]
             except KeyError:
                 raise MissingPriceException(
                     "No price for {} at {}".format(ticker, evaluated_at)
-                )
+                ) from None
             total += price * quantity
         return total
 
@@ -166,10 +192,16 @@ class Portfolio:
 
         :param prices_by_date: {datetime: {ticker: price in the base currency}}
         """
-        return [
-            (date, self.eval_nav(date, prices_by_date[date]))
-            for date in make_dates(from_date, to_date)
-        ]
+        result = []
+        for date in make_dates(from_date, to_date):
+            try:
+                prices = prices_by_date[date]
+            except KeyError:
+                raise MissingPriceException(
+                    "No prices for {}".format(date)
+                ) from None
+            result.append((date, self.eval_nav(date, prices)))
+        return result
 
     @classmethod
     def load_from_file(cls, path: str, current_prices: dict):

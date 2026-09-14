@@ -1,3 +1,4 @@
+import inspect
 import os
 import pytz
 import pytest
@@ -208,7 +209,77 @@ def test_eval_daily_nav_series_walks_days():
 
 
 def test_eval_inventory_default_date_is_evaluated_per_call():
-    """The default used to be bound at import time, freezing 'now'."""
-    transactions = [Portfolio.Transaction(utc(2020, 1, 1), "SPY", 10)]
+    """The default used to be bound at import time, freezing 'now'.
+
+    A transaction dated at 2020-01-01 cannot discriminate the bug: "now" is
+    after 2020 whether it was frozen at import time or computed per call, so
+    that version of this test passes identically against broken code. Use a
+    transaction timestamped at *test-run* time instead -- strictly after
+    module import completed. Under the old `evaluated_at=datetime.now(...)`
+    default, "now" was frozen back at import time, so this transaction
+    (dated after that) would be excluded. Under the fix, "now" is computed
+    fresh on this call, so the transaction (dated at or before it) is
+    included. The two calls are sequential in the same thread, so there is
+    no clock-resolution flakiness.
+    """
+    transaction_date = datetime.now(timezone.utc)
+    transactions = [Portfolio.Transaction(transaction_date, "SPY", 10)]
     pf = Portfolio({}, {}, transactions)
     assert pf.eval_inventory() == {"SPY": 10}
+
+
+def test_eval_inventory_default_parameter_is_none():
+    """Structural companion to the behavioural test above: the default must
+    be the sentinel `None`, not a `datetime` bound once at import time."""
+    default = inspect.signature(Portfolio.eval_inventory).parameters[
+        "evaluated_at"
+    ].default
+    assert default is None
+
+
+def test_eval_nav_does_not_mutate_inventory():
+    """eval_nav queries a historical inventory; it must not leave
+    `self.inventory` set to that historical snapshot as a side effect."""
+    transactions = [Portfolio.Transaction(utc(2020, 1, 1), "SPY", 10)]
+    pf = Portfolio({}, {}, transactions, base_currency="KRW")
+    pf.inventory = {"SPY": 999, "_KRW": 42}
+    pf.eval_nav(utc(2020, 6, 1), {"SPY": 100.0})
+    assert pf.inventory == {"SPY": 999, "_KRW": 42}
+
+
+def test_eval_daily_nav_series_does_not_mutate_inventory():
+    """Same hazard for the walking version: it must not leave
+    `self.inventory` at whatever the last iterated date happened to be."""
+    transactions = [Portfolio.Transaction(utc(2020, 1, 1), "SPY", 10)]
+    pf = Portfolio({}, {}, transactions, base_currency="KRW")
+    pf.inventory = {"SPY": 999, "_KRW": 42}
+    prices_by_date = {utc(2020, 6, 1): {"SPY": 100.0}, utc(2020, 6, 2): {"SPY": 100.0}}
+    pf.eval_daily_nav_series(utc(2020, 6, 1), utc(2020, 6, 3), prices_by_date)
+    assert pf.inventory == {"SPY": 999, "_KRW": 42}
+
+
+def test_eval_daily_nav_series_raises_on_a_missing_date():
+    transactions = [Portfolio.Transaction(utc(2026, 1, 1), "SPY", 10)]
+    pf = Portfolio({}, {}, transactions, base_currency="KRW")
+    prices_by_date = {utc(2026, 1, 2): {"SPY": 100.0}}  # 2026-01-03 missing
+    with pytest.raises(MissingPriceException, match="2026-01-03"):
+        pf.eval_daily_nav_series(utc(2026, 1, 2), utc(2026, 1, 4), prices_by_date)
+
+
+def test_eval_nav_treats_a_float_residual_as_closed():
+    transactions = [
+        Portfolio.Transaction(utc(2026, 1, 1), "SPY", 10),
+        Portfolio.Transaction(utc(2026, 1, 2), "SPY", -10 + 1e-13),
+    ]
+    pf = Portfolio({}, {}, transactions, base_currency="KRW")
+    # No SPY price supplied. If the ~1e-13 residual quantity were not
+    # treated as closed, this would raise MissingPriceException.
+    assert pf.eval_nav(utc(2026, 1, 3), {}) == 0.0
+
+
+def test_eval_nav_values_a_negative_quantity_with_its_sign():
+    """The zero-quantity guard is on magnitude, not sign -- a short position
+    must still be valued."""
+    transactions = [Portfolio.Transaction(utc(2026, 1, 1), "SPY", -10)]
+    pf = Portfolio({}, {}, transactions, base_currency="KRW")
+    assert pf.eval_nav(utc(2026, 1, 2), {"SPY": 100.0}) == -1000.0
