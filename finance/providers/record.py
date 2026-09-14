@@ -26,9 +26,23 @@ class DateTime(AbstractField):
         self._values[instance] = parse_date(value, self.date_format)
 
 
+def _clean_number(value):
+    """Normalizes a numeric string as it appears in brokerage exports.
+
+    Thousands separators and surrounding whitespace are stripped, and an empty
+    value is treated as zero -- exports leave numeric cells blank rather than
+    writing a zero.
+    """
+    if isinstance(value, str):
+        value = value.strip().replace(",", "")
+        if not value:
+            return "0"
+    return value
+
+
 class Decimal(AbstractField):
     def __set__(self, instance, value):
-        self._values[instance] = decimal.Decimal(value)
+        self._values[instance] = decimal.Decimal(_clean_number(value))
 
 
 class Float(AbstractField):
@@ -38,7 +52,7 @@ class Float(AbstractField):
 
 class Integer(AbstractField):
     def __set__(self, instance, value):
-        self._values[instance] = int(value)
+        self._values[instance] = int(decimal.Decimal(_clean_number(value)))
 
 
 class String(AbstractField):

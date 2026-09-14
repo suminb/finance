@@ -1,4 +1,5 @@
 import codecs
+import csv
 from datetime import timedelta
 
 from finance.providers.provider import Provider
@@ -81,15 +82,18 @@ class Miraeasset(Provider):
 
     def parse_records(self, fin):
         """거래내역조회 (0650)"""
-        headers = next(fin).strip().split(",")
+        reader = csv.reader(fin)
+        headers = [h.strip() for h in next(reader)]
 
         col_count = len(headers)
         assert col_count == 25, "Invalid column count ({})".format(col_count)
 
         column_indices = self.find_header_column_indices(headers)
 
-        for line in fin:
-            columns = [x.strip() for x in line.strip().split(",")]
+        for row in reader:
+            columns = [x.strip() for x in row]
+            if not any(columns):
+                continue
             assert len(columns) == col_count, "Invalid column count ({})".format(
                 len(columns)
             )
@@ -152,7 +156,7 @@ class Record(object):
     code = String()
     name = String()
     unit_price = Decimal()
-    quantity = Integer()
+    quantity = Decimal()
     fees = Decimal()
     tax = Decimal()
     raw_columns = List()
