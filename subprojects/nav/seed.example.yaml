@@ -1,0 +1,12 @@
+# Copy to seed.yaml and fill in from a 잔고 screen or export.
+# seed.yaml is gitignored: it holds real balances.
+#
+# Quantities and amounts are as of the close of seed_date. Transactions
+# dated after seed_date are replayed on top of this.
+seed_date: 2026-09-14
+positions:
+  - {ticker: AAPL, quantity: 10}
+  - {ticker: 005930.KS, quantity: 100}
+cash:
+  KRW: 1234567
+  USD: 890.12
