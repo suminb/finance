@@ -50,6 +50,27 @@ def test_region_for():
     assert prices.region_for("AAPL") == "US"
 
 
+def test_region_for_a_tokyo_listing_is_not_us():
+    """symbols.yaml ships 넥슨 일본 -> 3659.T, and this returned "US".
+
+    The warehouse deduplicates on (date, region, symbol), so a symbol filed
+    under the wrong region would duplicate rather than replace its own
+    history once the region was corrected.
+    """
+    assert prices.region_for("3659.T") == "JP"
+
+
+def test_region_for_an_unlisted_suffix_is_still_not_us():
+    """Only US listings are unsuffixed, so a dot never means US.
+
+    An unknown suffix falls back to itself: stable across runs, which is all
+    the dedup key needs, and never colliding with "US".
+    """
+    assert prices.region_for("0700.HK") == "HK"
+    assert prices.region_for("SOMETHING.XYZ") == "XYZ"
+    assert prices.region_for("BRK-B") == "US"  # a dash is not a suffix
+
+
 def test_required_symbols_includes_holdings_and_fx(symbol_map):
     assert prices.required_symbols(["AAPL", "005930.KS"], symbol_map, "KRW") == [
         "005930.KS",

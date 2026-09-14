@@ -25,12 +25,40 @@ def fx_symbol(currency: str, base: str) -> Optional[str]:
     return "{}{}=X".format(currency, base)
 
 
+# Yahoo exchange suffix -> the region the warehouse files the symbol under.
+# The warehouse deduplicates on (date, region, symbol), so a symbol that
+# changes region later duplicates its history rather than replacing it --
+# which is what returning "US" for 3659.T (a Tokyo listing, and one
+# symbols.yaml ships) would have caused.
+REGION_BY_SUFFIX = {
+    "KS": "KR",  # KOSPI
+    "KQ": "KR",  # KOSDAQ
+    "T": "JP",   # Tokyo
+    "HK": "HK",
+    "L": "GB",   # London
+    "TO": "CA",  # Toronto
+    "AX": "AU",
+    "SS": "CN",  # Shanghai
+    "SZ": "CN",  # Shenzhen
+    "DE": "DE",  # Xetra
+    "PA": "FR",  # Euronext Paris
+}
+
+
 def region_for(symbol: str) -> str:
+    """Warehouse region for a symbol, from its Yahoo exchange suffix.
+
+    Only US listings are unsuffixed, so an unrecognized suffix is emphatically
+    not US: it falls back to the uppercased suffix itself, which is stable
+    across runs (the property the dedup key needs) and cannot collide with
+    "US". Guessing "US" for anything with a dot was the actual bug.
+    """
     if symbol.endswith("=X"):
         return "FX"
-    if symbol.endswith((".KS", ".KQ")):
-        return "KR"
-    return "US"
+    _, dot, suffix = symbol.rpartition(".")
+    if not dot:
+        return "US"
+    return REGION_BY_SUFFIX.get(suffix.upper(), suffix.upper())
 
 
 def required_symbols(

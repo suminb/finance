@@ -724,3 +724,26 @@ def test_sync_with_a_three_currency_seed_refuses_rather_than_omitting(tmp_path):
 
     assert_clean_error(result, "JPY", "breakdown", "would not agree")
     assert not (root / "data" / "nav_daily.parquet").exists()
+
+
+def test_check_against_a_statement_predating_the_seed_says_so(tmp_path):
+    """Replay has no inventory before the seed date.
+
+    Every statement line came back as "computed 0.0000", which reads as a
+    catastrophic reconciliation failure rather than as a mis-dated file.
+    """
+    root, historical_path = _build_check_root(tmp_path)
+    statement_path = tmp_path / "statement.yaml"
+    _write_statement(statement_path, seed_date=date(2026, 8, 15))
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "check", str(statement_path),
+            "--root", str(root),
+            "--historical", str(historical_path),
+        ],
+    )
+
+    assert_clean_error(result, "2026-08-15", "before seed_date", "2026-09-01")
+    assert "computed" not in result.output

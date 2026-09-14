@@ -301,6 +301,16 @@ def check(statement: str, root: str, historical: str):
 
     p, symbol_map, account_seed, transactions, portfolio = state.load_state(root)
     actual = seed_module.load(statement, symbol_map)
+    if actual.seed_date < account_seed.seed_date:
+        # Replay has no inventory before the seed date, so every line of the
+        # statement would be reported as "computed 0.0000" -- which reads as a
+        # catastrophic reconciliation failure rather than as a date mistake.
+        raise click.ClickException(
+            "The statement is dated {}, before seed_date {}. NAV history "
+            "begins at the seed date, so there is nothing to reconcile "
+            "against; re-date the statement, or move seed_date back and "
+            "`nav rebuild`.".format(actual.seed_date, account_seed.seed_date)
+        )
     when = datetime.combine(actual.seed_date, time(0, 0, 0)).replace(tzinfo=timezone.utc)
 
     differences = check_module.compare(portfolio, actual, when)
