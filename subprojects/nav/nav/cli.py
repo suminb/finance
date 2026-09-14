@@ -49,7 +49,7 @@ def import_(paths, root: str):
     transactions = []
     for path in paths:
         transactions += ingest.normalize(
-            provider.read_records(path), symbol_map, category_map
+            provider.read_records(path), symbol_map, category_map, source=path
         )
 
     existing = ingest.load_frame(p["transaction"])

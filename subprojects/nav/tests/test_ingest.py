@@ -85,7 +85,82 @@ def test_frame_round_trip_preserves_decimals(maps):
     assert ingest.from_frame(ingest.to_frame(transactions)) == transactions
 
 
+def _write_export(path, rows):
+    """Writes a euc-kr 0650 export with the sample's real 25-column header."""
+    with open(SAMPLE, encoding="euc-kr") as fin:
+        header = fin.readline().rstrip("\n")
+    path.write_text(
+        "\n".join([header] + list(rows)) + "\n", encoding="euc-kr"
+    )
+    return str(path)
+
+
+# A 환전 pair: KRW out and USD in, emitted as two rows under ONE 거래번호.
+# README §3 describes exactly this two-row shape, and whether real 미래에셋
+# exports give the legs distinct 거래번호 is unknown -- which is why a shared
+# key has to be loud rather than guessed at.
+FX_PAIR_ROWS = [
+    '2026/09/05,7,출금,환전출금,KRW,"1,300,000","1,300,000",0,,,0,0,0,0,'
+    "0,0,,110000,HTS,,,,,,",
+    '2026/09/05,7,입금,환전입금,USD,"1,000.00","1,000.00",0,,,0,0,0,0,'
+    "0,0,,110000,HTS,,,,,,",
+]
+
+
+def test_two_rows_of_one_export_sharing_a_key_is_a_hard_error(maps, tmp_path):
+    """The colliding-key data loss: 2 rows in, 1 row out, no error.
+
+    Before this check, merge's drop_duplicates(keep="last") kept only the USD
+    leg and the ₩1,300,000 KRW leg vanished -- "2 rows read, 1 new, 1 total",
+    exit 0, every later NAV figure wrong. A repeat within one export can only
+    be a key-model violation, so it must abort the import.
+    """
+    symbol_map, _ = maps
+    category_map = categories.CategoryMap(
+        [{"category": "출금", "handler": "cash_out"},
+         {"category": "입금", "handler": "cash_in"}]
+    )
+    path = _write_export(tmp_path / "fx.csv", FX_PAIR_ROWS)
+
+    with pytest.raises(ingest.DuplicateKeyError) as excinfo:
+        ingest.normalize(
+            Miraeasset().read_records(path), symbol_map, category_map, source=path
+        )
+
+    assert [seq for _, seq in excinfo.value.keys] == [7]
+    assert "거래번호" in str(excinfo.value)
+    assert path in str(excinfo.value)
+
+
+def test_distinct_keys_in_one_export_are_accepted(maps, tmp_path):
+    """The same 환전 pair with distinct 거래번호 imports as two rows.
+
+    Guards against the check rejecting the legitimate shape too: only the
+    shared key is the error, not the pair itself.
+    """
+    symbol_map, _ = maps
+    category_map = categories.CategoryMap(
+        [{"category": "출금", "handler": "cash_out"},
+         {"category": "입금", "handler": "cash_in"}]
+    )
+    rows = [FX_PAIR_ROWS[0], FX_PAIR_ROWS[1].replace("2026/09/05,7,", "2026/09/05,8,")]
+    path = _write_export(tmp_path / "fx-ok.csv", rows)
+
+    transactions = ingest.normalize(
+        Miraeasset().read_records(path), symbol_map, category_map, source=path
+    )
+
+    assert [t.seq for t in transactions] == [7, 8]
+    assert len(ingest.merge(None, ingest.to_frame(transactions))) == 2
+
+
 def test_merge_is_idempotent(maps):
+    """Re-importing the same file stays a no-op.
+
+    This is the behaviour the within-export duplicate check must NOT be
+    conflated with: a key repeated across imports is idempotency and stays
+    silent, a key repeated inside one export is data loss and raises.
+    """
     frame = ingest.to_frame(normalized(maps))
     assert len(ingest.merge(frame, frame)) == len(frame)
 
