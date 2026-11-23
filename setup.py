@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 from distutils.core import setup
-from pkg_resources import parse_requirements
 from setuptools import find_packages
 
 import finance
@@ -16,7 +15,11 @@ def readme():
 
 
 with open("requirements.txt") as f:
-    install_requires = [str(x) for x in parse_requirements(f.read())]
+    install_requires = [
+        line.strip()
+        for line in f
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
 
 setup(
     name="sb-finance",
